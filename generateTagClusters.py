@@ -18,6 +18,7 @@ from glob import glob
 from _csv import QUOTE_MINIMAL
 from collections import defaultdict
 from collections import Counter
+from collections import namedtuple
 import collections
 import def_functions
 import datetime
@@ -95,6 +96,8 @@ skippedCount = 0
 appendToAlreadyExist = False
 count_non_geotagged = 0
 count_outside_shape = 0
+count_tags_global = 0
+count_tags_skipped = 0
 shapeFileExcludelocIDhash = set()
 shapeFileIncludedlocIDhash  = set()
 
@@ -257,15 +260,19 @@ for file_name in filelist:
                     #Filter tags based on two stoplists
                     photo_tags_filtered = set()
                     for tag in photo_tags:
-                        if tag in SortOutAlways_set:
+                        count_tags_global += 1
+                        #exclude numbers and those tags that are in SortOutAlways_set
+                        if tag.isdigit() or tag in SortOutAlways_set:
+                            count_tags_skipped += 1
                             continue
                         for inStr in SortOutAlways_inStr_set:
                             if inStr in tag:
+                                count_tags_skipped += 1
                                 break
                         else:
                             photo_tags_filtered.add(tag)
                     photo_tags = photo_tags_filtered
-                    #if not "toronto" in photo_tags:
+                    #if not "water" in photo_tags:
                     #    continue
                     photo_thumbnail = item[4]
                     photo_comments = ""
@@ -405,9 +412,11 @@ for file_name in filelist:
             ##Calculate toplists
             if photo_tags:    
                 UserDict_TagCounters_global[photo_userid].update(photo_tags) #add tagcount of this media to overall tagcount or this user, initialize counter for user if not already done 
-            print("Cleaned output of " + "%02d" % (count_loc,)  + " photolocations from " + "%02d" % (count_glob,)+ " (File " + str(partcount) + " of " + str(len(filelist)) + ") - Skipped Media: " + str(skippedCount), end='\r')
+            print("Cleaned output of " + "%02d" % (count_loc,)  + " photolocations from " + "%02d" % (count_glob,)+ " (File " + str(partcount) + " of " + str(len(filelist)) + ") - Skipped Media: " + str(skippedCount) + " - Skipped Tags: " + str(count_tags_skipped) +" of " + str(count_tags_global), end='\r')
 
 cleanedPhotoList = []
+#create structure for tuple with naming for easy referencing
+cleanedPhotoLocation_tuple = namedtuple('cleanedPhotoLocation_tuple', 'source lat lng photo_guid photo_owner userid photo_caption photo_dateTaken photo_uploadDate photo_views photo_tags photo_thumbnail photo_mTags photo_likes photo_comments photo_shortcode photo_mediatype photo_locName photo_locID')
 with open("Output/Output_cleaned.txt", 'w', encoding='utf8') as csvfile:
     csvfile.write("SOURCE,Latitude,Longitude,PhotoID,Owner,UserID,Name,DateTaken,UploadDate,Views,Tags,URL,MTags,Likes,Comments,Shortcode,Type,LocName,LocID," + '\n')
     datawriter = csv.writer(csvfile, delimiter=',', lineterminator='\n', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
@@ -416,7 +425,8 @@ with open("Output/Output_cleaned.txt", 'w', encoding='utf8') as csvfile:
             locIDUserID = str(location) + '::' + str(user_key)
             photo_latlng = location.split(':')
             photo = UserLocationsFirstPhoto_dict.get(locIDUserID,(" "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," "))
-            cleanedPhotoLocation = (photo[0],#Source = 0
+            #create tuple with cleaned photo data
+            cleanedPhotoLocation = cleanedPhotoLocation_tuple(photo[0],#Source = 0
                           float(photo_latlng[0]), #Lat = 1
                           float(photo_latlng[1]), #Lng = 2
                           photo[1],#photo_guid = 3
