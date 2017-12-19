@@ -13,6 +13,17 @@ see also (Alpha Shapes):
         https://plot.ly/python/alpha-shapes/
         https://stackoverflow.com/questions/41268547/estimating-an-area-of-an-image-generated-by-a-set-of-points-alpha-shapes
         
+or, if all points are seperated beforehand, HULL is also possible, simply generating a boundary shape for all input points:
+        https://stackoverflow.com/questions/44685052/boundary-points-from-a-set-of-coordinates
+        `
+        import numpy as np
+        from scipy.spatial import ConvexHull
+        allPoints=np.column_stack((LATS,LONGS))
+        hullPoints = ConvexHull(allPoints)
+        `
+        or concave hull: http://ubicomp.algoritmi.uminho.pt/local/concavehull.html
+        https://github.com/mlaloux/Python--alpha-shape_concave_hull
+        http://blog.thehumangeo.com/2014/05/12/drawing-boundaries-in-python/ !!
 # Single executable python file
 
 https://stackoverflow.com/questions/11436777/is-there-a-way-to-embed-dependencies-within-a-python-script
