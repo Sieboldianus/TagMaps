@@ -42,28 +42,28 @@ def daterange(start_date, end_date):
 
 
 #this class is needed to override tkinter window with drag&drop option when overrideredirect = true
-class initMainTk(tk.Tk):
-    def __init__(self,master=None):
-        tk.Tk.__init__(self,master)
-        self.overrideredirect(True)
-        self.configure(background='gray7')
-        self._offsetx = 0
-        self._offsety = 0
-        self.bind('<ButtonPress-1>',self.clickwin)
-        self.bind('<B1-Motion>',self.dragwin)
-        
-    def dragwin(self,event):
-        x = self.winfo_pointerx() - self._offsetx
-        y = self.winfo_pointery() - self._offsety
-        self.geometry('+{x}+{y}'.format(x=x,y=y))
+#class App:
+#    global tk
+#    def __init__(self):
+#        self.root = tk.Tk()
+#        #tk.Tk.__init__(self,master)
+#        self.root.overrideredirect(True)
+#        self.root.configure(background='gray7')
+#        self.root._offsetx = 0
+#        self.root._offsety = 0
+#        self.root.bind('<ButtonPress-1>',self.clickwin)
+#        self.root.bind('<B1-Motion>',self.dragwin)
+#        
+#    def dragwin(self,event):
+#        x = self.root.winfo_pointerx() - self._offsetx
+#        y = self.root.winfo_pointery() - self._offsety
+#        self.root.geometry('+{x}+{y}'.format(x=x,y=y))
+#
+#    def clickwin(self,event):
+#        self.root._offsetx = event.x
+#        self.root._offsety = event.y
 
-    def clickwin(self,event):
-        self._offsetx = event.x
-        self._offsety = event.y
-        
-class Win(tk.Frame):
-    def __init__(self,parent):
-        tk.Frame.__init__(self,parent)
+
 
 
 #class WinImg(Frame):

@@ -508,14 +508,73 @@ tnum = 0
 first = True
 plot_kwds = {'alpha' : 0.5, 's' : 10, 'linewidths':0}
 sys.stdout.flush()
-#Query user for optional removing of tags removing
-#User GUI query for excluding tags
-top_Tkinter_Root_Window = def_functions.initMainTk() #Tk()
-frame = def_functions.Win(top_Tkinter_Root_Window)
+#Tkinter Stuff
+#####################################################################################################################################################
+#def center(win):
+#    """
+#    centers a tkinter window
+#    :param win: the root or Toplevel window to center
+#    """
+#    win.update_idletasks()
+#    width = win.winfo_width()
+#    frm_width = win.winfo_rootx() - win.winfo_x()
+#    win_width = width + 2 * frm_width
+#    height = win.winfo_height()
+#    titlebar_height = win.winfo_rooty() - win.winfo_y()
+#    win_height = height + titlebar_height + frm_width
+#    x = win.winfo_screenwidth() // 2 - win_width // 2
+#    y = win.winfo_screenheight() // 2 - win_height // 2
+#    win.geometry('{}x{}+{}+{}'.format(width, height, x, y))
+#    win.deiconify()
+class App(tk.Tk):
+    def __init__(self):
+        tk.Tk.__init__(self)
+        self.overrideredirect(True) #this is needed to make the root disappear
+        self.geometry('%dx%d+%d+%d' % (0, 0, 0, 0))
+        #create separate floating window
+        self.floater = FloatingWindow(self)
+
+class FloatingWindow(tk.Toplevel):
+    #global app
+    def __init__(self, *args, **kwargs):
+        tk.Toplevel.__init__(self, *args, **kwargs)
+        self.overrideredirect(True)
+        self.configure(background='gray7')
+        #self.label = tk.Label(self, text="Click on the grip to move")
+        self.grip = tk.Label(self, bitmap="gray25")
+        self.grip.pack(side="left", fill="y")
+        #self.label.pack(side="right", fill="both", expand=True)
+        self.grip.bind("<ButtonPress-1>", self.StartMove)
+        self.grip.bind("<ButtonRelease-1>", self.StopMove)
+        self.grip.bind("<B1-Motion>", self.OnMotion)
+        #center Floating Window
+        w = self.winfo_reqwidth()
+        h = self.winfo_reqheight()
+        ws = self.winfo_screenwidth()
+        hs = self.winfo_screenheight()
+        x = (ws/2) - (w/2)
+        y = (hs/2) - (h/2)
+        self.geometry('+%d+%d' % (x, y))
+    def StartMove(self, event):
+        self.x = event.x
+        self.y = event.y
+
+    def StopMove(self, event):
+        self.x = None
+        self.y = None
+
+    def OnMotion(self, event):
+        deltax = event.x - self.x
+        deltay = event.y - self.y
+        x = self.winfo_x() + deltax
+        y = self.winfo_y() + deltay
+        self.geometry("+%s+%s" % (x, y))
+
+app = App()
 #necessary override for error reporting during tkinter mode
-#def report_callback_exception(self, exc, val, tb):
-#    showerror("Error", message=str(val))
-#tk.Tk.report_callback_exception = report_callback_exception
+def report_callback_exception(self, exc, val, tb):
+    showerror("Error", message=str(val))
+tk.Tk.report_callback_exception = report_callback_exception
     
 #the following code part is a bit garbled due to using TKinter interface
 ######################################################################################################################################################
@@ -523,7 +582,7 @@ frame = def_functions.Win(top_Tkinter_Root_Window)
 ######################################################################################################################################################
     
 def cluster_tags():
-    global top_Tkinter_Root_Window
+    #global app
     #global def_functions
     #global plt
     global tnum
@@ -531,7 +590,6 @@ def cluster_tags():
     global plot_kwds
     global cleanedPhotoList
     global topTagsList
-    global frame
     #calculate once boundary for all points
     df = pd.DataFrame(cleanedPhotoList)
     points = df.as_matrix(['lng','lat'])
@@ -555,10 +613,11 @@ def cluster_tags():
         global tmax
         global plot_kwds
         global first
-        global frame
-        #frame.destroy()
+        global app
+        #.destroy()
         #global plt
         nonlocal canvas
+        nonlocal frame
         nonlocal l
         nonlocal distY
         nonlocal distX
@@ -577,7 +636,7 @@ def cluster_tags():
         print("(" + str(tnum) + " of " + str(tmax) + ") Found " + str(len(selectedPhotoList)) + " photos for tag " + "'" + toptag[0] + "' (" + str(round(percentageOfTotalLocations,0)) + "% of total distinct locations in area)")
         #clustering
         df = pd.DataFrame(selectedPhotoList)
-        points = df.as_matrix(['lng','lat']) #converts pandas dataframe to numpy array (limit by list of column-names)
+        points = df.as_matrix(['lng','lat']) #converts pandas data to numpy array (limit by list of column-names)
         test_data = np.radians(points) #conversion to radians for HDBSCAN (does not support decimal degrees)
         #for each tag in overallNumOfUsersPerTag_global.most_common(1000) (descending), calculate HDBSCAN Clusters
         minClusterSize = int(((len(selectedPhotoList))/100)*5) #4% optimum
@@ -616,21 +675,12 @@ def cluster_tags():
         
         #first tag, train cut distance by human observer
         if tnum == 1:
-            #frame.configure(background='gray7')
+            #.configure(background='gray7')
             def quitTkinter():
-                global top_Tkinter_Root_Window
-                top_Tkinter_Root_Window.update() #see https://stackoverflow.com/questions/35040168/python-tkinter-error-cant-evoke-event-command
-                frame.update()
-                frame.destroy()
-                top_Tkinter_Root_Window.destroy()
-            w = frame.winfo_reqwidth()
-            h = frame.winfo_reqheight()
-            ws = frame.winfo_screenwidth()
-            hs = frame.winfo_screenheight()
-            x = (ws/2) - (w/2)
-            y = (hs/2) - (h/2)
-            top_Tkinter_Root_Window.geometry('+%d+%d' % (x, y))
-            
+                global app
+                app.update() #see https://stackoverflow.com/questions/35040168/python-tkinter-error-cant-evoke-event-command
+                app.quit() #root.quit() causes mainloop to exit, see https://stackoverflow.com/questions/2307464/what-is-the-difference-between-root-destroy-and-root-quit
+
             l = tk.Label(canvas, text="Optional: Exclude tags.", background="gray7",fg="gray80",font="Arial 10 bold")
             l.pack(padx=10, pady=10)
             l = tk.Label(canvas, text="Select all tags you wish to exclude from analysis \n and click on remove to proceed.", background="gray7",fg="gray80")
@@ -644,22 +694,32 @@ def cluster_tags():
             #    listbox.insert(END, item[0] + " ("+ str(item[1]) + " photos)")
             b = tk.Button(canvas, text = "Proceed", command=quitTkinter, background="gray20",fg="gray80",borderwidth=0,font="Arial 10 bold")
             b.pack(padx=10, pady=10)
-            canvas.pack(fill='both',padx=10, pady=10)
-            frame.pack()
-            top_Tkinter_Root_Window.update()    
-        
+            #adjust location of floater (center)
+
+            #commit
+            canvas.pack(fill='both',padx=0, pady=0)
+            frame.pack(fill='both',padx=0, pady=0)
+            #app.pack()
+            app.update()
+
+    frame = tk.Frame(app.floater)    
     canvas = tk.Canvas(frame, width=1320, height=440, highlightthickness=0,background="gray7")
-    top_Tkinter_Root_Window.title("Select Cluster Distance")
+    w = 1320#app.floater.winfo_reqwidth()
+    h = 440#app.floater.winfo_reqheight()
+    ws = app.winfo_screenwidth()
+    hs = app.winfo_screenheight()
+    x = (ws/2) - (w/2)
+    y = (hs/2) - (h/2)
+    app.floater.geometry('+%d+%d' % (x, y))
+    #app.title("Select Cluster Distance")
     l = tk.Label(canvas, text="########## STEP 3 of 4: Tag Location Clustering ##########", background="gray7",fg="gray80")
     l.pack()
-    #
     #Cluster preparation
     sns.set_context('poster')
     sns.set_style('white')
     sns.set_color_codes()
     matplotlib.style.use('ggplot')
     #photo selection
-    
     for toptag in topTagsList:
         tnum += 1
         cluster_tag(toptag)
@@ -671,14 +731,8 @@ def cluster_tags():
 ######################################################################################################################################################
 ######################################################################################################################################################
 
-w = frame.winfo_reqwidth()
-h = frame.winfo_reqheight()
-ws = frame.winfo_screenwidth()
-hs = frame.winfo_screenheight()
-x = (ws/2) - (w/2)
-y = (hs/2) - (h/2)
-top_Tkinter_Root_Window.title("Optional: Exclude tags")
-top_Tkinter_Root_Window.geometry('+%d+%d' % (x, y))
+#A frame is created for each window/part of the gui; after it is used, it is destroyed with frame.destroy()
+frame = tk.Frame(app.floater)
 canvas = tk.Canvas(frame, width=150, height=400, highlightthickness=0,background="gray7")
 l = tk.Label(canvas, text="Optional: Exclude tags.", background="gray7",fg="gray80",font="Arial 10 bold")
 l.pack(padx=10, pady=10)
@@ -693,19 +747,21 @@ def delete(listbox):
     global topTagsList
     global tagsRemoved
     global cluster_tags
+    global frame
     # Delete from Listbox
     selection = listbox.curselection()
     for index in selection[::-1]:
         listbox.delete(index)
         del(topTagsList[index])
+    frame.destroy()
     cluster_tags()
 b = tk.Button(canvas, text = "Remove and Proceed", command = lambda: delete(listbox), background="gray20",fg="gray80",borderwidth=0,font="Arial 10 bold")
 b.pack(padx=10, pady=10)
-canvas.pack(fill='both',padx=10, pady=10)
-frame.pack()
-#top_Tkinter_Root_Window.update()
-    
-top_Tkinter_Root_Window.mainloop()        
+canvas.pack(fill='both',padx=0, pady=0)
+frame.pack(fill='both',padx=0, pady=0)
+
+#end of tkinter main loop 
+app.mainloop()
     #Radians to meters:
     #https://www.mathsisfun.com/geometry/radians.html
     #1 Radian is about 57.2958 degrees.
