@@ -768,8 +768,8 @@ def cluster_tag(toptag,preview=None):
             fig1.canvas.set_window_title('Cluster Preview')
             #xmax = ax.get_xlim()[1]
             #ymax = ax.get_ylim()[1]
-            noisyTxt = '{} / {}'.format(mask_noisy.sum(), len(mask_noisy))
-            plt.text(limXMax, limYMax,str(number_of_clusters) + ' Cluster (' + noisyTxt + ' Noisy)',fontsize=10,horizontalalignment='right',verticalalignment='top',fontweight='bold')
+            noisyTxt = '{}/{}'.format(mask_noisy.sum(), len(mask_noisy))
+            plt.text(limXMax, limYMax,str(number_of_clusters) + ' Cluster (Noise: ' + noisyTxt + ')',fontsize=10,horizontalalignment='right',verticalalignment='top',fontweight='bold')
         else:
             plt.scatter(points.T[0], points.T[1], c=sel_colors, **plot_kwds)
             fig1 = plt.figure(num=1,figsize=(11, int(11*imgRatio)), dpi=80)
@@ -778,7 +778,7 @@ def cluster_tag(toptag,preview=None):
             #xmax = fig1.get_xlim()[1]
             #ymax = fig1.get_ylim()[1]
             noisyTxt = '{} / {}'.format(mask_noisy.sum(), len(mask_noisy))
-            plt.text(limXMax, limYMax,str(number_of_clusters) + ' Clusters (' + noisyTxt + ' Noisy)',fontsize=10,horizontalalignment='right',verticalalignment='top',fontweight='bold')
+            plt.text(limXMax, limYMax,str(number_of_clusters) + ' Clusters (Noise: ' + noisyTxt + ')',fontsize=10,horizontalalignment='right',verticalalignment='top',fontweight='bold')
 
         plt.tick_params(labelsize=10)
         if fig2:
