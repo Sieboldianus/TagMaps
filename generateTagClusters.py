@@ -36,6 +36,12 @@ import sklearn.datasets as data
 import pandas as pd
 import hdbscan
 
+from multiprocessing.pool import ThreadPool
+pool = ThreadPool(processes=1)
+from time import sleep
+
+
+
 ##Needed for Shapefilestuff
 
 #enable for map display
@@ -584,7 +590,8 @@ app = App()
 def report_callback_exception(self, exc, val, tb):
     showerror("Error", message=str(val))
 tk.Tk.report_callback_exception = report_callback_exception
-    
+
+
 #the following code part is a bit garbled due to using TKinter interface
 ######################################################################################################################################################
 ######################################################################################################################################################
@@ -629,6 +636,8 @@ distY = def_functions.haversine(limXMin, limYMin, limXMin, limYMax)
 distX = def_functions.haversine(limXMin, limYMin, limXMax, limYMin) 
 
 clusterTreeCuttingDist = (distX/100)*4 #4% of research area width = default value #223.245922725 #= 0.000035 radians dist
+
+
 
 #tkinter.messagebox.showinfo("messagr", str(distY))
 #tkinter.messagebox.showinfo("messagr", str(distX))
@@ -691,6 +700,10 @@ def sel_photos(tag,cleanedPhotoList):
             distinctLocalLocationCount.add(cleanedPhotoLocation.photo_locID)
     return selectedPhotoList, len(distinctLocalLocationCount)
 
+def fit_cluster(clusterer, data):
+    clusterer.fit(data)
+    return clusterer
+
 def cluster_tag(toptag,preview=None):
     if preview is None:
         preview = False
@@ -709,6 +722,7 @@ def cluster_tag(toptag,preview=None):
     #l.pack()    
     selectedPhotoList, distinctLocalLocationCount = sel_photos(toptag[0],cleanedPhotoList)
     percentageOfTotalLocations = distinctLocalLocationCount/(total_distinct_locations/100)
+    #tkinter.messagebox.showinfo("Num of clusters: ", "(" + str(tnum) + " of " + str(tmax) + ") Found " + str(len(selectedPhotoList)) + " photos for tag " + "'" + toptag[0] + "' (" + str(round(percentageOfTotalLocations,0)) + "% of total distinct locations in area)")
     print("(" + str(tnum) + " of " + str(tmax) + ") Found " + str(len(selectedPhotoList)) + " photos for tag " + "'" + toptag[0] + "' (" + str(round(percentageOfTotalLocations,0)) + "% of total distinct locations in area)")
     #clustering
     df = pd.DataFrame(selectedPhotoList)
@@ -738,6 +752,8 @@ def cluster_tag(toptag,preview=None):
                 #earth.bluemarble(alpha=0.42)
                 #earth.drawcoastlines(color='#555566', linewidth=1)
                 fig1.canvas.set_window_title('Preview Map')
+            plt.gca().set_xlim([limXMin, limXMax]) 
+            plt.gca().set_ylim([limYMin, limYMax]) 
             plt.tick_params(labelsize=10)
             currentDisplayTag = toptag
     else: 
@@ -746,15 +762,26 @@ def cluster_tag(toptag,preview=None):
         #for each tag in overallNumOfUsersPerTag_global.most_common(1000) (descending), calculate HDBSCAN Clusters
         minClusterSize = int(((len(selectedPhotoList))/100)*5) #4% optimum
         #minClusterSize = 2
-        clusterer = hdbscan.HDBSCAN(min_cluster_size=minClusterSize,gen_min_span_tree=True,allow_single_cluster=True,min_samples=1)
+        clusterer = hdbscan.HDBSCAN(min_cluster_size=minClusterSize,gen_min_span_tree=False,allow_single_cluster=True,min_samples=1,metric='haversine')
+        #clusterer = hdbscan.HDBSCAN(min_cluster_size=10,metric='haversine',gen_min_span_tree=False,allow_single_cluster=True)
         #clusterer = hdbscan.robust_single_linkage_.RobustSingleLinkage(cut=0.000035)
-        #srsl_plt = hdbscan.robust_single_linkage_.plot()
-        clusterer.fit(tagRadiansData)
+        #srsl_plt = hdbscan.robust_single_linkage_.plot() 
+        #add projection
+        #projection = TSNE().fit_transform(data)
+        #plt.scatter(*projection.T, **plot_kwds)
+        #http://hdbscan.readthedocs.io/en/latest/parameter_selection.html
+        
+        #Start clusterer on different thread to prevent GUI from freezing
+        #See: http://stupidpythonideas.blogspot.de/2013/10/why-your-gui-app-freezes.html
+        #https://stackoverflow.com/questions/6893968/how-to-get-the-return-value-from-a-thread-in-python
+        async_result = pool.apply_async(fit_cluster, (clusterer, tagRadiansData))
+        clusterer = async_result.get()
+        #clusterer.fit(tagRadiansData)
+        #updateNeeded = False
+
         sel_labels = clusterer.single_linkage_tree_.get_clusters(getRadiansFromMeters(clusterTreeCuttingDist), min_cluster_size=2) #0.000035 without haversine: 223 m (or 95 m for 0.000015)
         mask_noisy = (sel_labels == -1)
         number_of_clusters = len(np.unique(sel_labels[~mask_noisy])) #len(sel_labels)
-        #if toptag[0] == "water":
-        #    print(sel_labels)
         palette = sns.color_palette(None, len(sel_labels)) #sns.color_palette("hls", ) #sns.color_palette(None, 100)
         sel_colors = [palette[x] if x >= 0
                       else (0.5, 0.5, 0.5)
@@ -766,6 +793,8 @@ def cluster_tag(toptag,preview=None):
             plt.suptitle(toptag[0].upper(), fontsize=18, fontweight='bold') #plt references the last figure accessed
             ax = plt.scatter(points.T[0], points.T[1], color=sel_colors, **plot_kwds)
             fig1.canvas.set_window_title('Cluster Preview')
+            plt.title('Cluster Preview @ ' + str(clusterTreeCuttingDist) +'m', fontsize=12,loc='center')
+            #plt.title('Cluster Preview')
             #xmax = ax.get_xlim()[1]
             #ymax = ax.get_ylim()[1]
             noisyTxt = '{}/{}'.format(mask_noisy.sum(), len(mask_noisy))
@@ -775,50 +804,59 @@ def cluster_tag(toptag,preview=None):
             fig1 = plt.figure(num=1,figsize=(11, int(11*imgRatio)), dpi=80)
             fig1.canvas.set_window_title('Cluster Preview')
             plt.suptitle(toptag[0].upper(), fontsize=18, fontweight='bold')
+            plt.title('Cluster Preview @ ' + str(clusterTreeCuttingDist) +'m', fontsize=12,loc='center')
             #xmax = fig1.get_xlim()[1]
             #ymax = fig1.get_ylim()[1]
             noisyTxt = '{} / {}'.format(mask_noisy.sum(), len(mask_noisy))
             plt.text(limXMax, limYMax,str(number_of_clusters) + ' Clusters (Noise: ' + noisyTxt + ')',fontsize=10,horizontalalignment='right',verticalalignment='top',fontweight='bold')
-
+        plt.gca().set_xlim([limXMin, limXMax]) 
+        plt.gca().set_ylim([limYMin, limYMax])            
         plt.tick_params(labelsize=10)
+        #if len(tagRadiansData) < 10000:
         if fig2:
             plt.figure(2).clf()
             plt.suptitle(toptag[0].upper(), fontsize=18, fontweight='bold')
+            #plt.title('Condensed Tree', fontsize=12,loc='center')
             clusterer.condensed_tree_.plot(select_clusters=False, selection_palette=sel_colors,label_clusters=True)
         else:
             plt.figure(2).canvas.set_window_title('Condensed Tree')
-            fig2 = clusterer.condensed_tree_.plot(select_clusters=False, selection_palette=sel_colors,label_clusters=True)
+            fig2 = clusterer.condensed_tree_.plot(select_clusters=False, selection_palette=sel_colors,label_clusters=False)
+            #fig2 = clusterer.condensed_tree_.plot(select_clusters=False, selection_palette=sel_colors,label_clusters=True)
+            #plt.title('Condensed Tree', fontsize=12,loc='center')
             plt.suptitle(toptag[0].upper(), fontsize=18, fontweight='bold')
         plt.tick_params(labelsize=10)
         if fig3:
             plt.figure(3).clf()
             plt.suptitle(toptag[0].upper(), fontsize=18, fontweight='bold')
+            #plt.title('Single Linkage Tree', fontsize=12,loc='center')
             #clusterer.single_linkage_tree_.plot(truncate_mode='lastp',p=50)
-            ax = clusterer.single_linkage_tree_.plot(truncate_mode='lastp',p=50)
+            ax = clusterer.single_linkage_tree_.plot(truncate_mode='lastp',p=max(50,min(number_of_clusters,500))) #p is the number of max count of leafs in the tree, this should at least be the number of clusters, not lower than 50 [but max 500 to not crash]
             #tkinter.messagebox.showinfo("messagr", str(type(ax)))
-            vals = ax.get_yticks()
-            ax.set_yticklabels(['{:3.1f}m'.format(getMetersFromRadians(x)) for x in vals])
             #plot cutting distance
             y = getRadiansFromMeters(clusterTreeCuttingDist)
             xmin = ax.get_xlim()[0]
             xmax = ax.get_xlim()[1]
-            line, = ax.plot([xmin, xmax], [y, y], color='k', label='Cluster (Cut) Distance')
-            line.set_label('Cluster (Cut) Distance')             
+            line, = ax.plot([xmin, xmax], [y, y], color='k', label='Cluster (Cut) Distance ' + str(clusterTreeCuttingDist) +'m')
+            line.set_label('Cluster (Cut) Distance ' + str(clusterTreeCuttingDist) +'m')             
             ax.legend(fontsize=10)
+            vals = ax.get_yticks()
+            ax.set_yticklabels(['{:3.1f}m'.format(getMetersFromRadians(x)) for x in vals])
+
         else:
             plt.figure(3).canvas.set_window_title('Single Linkage Tree')
-            fig3 = clusterer.single_linkage_tree_.plot(truncate_mode='lastp',p=50)
+            fig3 = clusterer.single_linkage_tree_.plot(truncate_mode='lastp',p=max(50,min(number_of_clusters,500)))
             plt.suptitle(toptag[0].upper(), fontsize=18, fontweight='bold')
+            #plt.title('Single Linkage Tree', fontsize=12,loc='center')
             #tkinter.messagebox.showinfo("messagr", str(type(fig3)))
-            vals = fig3.get_yticks()
-            fig3.set_yticklabels(['{:3.1f}m'.format(getMetersFromRadians(x)) for x in vals])
             #plot cutting distance
             y = getRadiansFromMeters(clusterTreeCuttingDist)
             xmin = fig3.get_xlim()[0]
             xmax = fig3.get_xlim()[1]
-            line, = fig3.plot([xmin, xmax], [y, y], color='k', label='Cluster (Cut) Distance')
-            line.set_label('Cluster (Cut) Distance')
+            line, = fig3.plot([xmin, xmax], [y, y], color='k', label='Cluster (Cut) Distance ' + str(clusterTreeCuttingDist) +'m')
+            line.set_label('Cluster (Cut) Distance ' + str(clusterTreeCuttingDist) +'m')
             fig3.legend(fontsize=10)
+            vals = fig3.get_yticks()
+            fig3.set_yticklabels(['{:3.1f}m'.format(getMetersFromRadians(x)) for x in vals])
         plt.tick_params(labelsize=10)
         #adjust scalebar limits
         tkScalebar.configure(from_=(clusterTreeCuttingDist/100), to=(clusterTreeCuttingDist*2))
@@ -870,6 +908,7 @@ def onselect(evt):
     #plt.close('all')
 def cluster_currentDisplayTag():
     if currentDisplayTag:
+        #tkinter.messagebox.showinfo("Clustertag: ", str(currentDisplayTag))
         cluster_tag(currentDisplayTag)
     else:
         cluster_tag(topTagsList[0])
@@ -895,16 +934,24 @@ def proceedClusterAllTags():
 
 #A frame is created for each window/part of the gui; after it is used, it is destroyed with frame.destroy()
 listboxFrame = tk.Frame(app.floater)
-canvas = tk.Canvas(listboxFrame, width=150, height=400, highlightthickness=0,background="gray7")
+canvas = tk.Canvas(listboxFrame, width=150, height=200, highlightthickness=0,background="gray7")
 l = tk.Label(canvas, text="Optional: Exclude tags.", background="gray7",fg="gray80",font="Arial 10 bold")
 l.pack(padx=10, pady=10)
 l = tk.Label(canvas, text="Select all tags you wish to exclude from analysis \n and click on remove to proceed.", background="gray7",fg="gray80")
 l.pack(padx=10, pady=10)
-listbox = tk.Listbox(canvas,selectmode=tk.MULTIPLE, bd=0,background="gray29",fg="gray91")
+listbox = tk.Listbox(canvas,selectmode=tk.MULTIPLE, bd=0,background="gray29",fg="gray91",width=30)
 listbox.bind('<<ListboxSelect>>', onselect)
+scroll = tk.Scrollbar(canvas, orient=tk.VERTICAL,background="gray20",borderwidth=0)
+scroll.configure(command=listbox.yview)
+scroll.pack(side="right", fill="y")
 listbox.pack()
+listbox.config(yscrollcommand=scroll.set)
 for item in topTagsList[:500]: #only for first 100 entries
-    listbox.insert(tk.END, item[0] + " ("+ str(item[1]) + " photos)")
+    listbox.insert(tk.END, item[0] + " ("+ str(item[1]) + " user)")
+canvas.pack(fill='both',padx=0, pady=0)
+listboxFrame.pack(fill='both',padx=0, pady=0)
+buttonsFrame = tk.Frame(app.floater)
+canvas = tk.Canvas(buttonsFrame, width=150, height=200, highlightthickness=0,background="gray7")
 b = tk.Button(canvas, text = "Remove Tag(s)", command = lambda: delete(listbox), background="gray20",fg="gray80",borderwidth=0,font="Arial 10 bold")
 b.pack(padx=10, pady=10)
 c = tk.Checkbutton(canvas, text="Map Tags", variable=genPreviewMap,background="gray7",fg="gray80",borderwidth=0,font="Arial 10 bold")
@@ -919,7 +966,7 @@ b.pack(padx=10, pady=10)
 b = tk.Button(canvas, text = "Quit", command=quitTkinter, background="gray20",fg="gray80",borderwidth=0,font="Arial 10 bold")
 b.pack(padx=10, pady=10)
 canvas.pack(fill='both',padx=0, pady=0)
-listboxFrame.pack(fill='both',padx=0, pady=0)
+buttonsFrame.pack(fill='both',padx=0, pady=0)
 
 #end of tkinter main loop 
 app.mainloop()

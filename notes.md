@@ -30,3 +30,13 @@ https://stackoverflow.com/questions/11436777/is-there-a-way-to-embed-dependencie
 https://stackoverflow.com/questions/5458048/how-to-make-a-python-script-standalone-executable-to-run-without-any-dependency
 **py2exe**:
     http://docs.python-guide.org/en/latest/shipping/freezing/
+    
+
+#other cluster algorithms
+
+largeVis: An Implementation of the LargeVis Algorithm
+https://cran.r-project.org/web/packages/largeVis/vignettes/largeVis.html
+
+t-SNE
+https://blog.datascienceheroes.com/playing-with-dimensions-from-clustering-pca-t-sne-to-carl-sagan/
+https://lvdmaaten.github.io/tsne/
