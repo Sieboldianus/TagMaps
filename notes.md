@@ -24,6 +24,7 @@ or, if all points are seperated beforehand, HULL is also possible, simply genera
         or concave hull: http://ubicomp.algoritmi.uminho.pt/local/concavehull.html
         https://github.com/mlaloux/Python--alpha-shape_concave_hull
         http://blog.thehumangeo.com/2014/05/12/drawing-boundaries-in-python/ !!
+        https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.ConvexHull.html#scipy.spatial.ConvexHull
 # Single executable python file
 
 https://stackoverflow.com/questions/11436777/is-there-a-way-to-embed-dependencies-within-a-python-script

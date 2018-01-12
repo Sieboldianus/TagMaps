@@ -31,6 +31,7 @@ import datetime
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+plt.ion() #enable interactive mode for pyplot (not necessary?!)
 import seaborn as sns
 import sklearn.datasets as data
 import pandas as pd
@@ -48,7 +49,8 @@ from time import sleep
 #from mpl_toolkits.basemap import Basemap
 #from PIL import Image
 
-#import fiona #Fiona needed for reading Shapefile
+import fiona #Fiona needed for reading Shapefile
+import shapely.geometry as geometry
 #from shapely.geometry import Polygon
 #from shapely.geometry import shape
 #from shapely.geometry import Point
@@ -130,6 +132,27 @@ count_tags_skipped = 0
 shapeFileExcludelocIDhash = set()
 shapeFileIncludedlocIDhash  = set()
 
+#initialize global variables for analysis bounds (lat, lng coordinates)
+limLatMin = None
+limLatMax = None
+limLngMin = None
+limLngMax = None
+def setLatLngBounds(Lat,Lng):
+    global limLatMin, limLatMax, limLngMin, limLngMax
+    if limLatMin is None or (Lat < limLatMin and not Lat == 0):
+        limLatMin = Lat
+    if limLatMax is None or (Lat > limLatMax and not Lat == 0):
+        limLatMax = Lat      
+    if limLngMin is None or (Lng < limLngMin and not Lng == 0):
+        limLngMin = Lng       
+    if limLngMax is None or (Lng > limLngMax and not Lng == 0):
+        limLngMax = Lng
+def is_number(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False        
 LocationsPerUserID_dict = defaultdict(set)
 UserLocationTagList_dict = defaultdict(set)
 UserLocationWordList_dict = defaultdict(set)
@@ -187,6 +210,7 @@ for file_name in filelist:
                     if (photo_locID in loc_dict):
                         photo_latitude = loc_dict[photo_locID][0]
                         photo_longitude = loc_dict[photo_locID][1]
+                        #setLatLngBounds(photo_latitude,photo_longitude)
                         if shapefileIntersect:
                             #skip all outside shapefile
                             if photo_locID in shapeFileExcludelocIDhash:
@@ -308,8 +332,17 @@ for file_name in filelist:
                     photo_comments = ""
                     photo_mediatype = ""
                     photo_locName = ""
-                    photo_latitude = Decimal(item[1])
-                    photo_longitude = Decimal(item[2])
+                    if is_number(item[1]):
+                        photo_latitude = Decimal(item[1])
+                    else:
+                        skippedCount += 1
+                        continue
+                    if is_number(item[2]):    
+                        photo_longitude = Decimal(item[2])
+                    else:
+                        skippedCount += 1
+                        continue
+                    setLatLngBounds(photo_latitude,photo_longitude)
                     photo_locID = str(photo_latitude) + ':' + str(photo_longitude) #create loc_id from lat/lng              
                     photo_mTags = "" #not used currently but available
                     photo_views = item[10]                                                             
@@ -448,6 +481,8 @@ for file_name in filelist:
 
 total_distinct_locations = len(distinctLocations_set)
 print("\nTotal distinct locations: " + str(total_distinct_locations))
+#boundary:
+print("Bounds are: Min " + str(float(limLngMin)) + " " + str(float(limLatMin)) + " Max " + str(float(limLngMax)) + " " + str(float(limLatMax)))
 cleanedPhotoList = []
 #create structure for tuple with naming for easy referencing
 cleanedPhotoLocation_tuple = namedtuple('cleanedPhotoLocation_tuple', 'source lat lng photo_guid photo_owner userid photo_caption photo_dateTaken photo_uploadDate photo_views photo_tags photo_thumbnail photo_mTags photo_likes photo_comments photo_shortcode photo_mediatype photo_locName photo_locID')
@@ -667,38 +702,6 @@ clusterTreeCuttingDist = (distX/100)*4 #4% of research area width = default valu
 #    #app.title("Select Cluster Distance")
 #    first = False
 
-#def cluster_tags():
-#    #global app
-#    #global def_functions
-#    #global plt
-#    global tnum #global reference because tnum is changed in this function
-#    global first
-#    #global plot_kwds
-#    global cleanedPhotoList
-#    global topTagsList
-#    #photo selection
-#    tnum = 1
-#    for toptag in topTagsList:
-#        clusters, selectedPhotoList = cluster_tag(toptag,None,True)
-#        #clusters contains the cluster values (-1 = no cluster, 0 maybe, >0 = cluster
-#        # in the same order, selectedPhotoList contains all original photo data, thus clusters[10] and selectedPhotoList[10] refer to the same photo
-#        mask_noisy = (clusters == -1)
-#        number_of_clusters = len(np.unique(clusters[~mask_noisy])) #mit noisy (=0)
-#        print("--> " + str(number_of_clusters) + " cluster.")
-#        tnum += 1
-#        #plt.close('all')
-#        clusterPhotosArray = [selectedPhotoList[i] for i in clusters]
-#        
-#        #if tnum > 20:
-#        #    photo_num = 0
-#        #    for x in clusters:
-#        #        currentClusterPhotos = selectedPhotoList[x]
-#        #        if x >= 0: # no clusters: x = -1
-#        #            currentClusterPhotos = [selectedPhotoList[i] for i in clusters] 
-#        #            #print(str(x)) #--> value of x contains the number of the cluster! Numbers are NOT sorted!
-#        #            #print(selectedPhotoList[photo_num][:5])
-#        #        photo_num+=1
-#        #    break
 def quitTkinter():
     #exits Tkinter gui and continues with code execution after mainloop()
     #global app
@@ -710,9 +713,12 @@ def quitTkinter():
     app.quit() ##root.quit() causes mainloop to exit, see https://stackoverflow.com/questions/2307464/what-is-the-difference-between-root-destroy-and-root-quit
 def proceedWithCluster():
     global proceedClusting
+    global fig1
     proceedClusting = True
 #def vis_tag(tag):
     #tkinter.messagebox.showinfo("Proceed", "Proceed")
+    #if plt.figure(1):
+    #    plt.figure(1).clf()
     app.update() #see https://stackoverflow.com/questions/35040168/python-tkinter-error-cant-evoke-event-command
     app.destroy()
     app.quit()
@@ -739,9 +745,10 @@ def cluster_tag(toptag,preview=None,silent=None):
     global first
     global currentDisplayTag
     global limYMin, limYMax, limXMin, limXMax, distY, distX, imgRatio, floaterX, floaterY
-    #global graphFrame
     global fig1, fig2, fig3, fig4
-    global tkScalebar
+    #global graphFrame
+    
+    
 
     #if graphFrame: #if 
     #    graphFrame.destroy()
@@ -829,6 +836,7 @@ def cluster_tag(toptag,preview=None,silent=None):
                       for x in sel_labels] #clusterer.labels_ (best selection) or sel_labels (cut distance)
         #tkinter.messagebox.showinfo("Num of clusters: ", str(len(sel_colors)) + " " + str(sel_colors[1]))
         #output/update matplotlib figures
+        
         if fig1:
             plt.figure(1).clf()
             plt.suptitle(toptag[0].upper(), fontsize=18, fontweight='bold') #plt references the last figure accessed
@@ -878,7 +886,7 @@ def cluster_tag(toptag,preview=None,silent=None):
         if fig3:
             plt.figure(3).clf()
             plt.suptitle(toptag[0].upper(), fontsize=18, fontweight='bold')
-            #plt.title('Single Linkage Tree', fontsize=12,loc='center')
+            plt.title('Single Linkage Tree', fontsize=12,loc='center')
             #clusterer.single_linkage_tree_.plot(truncate_mode='lastp',p=50)
             ax = clusterer.single_linkage_tree_.plot(truncate_mode='lastp',p=max(50,min(number_of_clusters*10,256))) #p is the number of max count of leafs in the tree, this should at least be the number of clusters*10, not lower than 50 [but max 500 to not crash]
             #tkinter.messagebox.showinfo("messagr", str(type(ax)))
@@ -895,7 +903,7 @@ def cluster_tag(toptag,preview=None,silent=None):
             plt.figure(3).canvas.set_window_title('Single Linkage Tree')
             fig3 = clusterer.single_linkage_tree_.plot(truncate_mode='lastp',p=max(50,min(number_of_clusters*10,256)))
             plt.suptitle(toptag[0].upper(), fontsize=18, fontweight='bold')
-            #plt.title('Single Linkage Tree', fontsize=12,loc='center')
+            plt.title('Single Linkage Tree', fontsize=12,loc='center')
             #tkinter.messagebox.showinfo("messagr", str(type(fig3)))
             #plot cutting distance
             y = getRadiansFromMeters(clusterTreeCuttingDist)
@@ -943,6 +951,7 @@ def cluster_tag(toptag,preview=None,silent=None):
                 #cb.ax.set_yticklabels(['{:3.1f}m'.format(getMetersFromRadians(x)) for x in vals]) 
         plt.tick_params(labelsize=10)
         #adjust scalebar limits
+        global tkScalebar
         tkScalebar.configure(from_=(clusterTreeCuttingDist/100), to=(clusterTreeCuttingDist*2))
         
 def getRadiansFromMeters(dist):
@@ -1012,7 +1021,7 @@ def delete(listbox):
 ######################################################################################################################################################
 
 #A frame is created for each window/part of the gui; after it is used, it is destroyed with frame.destroy()
-#plt.ion() #enable interactive mode for pyplot (not necessary?!)
+
 listboxFrame = tk.Frame(app.floater)
 canvas = tk.Canvas(listboxFrame, width=150, height=200, highlightthickness=0,background="gray7")
 l = tk.Label(canvas, text="Optional: Exclude tags.", background="gray7",fg="gray80",font="Arial 10 bold")
@@ -1048,47 +1057,172 @@ b.pack(padx=10, pady=10)
 canvas.pack(fill='both',padx=0, pady=0)
 buttonsFrame.pack(fill='both',padx=0, pady=0)
 
-#end of tkinter main loop 
+#end of tkinter main loop
+#
 app.mainloop()
+plt.close("all")
+from descartes import PolygonPatch
+def plot_polygon(polygon):
+    fig = plt.figure(figsize=(10,10))
+    ax = fig.add_subplot(111)
+    margin = .3
+    x_min, y_min, x_max, y_max = polygon.bounds
+    ax.set_xlim([x_min-margin, x_max+margin])
+    ax.set_ylim([y_min-margin, y_max+margin])
+    patch = PolygonPatch(polygon, fc='#999999',
+                         ec='#000000', fill=True,
+                         zorder=-1)
+    ax.add_patch(patch)
+    return fig
+from shapely.ops import cascaded_union, polygonize
+from scipy.spatial import Delaunay
+import math
+def alpha_shape(points, alpha):
+    """
+    Alpha Shapes Code by KEVIN DWYER
+    see http://blog.thehumangeo.com/2014/05/12/drawing-boundaries-in-python/
+    Compute the alpha shape (concave hull) of a set
+    of points.
+    @param points: Iterable container of points.
+    @param alpha: alpha value to influence the
+        gooeyness of the border. Smaller numbers
+        don't fall inward as much as larger numbers.
+        Too large, and you lose everything!
+    """
+    if len(points) < 4:
+        # When you have a triangle, there is no sense
+        # in computing an alpha shape.
+        return geometry.MultiPoint(list(points)).convex_hull
+    def add_edge(edges, edge_points, coords, i, j):
+        """
+        Add a line between the i-th and j-th points,
+        if not in the list already
+        """
+        if (i, j) in edges or (j, i) in edges:
+            # already added
+            return
+        edges.add( (i, j) )
+        edge_points.append(coords[ [i, j] ])
+    coords = np.array([point.coords[0]
+                       for point in points])
+    
+    #print(str(len(coords)))
+    tri = Delaunay(coords)#,qhull_o}ptions = 'QJ') #To avoid this error, you can joggle the data by specifying the 'QJ' option to the DELAUNAY function. https://de.mathworks.com/matlabcentral/answers/94438-why-does-the-delaunay-function-in-matlab-7-0-r14-produce-an-error-when-passed-colinear-points?s_tid=gn_loc_drop
+    #tri = Delaunay(coords,{'QJ'}) #Version 3.1 added triangulated output ('Qt'). It should be used for Delaunay triangulations instead of using joggled input ('QJ').
+    edges = set()
+    edge_points = []
+    # loop over triangles:
+    # ia, ib, ic = indices of corner points of the
+    # triangle
+    for ia, ib, ic in tri.vertices:
+        pa = coords[ia]
+        pb = coords[ib]
+        pc = coords[ic]
+        # Lengths of sides of triangle
+        a = math.sqrt((pa[0]-pb[0])**2 + (pa[1]-pb[1])**2)
+        b = math.sqrt((pb[0]-pc[0])**2 + (pb[1]-pc[1])**2)
+        c = math.sqrt((pc[0]-pa[0])**2 + (pc[1]-pa[1])**2)
+        # Semiperimeter of triangle
+        s = (a + b + c)/2.0
+        # Area of triangle by Heron's formula
+        area = math.sqrt(s*(s-a)*(s-b)*(s-c))
+        circum_r = a*b*c/(4.0*area)
+        # Here's the radius filter.
+        #print circum_r
+        if circum_r < 1.0/alpha:
+            add_edge(edges, edge_points, coords, ia, ib)
+            add_edge(edges, edge_points, coords, ib, ic)
+            add_edge(edges, edge_points, coords, ic, ia)
+    m = geometry.MultiLineString(edge_points)
+    triangles = list(polygonize(m))
+    return cascaded_union(triangles)#, edge_points
+    #return geometry.polygon.asPolygon(edge_points,holes=None)
 
+bdist = 0
+noClusterPhotos_perTag_DictOfLists = defaultdict(list)
+clustersPerTag = defaultdict(list)
 if proceedClusting:
     #Proceed with clustering all tags
     tnum = 1
     for toptag in topTagsList:
+        
         clusters, selectedPhotoList = cluster_tag(toptag,None,True)
+        #print("baseDataList: ")
+        #print(str(type(selectedPhotoList)))
+        #for s in selectedPhotoList[:2]:
+        #    print(*s)
+        #print("resultData: ")
+        ##for s in clusters[:2]:
+        ##    print(*s)
+        #print(str(type(clusters)))
+        #print(clusters)
         #clusters contains the cluster values (-1 = no cluster, 0 maybe, >0 = cluster
         # in the same order, selectedPhotoList contains all original photo data, thus clusters[10] and selectedPhotoList[10] refer to the same photo
         mask_noisy = (clusters == -1)
         number_of_clusters = len(np.unique(clusters[~mask_noisy])) #mit noisy (=0)
         print("--> " + str(number_of_clusters) + " cluster.")
         tnum += 1
-        #plt.close('all')
-        #sys.exit(str(type(selectedPhotoList)) + " " + str(type(clusters)))
-        #for x in range(0,number_of_clusters):
-        #    #selArray = selectedPhotoList[clusters=x]
-        #    #clusterPhotosArray = selectedPhotoList[clusters == x]
-        #    if x < 30:
-        #        print(str(len(selArray)))
         photo_num = 0
-        clusterPhotosList = [[] for x in range(number_of_clusters)] 
+        clusterPhotosList = [[] for x in range(number_of_clusters)]
         for x in clusters:
-            photolist = []
+            #photolist = []
             if x >= 0: # no clusters: x = -1
                 clusterPhotosList[x].append(selectedPhotoList[photo_num])
                 #clusterPhotosArray_dict[x].add(selectedPhotoList[photo_num])
+            else:
+                noClusterPhotos_perTag_DictOfLists[toptag].append(selectedPhotoList[photo_num])
             photo_num+=1
-        print(str(toptag) + " - Number of clusters: " + str(len(clusterPhotosList)) + " Photo num: " + str(photo_num))    
-        #if tnum > 20:
-        #    photo_num = 0
-        #    for x in clusters:
-        #        currentClusterPhotos = selectedPhotoList[x]
-        #        if x >= 0: # no clusters: x = -1
-        #            currentClusterPhotos = [selectedPhotoList[i] for i in clusters] 
-        #            #print(str(x)) #--> value of x contains the number of the cluster! Numbers are NOT sorted!
-        #            #print(selectedPhotoList[photo_num][:5])
-        #        photo_num+=1
-        #    break
-    
+        #print("resultList: ")
+        #for s in clusterPhotosList[:2]:
+        #    print(*s)
+        #print(str(toptag) + " - Number of clusters: " + str(len(clusterPhotosList)) + " Photo num: " + str(photo_num))
+        # Sort descending based on size of cluster: https://stackoverflow.com/questions/30346356/how-to-sort-list-of-lists-according-to-length-of-sublists
+        clusterPhotosList.sort(key=len, reverse=True)
+        if not len(clusterPhotosList) == 0:
+            clustersPerTag[toptag] = clusterPhotosList
+        #plt.autoscale(enable=True)
+        for cluster in clusterPhotosList:
+            points = [geometry.Point(point[2], point[1])
+                      for point in cluster]
+            x = [p.coords.xy[0] for p in points]
+            y = [p.coords.xy[1] for p in points]
+            point_collection = geometry.MultiPoint(list(points))
+            result_polygon = None
+            if len(points) > 10:
+                if len(points) < 20:
+                    result_polygon = point_collection.convex_hull #convex hull
+                    result_polygon = result_polygon.buffer((limLngMax-limLngMin)/200,resolution=3)
+                else:
+                    result_polygon = alpha_shape(points,alpha=clusterTreeCuttingDist*10) #concave hull/alpha shape
+                    if type(result_polygon) is geometry.multipolygon.MultiPolygon:
+                        #repeat generating alpha shapes with smaller alpha value if Multigon is generated
+                        result_polygon = alpha_shape(points,alpha=clusterTreeCuttingDist*5)
+                        if type(result_polygon) is geometry.multipolygon.MultiPolygon:
+                            result_polygon = alpha_shape(points,alpha=clusterTreeCuttingDist)
+                            if type(result_polygon) is geometry.multipolygon.MultiPolygon:
+                                #if still of type multipolygon, try to remove holes and do a convex_hull
+                                result_polygon = result_polygon.convex_hull
+                    result_polygon = result_polygon.buffer((limLngMax-limLngMin)/200,resolution=3)
+            elif 2 <= len(points) < 5: 
+                #calc distance between points http://www.mathwarehouse.com/algebra/distance_formula/index.php
+                #bdist = math.sqrt((points[0].coords.xy[0][0]-points[1].coords.xy[0][0])**2 + (points[0].coords.xy[1][0]-points[1].coords.xy[1][0])**2)
+                #print(str(bdist))
+                result_polygon = point_collection.buffer((limLngMax-limLngMin)/200,resolution=3) #single dots are presented as buffer with 0.5% of width-area
+            elif len(points)==1 or type(result_polygon) is geometry.point.Point or result_polygon is None:
+                result_polygon = point_collection.buffer((limLngMax-limLngMin)/200,resolution=3) #single dots are presented as buffer with 0.5% of width-area
+            #final check for multipolygon
+            if type(result_polygon) is geometry.multipolygon.MultiPolygon:
+                    result_polygon = result_polygon.convex_hull
+            plot_polygon(result_polygon)
+            plt.gca().set_xlim([float(limLngMin), float(limLngMax)]) 
+            plt.gca().set_ylim([float(limLatMin), float(limLatMax)])
+            plt.plot(x,y,'o',ms=5)
+            plt.waitforbuttonpress()
+            plt.close()
+        if tnum == 4:
+            break
+            #plt.savefig('foo.png')
+            #sys.exit()
     print("########## STEP 4 of 4: Calculation of Tag Cluster Shapes ##########")
     #for each cluster of points, calculate boundary shape and add statistics (HImpTag etc.)
     
