@@ -484,9 +484,11 @@ total_distinct_locations = len(distinctLocations_set)
 print("\nTotal distinct locations: " + str(total_distinct_locations))
 #boundary:
 print("Bounds are: Min " + str(float(limLngMin)) + " " + str(float(limLatMin)) + " Max " + str(float(limLngMax)) + " " + str(float(limLatMax)))
-cleanedPhotoList = []
+#cleanedPhotoList = []
+
 #create structure for tuple with naming for easy referencing
 cleanedPhotoLocation_tuple = namedtuple('cleanedPhotoLocation_tuple', 'source lat lng photo_guid photo_owner userid photo_caption photo_dateTaken photo_uploadDate photo_views photo_tags photo_thumbnail photo_mTags photo_likes photo_comments photo_shortcode photo_mediatype photo_locName photo_locID')
+cleanedPhotoDict = defaultdict(cleanedPhotoLocation_tuple)
 with open("Output/Output_cleaned.txt", 'w', encoding='utf8') as csvfile:
     csvfile.write("SOURCE,Latitude,Longitude,PhotoID,Owner,UserID,Name,DateTaken,UploadDate,Views,Tags,URL,MTags,Likes,Comments,Shortcode,Type,LocName,LocID," + '\n')
     datawriter = csv.writer(csvfile, delimiter=',', lineterminator='\n', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
@@ -536,7 +538,8 @@ with open("Output/Output_cleaned.txt", 'w', encoding='utf8') as csvfile:
                           cleanedPhotoLocation.photo_locName,#photo_locName = 17
                           cleanedPhotoLocation.photo_locID]#photo_locID = 18
                           )
-            cleanedPhotoList.append(cleanedPhotoLocation)
+            #cleanedPhotoList.append(cleanedPhotoLocation)
+            cleanedPhotoDict[cleanedPhotoLocation.photo_guid] = cleanedPhotoLocation
 
 print("########## STEP 2 of 5: Tag Ranking ##########")
 overallNumOfUsersPerTag_global = collections.Counter()
@@ -662,6 +665,7 @@ fig4 = None
 #Optional: set global plotting bounds
 #plt.gca().set_xlim([limXMin, limXMax])
 #plt.gca().set_ylim([limYMin, limYMax])
+cleanedPhotoList = list(cleanedPhotoDict.values())
 df = pd.DataFrame(cleanedPhotoList) 
 points = df.as_matrix(['lng','lat'])
 limYMin = np.min(points.T[1])       
@@ -727,12 +731,12 @@ def proceedWithCluster():
 def sel_photos(tag,cleanedPhotoList):
     #select photos from list based on a specific tag
     distinctLocalLocationCount = set()
-    selectedPhotoList = []
+    selectedPhotoList_Guids = []
     for cleanedPhotoLocation in cleanedPhotoList:
         if tag in (cleanedPhotoLocation.photo_tags) or (tag in cleanedPhotoLocation.photo_caption):
-            selectedPhotoList.append(cleanedPhotoLocation)
+            selectedPhotoList_Guids.append(cleanedPhotoLocation.photo_guid)
             distinctLocalLocationCount.add(cleanedPhotoLocation.photo_locID)
-    return selectedPhotoList, len(distinctLocalLocationCount)
+    return selectedPhotoList_Guids, len(distinctLocalLocationCount)
 
 def fit_cluster(clusterer, data):
     clusterer.fit(data)
@@ -757,12 +761,13 @@ def cluster_tag(toptag,preview=None,silent=None):
     #canvas = tk.Canvas(graphFrame, width=canvasWidth, height=canvasHeight, highlightthickness=0,background="gray7")
     #l = tk.Label(canvas, text="Preview Map", background="gray7",fg="gray80",font="Arial 10 bold")
     #l.pack()    
-    selectedPhotoList, distinctLocalLocationCount = sel_photos(toptag[0],cleanedPhotoList)
+    selectedPhotoList_Guids, distinctLocalLocationCount = sel_photos(toptag[0],cleanedPhotoList)
     percentageOfTotalLocations = distinctLocalLocationCount/(total_distinct_locations/100)
     #tkinter.messagebox.showinfo("Num of clusters: ", "(" + str(tnum) + " of " + str(tmax) + ") Found " + str(len(selectedPhotoList)) + " photos for tag " + "'" + toptag[0] + "' (" + str(round(percentageOfTotalLocations,0)) + "% of total distinct locations in area)")
     if silent:
-        print("(" + str(tnum) + " of " + str(tmax) + ") Found " + str(len(selectedPhotoList)) + " photos for tag " + "'" + toptag[0] + "' (" + str(round(percentageOfTotalLocations,0)) + "% of total distinct locations in area)", end=" ")
+        print("(" + str(tnum) + " of " + str(tmax) + ") Found " + str(len(selectedPhotoList_Guids)) + " photos for tag " + "'" + toptag[0] + "' (" + str(round(percentageOfTotalLocations,0)) + "% of total distinct locations in area)", end=" ")
     #clustering
+    selectedPhotoList = [cleanedPhotoDict[x] for x in selectedPhotoList_Guids]
     df = pd.DataFrame(selectedPhotoList)
     points = df.as_matrix(['lng','lat']) #converts pandas data to numpy array (limit by list of column-names)
     
@@ -799,7 +804,7 @@ def cluster_tag(toptag,preview=None,silent=None):
         #cluster data
         tagRadiansData = np.radians(points) #conversion to radians for HDBSCAN (does not support decimal degrees)
         #for each tag in overallNumOfUsersPerTag_global.most_common(1000) (descending), calculate HDBSCAN Clusters
-        minClusterSize = max(2,int(((len(selectedPhotoList))/100)*5)) #4% optimum
+        minClusterSize = max(2,int(((len(selectedPhotoList_Guids))/100)*5)) #4% optimum
         #minClusterSize = 2
         clusterer = hdbscan.HDBSCAN(min_cluster_size=minClusterSize,gen_min_span_tree=createMinimumSpanningTree,allow_single_cluster=True,min_samples=1)
         #clusterer = hdbscan.HDBSCAN(min_cluster_size=minClusterSize,gen_min_span_tree=True,min_samples=1)
@@ -825,7 +830,7 @@ def cluster_tag(toptag,preview=None,silent=None):
 
         #exit function in case final processing loop (no figure generating)
         if silent:
-            return sel_labels, selectedPhotoList
+            return sel_labels, selectedPhotoList_Guids
         mask_noisy = (sel_labels == -1)
         number_of_clusters = len(np.unique(sel_labels[~mask_noisy])) #len(sel_labels)
         #palette = sns.color_palette("hls", )
@@ -1147,7 +1152,7 @@ if proceedClusting:
     tnum = 1
     for toptag in topTagsList:
         
-        clusters, selectedPhotoList = cluster_tag(toptag,None,True)
+        clusters, selectedPhotoList_Guids = cluster_tag(toptag, None, True)
         #print("baseDataList: ")
         #print(str(type(selectedPhotoList)))
         #for s in selectedPhotoList[:2]:
@@ -1159,43 +1164,72 @@ if proceedClusting:
         #print(clusters)
         #clusters contains the cluster values (-1 = no cluster, 0 maybe, >0 = cluster
         # in the same order, selectedPhotoList contains all original photo data, thus clusters[10] and selectedPhotoList[10] refer to the same photo
+        numpy_selectedPhotoList_Guids = np.asarray(selectedPhotoList_Guids)
         mask_noisy = (clusters == -1)
         number_of_clusters = len(np.unique(clusters[~mask_noisy])) #mit noisy (=0)
         print("--> " + str(number_of_clusters) + " cluster.")
         tnum += 1
         photo_num = 0
-        clusterPhotosList = [[] for x in range(number_of_clusters)]
-        for x in clusters:
-            #photolist = []
-            if x >= 0: # no clusters: x = -1
-                clusterPhotosList[x].append(selectedPhotoList[photo_num])
-                #clusterPhotosArray_dict[x].add(selectedPhotoList[photo_num])
-            else:
-                noClusterPhotos_perTag_DictOfLists[toptag].append(selectedPhotoList[photo_num])
-            photo_num+=1
+        #clusternum_photolist = zip(clusters,selectedPhotoList)
+        #clusterPhotosList = [[] for x in range(number_of_clusters)]
+        clusterPhotosGuidsList = []
+        for x in range(number_of_clusters):
+            currentClusterPhotoGuids = numpy_selectedPhotoList_Guids[clusters==x]
+            clusterPhotosGuidsList.append(currentClusterPhotoGuids)
+        noClusterPhotos_perTag_DictOfLists[toptag[0]] = list(numpy_selectedPhotoList_Guids[clusters==-1])
+        #for x in clusters:
+        #    #photolist = []
+        #    if x >= 0: # no clusters: x = -1
+        #        clusterPhotosList[x].append([selectedPhotoList[photo_num]])
+        #        #clusterPhotosArray_dict[x].add(selectedPhotoList[photo_num])
+        #    else:
+        #        noClusterPhotos_perTag_DictOfLists[toptag[0]].append(selectedPhotoList[photo_num])
+        #    photo_num+=1
+
         #print("resultList: ")
         #for s in clusterPhotosList[:2]:
         #    print(*s)
         #print(str(toptag) + " - Number of clusters: " + str(len(clusterPhotosList)) + " Photo num: " + str(photo_num))
         # Sort descending based on size of cluster: https://stackoverflow.com/questions/30346356/how-to-sort-list-of-lists-according-to-length-of-sublists
-        clusterPhotosList.sort(key=len, reverse=True)
-        if not len(clusterPhotosList) == 0:
-            clustersPerTag[toptag] = clusterPhotosList
+        clusterPhotosGuidsList.sort(key=len, reverse=True)
+        if not len(clusterPhotosGuidsList) == 0:
+            clustersPerTag[toptag[0]] = clusterPhotosGuidsList
         #plt.autoscale(enable=True)
         
-        if tnum == 4:
-            break
+        #if tnum == 50:
+        #    break
             #plt.savefig('foo.png')
             #sys.exit()
     print("########## STEP 4 of 5: Generating Alpha Shapes ##########")
+    sys.stdout.flush()
     #for each cluster of points, calculate boundary shape and add statistics (HImpTag etc.)
-    listOfPolygons = []
+    listOfAlphashapesAndMeta = []
+    tnum = 1
     for toptag in topTagsList:
-        if toptag in clustersPerTag:
-            clusterPhotoList = clustersPerTag[toptag]
-            for cluster in clusterPhotosList:
-                points = [geometry.Point(point[2], point[1])
-                          for point in cluster]
+        tnum += 1
+        clusterPhotoGuidList = clustersPerTag.get(toptag[0], None)
+        #print(toptag[0])
+        if clusterPhotoGuidList:
+            #clusterPhotoList = clustersPerTag[toptag[0]]
+            #print(str(len(clusterPhotoGuidList)))
+            firstCluster = True
+            for photo_guids in clusterPhotoGuidList:
+                if firstCluster:
+                    HImP = 1
+                    firstCluster = False
+                else:
+                    HImP = 0
+                #try:
+                #    print(*photos[:10])
+                #except UnicodeEncodeError:
+                #    print("skipped\n")
+                #get full photo data from dict as list
+                photos = [cleanedPhotoDict[x] for x in photo_guids]
+                
+                uniqueUserCount = len(set([photo.userid for photo in photos]))
+                sumViews = sum([photo.photo_views for photo in photos])
+                points = [geometry.Point(photo.lng, photo.lat)
+                          for photo in photos]
                 x = [p.coords.xy[0] for p in points]
                 y = [p.coords.xy[1] for p in points]
                 point_collection = geometry.MultiPoint(list(points))
@@ -1225,7 +1259,10 @@ if proceedClusting:
                 #final check for multipolygon
                 if type(result_polygon) is geometry.multipolygon.MultiPolygon:
                         result_polygon = result_polygon.convex_hull
-                listOfPolygons.append(result_polygon)
+                #Geom, Join_Count, Views,  COUNT_User,ImpTag,TagCountG,HImpTag
+
+                listOfAlphashapesAndMeta.append((result_polygon,len(photo_guids),sumViews,uniqueUserCount,toptag[0],toptag[1],HImP))
+                #print(str(listOfPolygons[len(listOfPolygons)-1])+'\n')
                 #plot_polygon(result_polygon)
                 #plt.suptitle(toptag[0].upper(), fontsize=18, fontweight='bold')
                 #plt.gca().set_xlim([float(limLngMin), float(limLngMax)]) 
@@ -1233,31 +1270,70 @@ if proceedClusting:
                 #plt.plot(x,y,'o',ms=5)
                 #plt.waitforbuttonpress()
                 #plt.close()
-        if toptag in noClusterPhotos_perTag_DictOfLists:
-            singlePhotoList = noClusterPhotos_perTag_DictOfLists[toptag]
-            for singlePhoto in singlePhotoList:
-                point = geometry.Point(singlePhoto[2], singlePhoto[1])
-                resultPolygon = point.buffer((limLngMax-limLngMin)/200,resolution=3)
-                listOfPolygons.append(result_polygon)
+        singlePhotoGuidList = noClusterPhotos_perTag_DictOfLists.get(toptag[0], None)
+        if singlePhotoGuidList:
+            #print("Single: " + str(len(singlePhotoGuidList)))
+            photos = [cleanedPhotoDict[x] for x in singlePhotoGuidList]
+            points = [geometry.Point(photo.lng, photo.lat)
+                      for photo in photos]
+            x = [p.coords.xy[0] for p in points]
+            y = [p.coords.xy[1] for p in points]
+            point_collection = geometry.MultiPoint(list(points))
+            result_polygon = point_collection.buffer((limLngMax-limLngMin)/200,resolution=3)
+            if type(result_polygon) is geometry.multipolygon.MultiPolygon:
+                for polygon in result_polygon:
+                    listOfAlphashapesAndMeta.append((result_polygon,1,0,1,toptag[0],toptag[1],0))
+            else:
+                listOfAlphashapesAndMeta.append((result_polygon,1,0,1,toptag[0],toptag[1],0))
+            
+        #if tnum == 50:
+        #    break
+        #if toptag in noClusterPhotos_perTag_DictOfLists:
+        #    singlePhotoList = noClusterPhotos_perTag_DictOfLists[toptag]
+        #    #for singlePhoto in singlePhotoList:
+        #    #point = geometry.Point(singlePhoto[2], singlePhoto[1])
+        #    points = [geometry.Point(point[2], point[1])
+        #              for point in singlePhotoList]
+        #    x = [p.coords.xy[0] for p in points]
+        #    y = [p.coords.xy[1] for p in points]
+        #    point_collection = geometry.MultiPoint(list(points))
+        #    result_polygon = point_collection.buffer((limLngMax-limLngMin)/200,resolution=3)
+        #    if type(result_polygon) is geometry.multipolygon.MultiPolygon:
+        #        for polygon in result_polygon:
+        #            listOfPolygons.append(result_polygon)
+        #    else:
+        #        listOfPolygons.append(result_polygon)
+            
+    print(str(len(listOfAlphashapesAndMeta)) + " Alpha Shapes. Done.")
     ##Output Boundary Shapes in merged Shapefile##
-    print("########## STEP 5 of 5: Generating Output ##########")
+    print("########## STEP 5 of 5: Writing Results to Shapefile ##########")
     
     # Define a polygon feature geometry with one attribute
     schema = {
         'geometry': 'Polygon',
-        'properties': {'id': 'int'},
+        'properties': {'Join_Count': 'int', 
+                       'Views': 'int',
+                       'COUNT_User': 'int',
+                       'ImpTag': 'str',
+                       'TagCountG': 'int',
+                       'HImpTag': 'int'},
     }
     
     # Write a new Shapefile
     # WGS1984
-    with fiona.open('allTagClusters.shp', mode='w', driver='ESRI Shapefile', schema=schema,crs=from_epsg(4326)) as c:
+    with fiona.open('Output/allTagClusters.shp', mode='w', driver='ESRI Shapefile', schema=schema,crs=from_epsg(4326)) as c:
         ## If there are multiple geometries, put the "for" loop here
         idx = 0
-        for polygon in listOfPolygons:
+        for alphaShapeAndMeta in listOfAlphashapesAndMeta:
             idx += 1
             c.write({
-                'geometry': geometry.mapping(polygon),
-                'properties': {'id': 123},
+                'geometry': geometry.mapping(alphaShapeAndMeta[0]),
+                'properties': {'Join_Count': alphaShapeAndMeta[1], 
+                               'Views': alphaShapeAndMeta[2],
+                               'COUNT_User': alphaShapeAndMeta[3],
+                               'ImpTag': alphaShapeAndMeta[4],
+                               'TagCountG': alphaShapeAndMeta[5],
+                               'HImpTag': alphaShapeAndMeta[6]},
             })
     
     print("\n" + "Done.")
