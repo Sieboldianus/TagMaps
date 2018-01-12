@@ -50,6 +50,7 @@ from time import sleep
 #from PIL import Image
 
 import fiona #Fiona needed for reading Shapefile
+from fiona.crs import from_epsg
 import shapely.geometry as geometry
 #from shapely.geometry import Polygon
 #from shapely.geometry import shape
@@ -118,7 +119,7 @@ else:
     sys.exit("Source not supported yet.")
 
 print('\n')
-print("########## STEP 1 of 4: Data Cleanup ##########")
+print("########## STEP 1 of 5: Data Cleanup ##########")
 if (len(filelist) == 0):
     sys.exit("No *.json/csv files found.")
 else:
@@ -537,7 +538,7 @@ with open("Output/Output_cleaned.txt", 'w', encoding='utf8') as csvfile:
                           )
             cleanedPhotoList.append(cleanedPhotoLocation)
 
-print("########## STEP 2 of 4: Tag Ranking ##########")
+print("########## STEP 2 of 5: Tag Ranking ##########")
 overallNumOfUsersPerTag_global = collections.Counter()
 for user_key, taghash in UserDict_TagCounters_global.items():
     #taghash contains unique values (= strings) for each user, thus summing up these taghashes counts each user only once per tag
@@ -549,7 +550,7 @@ with open("Output/Output_toptags.txt", 'w', encoding="utf8") as file: #overwrite
 tmax = 1000
 topTagsList = overallNumOfUsersPerTag_global.most_common(tmax)
 
-print("########## STEP 3 of 4: Tag Location Clustering ##########")
+print("########## STEP 3 of 5: Tag Location Clustering ##########")
 #prepare some variables
 tnum = 0
 first = True
@@ -1181,53 +1182,84 @@ if proceedClusting:
         if not len(clusterPhotosList) == 0:
             clustersPerTag[toptag] = clusterPhotosList
         #plt.autoscale(enable=True)
-        for cluster in clusterPhotosList:
-            points = [geometry.Point(point[2], point[1])
-                      for point in cluster]
-            x = [p.coords.xy[0] for p in points]
-            y = [p.coords.xy[1] for p in points]
-            point_collection = geometry.MultiPoint(list(points))
-            result_polygon = None
-            if len(points) > 10:
-                if len(points) < 20:
-                    result_polygon = point_collection.convex_hull #convex hull
-                    result_polygon = result_polygon.buffer((limLngMax-limLngMin)/200,resolution=3)
-                else:
-                    result_polygon = alpha_shape(points,alpha=clusterTreeCuttingDist*10) #concave hull/alpha shape
-                    if type(result_polygon) is geometry.multipolygon.MultiPolygon:
-                        #repeat generating alpha shapes with smaller alpha value if Multigon is generated
-                        result_polygon = alpha_shape(points,alpha=clusterTreeCuttingDist*5)
-                        if type(result_polygon) is geometry.multipolygon.MultiPolygon:
-                            result_polygon = alpha_shape(points,alpha=clusterTreeCuttingDist)
-                            if type(result_polygon) is geometry.multipolygon.MultiPolygon:
-                                #if still of type multipolygon, try to remove holes and do a convex_hull
-                                result_polygon = result_polygon.convex_hull
-                    result_polygon = result_polygon.buffer((limLngMax-limLngMin)/200,resolution=3)
-            elif 2 <= len(points) < 5: 
-                #calc distance between points http://www.mathwarehouse.com/algebra/distance_formula/index.php
-                #bdist = math.sqrt((points[0].coords.xy[0][0]-points[1].coords.xy[0][0])**2 + (points[0].coords.xy[1][0]-points[1].coords.xy[1][0])**2)
-                #print(str(bdist))
-                result_polygon = point_collection.buffer((limLngMax-limLngMin)/200,resolution=3) #single dots are presented as buffer with 0.5% of width-area
-            elif len(points)==1 or type(result_polygon) is geometry.point.Point or result_polygon is None:
-                result_polygon = point_collection.buffer((limLngMax-limLngMin)/200,resolution=3) #single dots are presented as buffer with 0.5% of width-area
-            #final check for multipolygon
-            if type(result_polygon) is geometry.multipolygon.MultiPolygon:
-                    result_polygon = result_polygon.convex_hull
-            plot_polygon(result_polygon)
-            plt.gca().set_xlim([float(limLngMin), float(limLngMax)]) 
-            plt.gca().set_ylim([float(limLatMin), float(limLatMax)])
-            plt.plot(x,y,'o',ms=5)
-            plt.waitforbuttonpress()
-            plt.close()
+        
         if tnum == 4:
             break
             #plt.savefig('foo.png')
             #sys.exit()
-    print("########## STEP 4 of 4: Calculation of Tag Cluster Shapes ##########")
+    print("########## STEP 4 of 5: Generating Alpha Shapes ##########")
     #for each cluster of points, calculate boundary shape and add statistics (HImpTag etc.)
-    
+    listOfPolygons = []
+    for toptag in topTagsList:
+        if toptag in clustersPerTag:
+            clusterPhotoList = clustersPerTag[toptag]
+            for cluster in clusterPhotosList:
+                points = [geometry.Point(point[2], point[1])
+                          for point in cluster]
+                x = [p.coords.xy[0] for p in points]
+                y = [p.coords.xy[1] for p in points]
+                point_collection = geometry.MultiPoint(list(points))
+                result_polygon = None
+                if len(points) > 10:
+                    if len(points) < 20:
+                        result_polygon = point_collection.convex_hull #convex hull
+                        result_polygon = result_polygon.buffer((limLngMax-limLngMin)/200,resolution=3)
+                    else:
+                        result_polygon = alpha_shape(points,alpha=clusterTreeCuttingDist*10) #concave hull/alpha shape
+                        if type(result_polygon) is geometry.multipolygon.MultiPolygon:
+                            #repeat generating alpha shapes with smaller alpha value if Multigon is generated
+                            result_polygon = alpha_shape(points,alpha=clusterTreeCuttingDist*5)
+                            if type(result_polygon) is geometry.multipolygon.MultiPolygon:
+                                result_polygon = alpha_shape(points,alpha=clusterTreeCuttingDist)
+                                if type(result_polygon) is geometry.multipolygon.MultiPolygon:
+                                    #if still of type multipolygon, try to remove holes and do a convex_hull
+                                    result_polygon = result_polygon.convex_hull
+                        result_polygon = result_polygon.buffer((limLngMax-limLngMin)/200,resolution=3)
+                elif 2 <= len(points) < 5: 
+                    #calc distance between points http://www.mathwarehouse.com/algebra/distance_formula/index.php
+                    #bdist = math.sqrt((points[0].coords.xy[0][0]-points[1].coords.xy[0][0])**2 + (points[0].coords.xy[1][0]-points[1].coords.xy[1][0])**2)
+                    #print(str(bdist))
+                    result_polygon = point_collection.buffer((limLngMax-limLngMin)/200,resolution=3) #single dots are presented as buffer with 0.5% of width-area
+                elif len(points)==1 or type(result_polygon) is geometry.point.Point or result_polygon is None:
+                    result_polygon = point_collection.buffer((limLngMax-limLngMin)/200,resolution=3) #single dots are presented as buffer with 0.5% of width-area
+                #final check for multipolygon
+                if type(result_polygon) is geometry.multipolygon.MultiPolygon:
+                        result_polygon = result_polygon.convex_hull
+                listOfPolygons.append(result_polygon)
+                #plot_polygon(result_polygon)
+                #plt.suptitle(toptag[0].upper(), fontsize=18, fontweight='bold')
+                #plt.gca().set_xlim([float(limLngMin), float(limLngMax)]) 
+                #plt.gca().set_ylim([float(limLatMin), float(limLatMax)])
+                #plt.plot(x,y,'o',ms=5)
+                #plt.waitforbuttonpress()
+                #plt.close()
+        if toptag in noClusterPhotos_perTag_DictOfLists:
+            singlePhotoList = noClusterPhotos_perTag_DictOfLists[toptag]
+            for singlePhoto in singlePhotoList:
+                point = geometry.Point(singlePhoto[2], singlePhoto[1])
+                resultPolygon = point.buffer((limLngMax-limLngMin)/200,resolution=3)
+                listOfPolygons.append(result_polygon)
     ##Output Boundary Shapes in merged Shapefile##
-
+    print("########## STEP 5 of 5: Generating Output ##########")
+    
+    # Define a polygon feature geometry with one attribute
+    schema = {
+        'geometry': 'Polygon',
+        'properties': {'id': 'int'},
+    }
+    
+    # Write a new Shapefile
+    # WGS1984
+    with fiona.open('allTagClusters.shp', mode='w', driver='ESRI Shapefile', schema=schema,crs=from_epsg(4326)) as c:
+        ## If there are multiple geometries, put the "for" loop here
+        idx = 0
+        for polygon in listOfPolygons:
+            idx += 1
+            c.write({
+                'geometry': geometry.mapping(polygon),
+                'properties': {'id': 123},
+            })
+    
     print("\n" + "Done.")
 else:
     print("\n" + "User abort.")
