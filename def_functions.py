@@ -58,6 +58,27 @@ def haversine(lon1, lat1, lon2, lat2):
     m = km*1000
     return m
 
+def getRadiansFromMeters(dist):
+    dist = dist/1000
+    degreesDist = dist/111.325
+    radiansDist = degreesDist/57.2958
+    return radiansDist
+    #https://www.mathsisfun.com/geometry/radians.html
+    #1 Radian is about 57.2958 degrees.
+    #then see https://sciencing.com/convert-distances-degrees-meters-7858322.html
+    #Multiply the number of degrees by 111.325
+    #To convert this to meters, multiply by 1,000. So, 2 degrees is 222,65 meters.    
+def getMetersFromRadians(dist):
+    dist = dist * 57.2958
+    dist = dist * 111.325
+    metersDist = round(dist * 1000,1)
+
+    return metersDist
+    #1 Radian is about 57.2958 degrees.
+    #then see https://sciencing.com/convert-distances-degrees-meters-7858322.html
+    #Multiply the number of degrees by 111.325
+    #To convert this to meters, multiply by 1,000. So, 2 degrees is 222,65 meters.    
+    #plt.close('all') #clear memory
 #this class is needed to override tkinter window with drag&drop option when overrideredirect = true
 #class App:
 #    global tk

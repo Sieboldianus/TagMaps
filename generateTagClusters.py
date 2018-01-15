@@ -25,7 +25,7 @@ from tkinter.messagebox import showerror
 import tkinter.messagebox
 import def_functions
 import datetime
-
+import warnings
 
 #Cluster stuff
 import numpy as np
@@ -119,7 +119,7 @@ else:
     sys.exit("Source not supported yet.")
 
 print('\n')
-print("########## STEP 1 of 5: Data Cleanup ##########")
+print("########## STEP 1 of 6: Data Cleanup ##########")
 if (len(filelist) == 0):
     sys.exit("No *.json/csv files found.")
 else:
@@ -518,6 +518,7 @@ with open("Output/Output_cleaned.txt", 'w', encoding='utf8') as csvfile:
                           photo[15],#photo_locName = 17
                           photo[16]#photo_locID = 18
                           )
+            ##optional Write Cleaned Data to CSV/TXT
             datawriter.writerow([cleanedPhotoLocation.source,#Source = 0
                           cleanedPhotoLocation.lat, #Lat = 1
                           cleanedPhotoLocation.lng, #Lng = 2
@@ -538,22 +539,27 @@ with open("Output/Output_cleaned.txt", 'w', encoding='utf8') as csvfile:
                           cleanedPhotoLocation.photo_locName,#photo_locName = 17
                           cleanedPhotoLocation.photo_locID]#photo_locID = 18
                           )
-            #cleanedPhotoList.append(cleanedPhotoLocation)
             cleanedPhotoDict[cleanedPhotoLocation.photo_guid] = cleanedPhotoLocation
 
-print("########## STEP 2 of 5: Tag Ranking ##########")
+print("########## STEP 2 of 6: Tag Ranking ##########")
 overallNumOfUsersPerTag_global = collections.Counter()
 for user_key, taghash in UserDict_TagCounters_global.items():
     #taghash contains unique values (= strings) for each user, thus summing up these taghashes counts each user only once per tag
     overallNumOfUsersPerTag_global.update(taghash)
-toptags = ''.join("%s,%i" % v + '\n' for v in overallNumOfUsersPerTag_global.most_common(1000))
-with open("Output/Output_toptags.txt", 'w', encoding="utf8") as file: #overwrite
-    file.write(toptags)
 
 tmax = 1000
 topTagsList = overallNumOfUsersPerTag_global.most_common(tmax)
 
-print("########## STEP 3 of 5: Tag Location Clustering ##########")
+from itertools import dropwhile
+for key, count in dropwhile(lambda key_count: key_count[1] >= 2, topTagsList):
+    del topTagsList[key]
+    
+#optional write toptags to file
+toptags = ''.join("%s,%i" % v + '\n' for v in topTagsList)
+with open("Output/Output_toptags.txt", 'w', encoding="utf8") as file: #overwrite
+    file.write(toptags)
+
+print("########## STEP 3 of 6: Tag Location Clustering ##########")
 #prepare some variables
 tnum = 0
 first = True
@@ -624,7 +630,8 @@ class FloatingWindow(tk.Toplevel):
         x = self.winfo_x() + deltax
         y = self.winfo_y() + deltay
         self.geometry("+%s+%s" % (x, y))
-
+        
+clusterTreeCuttingDist = 0
 app = App()
 #necessary override for error reporting during tkinter mode
 def report_callback_exception(self, exc, val, tb):
@@ -666,7 +673,7 @@ fig4 = None
 #plt.gca().set_xlim([limXMin, limXMax])
 #plt.gca().set_ylim([limYMin, limYMax])
 cleanedPhotoList = list(cleanedPhotoDict.values())
-df = pd.DataFrame(cleanedPhotoList) 
+df = pd.DataFrame(cleanedPhotoList)
 points = df.as_matrix(['lng','lat'])
 limYMin = np.min(points.T[1])       
 limYMax = np.max(points.T[1])    
@@ -677,9 +684,7 @@ distX = limXMax - limXMin
 imgRatio = distX/(distY*2) 
 distY = def_functions.haversine(limXMin, limYMin, limXMin, limYMax)
 distX = def_functions.haversine(limXMin, limYMin, limXMax, limYMin) 
-
 clusterTreeCuttingDist = (distX/100)*4 #4% of research area width = default value #223.245922725 #= 0.000035 radians dist
-
 
 #tkinter.messagebox.showinfo("messagr", str(distY))
 #tkinter.messagebox.showinfo("messagr", str(distX))
@@ -741,8 +746,7 @@ def sel_photos(tag,cleanedPhotoList):
 def fit_cluster(clusterer, data):
     clusterer.fit(data)
     return clusterer
-
-def cluster_tag(toptag,preview=None,silent=None):
+def cluster_tag(toptag=None,preview=None,silent=None):
     if preview is None:
         preview = False
     if silent is None:
@@ -752,22 +756,25 @@ def cluster_tag(toptag,preview=None,silent=None):
     global limYMin, limYMax, limXMin, limXMax, distY, distX, imgRatio, floaterX, floaterY
     global fig1, fig2, fig3, fig4
     #global graphFrame
-    
-    
-
     #if graphFrame: #if 
     #    graphFrame.destroy()
     #graphFrame = tk.Frame(app.floater)
     #canvas = tk.Canvas(graphFrame, width=canvasWidth, height=canvasHeight, highlightthickness=0,background="gray7")
     #l = tk.Label(canvas, text="Preview Map", background="gray7",fg="gray80",font="Arial 10 bold")
-    #l.pack()    
+    #l.pack()   
     selectedPhotoList_Guids, distinctLocalLocationCount = sel_photos(toptag[0],cleanedPhotoList)
     percentageOfTotalLocations = distinctLocalLocationCount/(total_distinct_locations/100)
     #tkinter.messagebox.showinfo("Num of clusters: ", "(" + str(tnum) + " of " + str(tmax) + ") Found " + str(len(selectedPhotoList)) + " photos for tag " + "'" + toptag[0] + "' (" + str(round(percentageOfTotalLocations,0)) + "% of total distinct locations in area)")
     if silent:
-        print("(" + str(tnum) + " of " + str(tmax) + ") Found " + str(len(selectedPhotoList_Guids)) + " photos for tag " + "'" + toptag[0] + "' (" + str(round(percentageOfTotalLocations,0)) + "% of total distinct locations in area)", end=" ")
+        try:
+           print("(" + str(tnum) + " of " + str(tmax) + ") Found " + str(len(selectedPhotoList_Guids)) + " photos for tag " + "'" + toptag[0] + "' (" + str(round(percentageOfTotalLocations,0)) + "% of total distinct locations in area)", end=" ")
+        except UnicodeEncodeError:
+           print("(" + str(tnum) + " of " + str(tmax) + ") Found " + str(len(selectedPhotoList_Guids)) + " photos for tag " + "'" + "#".join(re.findall("[a-zA-Z]+", toptag[0])) + "' (" + str(round(percentageOfTotalLocations,0)) + "% of total distinct locations in area)", end=" ")
+    
     #clustering
+
     selectedPhotoList = [cleanedPhotoDict[x] for x in selectedPhotoList_Guids]
+    #only used for tag clustering, otherwise (photo location clusters), global vars are used (df, points)
     df = pd.DataFrame(selectedPhotoList)
     points = df.as_matrix(['lng','lat']) #converts pandas data to numpy array (limit by list of column-names)
     
@@ -800,12 +807,12 @@ def cluster_tag(toptag,preview=None,silent=None):
             plt.gca().set_ylim([limYMin, limYMax]) 
             plt.tick_params(labelsize=10)
             currentDisplayTag = toptag
-    else: 
+    else:
         #cluster data
         tagRadiansData = np.radians(points) #conversion to radians for HDBSCAN (does not support decimal degrees)
         #for each tag in overallNumOfUsersPerTag_global.most_common(1000) (descending), calculate HDBSCAN Clusters
+
         minClusterSize = max(2,int(((len(selectedPhotoList_Guids))/100)*5)) #4% optimum
-        #minClusterSize = 2
         clusterer = hdbscan.HDBSCAN(min_cluster_size=minClusterSize,gen_min_span_tree=createMinimumSpanningTree,allow_single_cluster=True,min_samples=1)
         #clusterer = hdbscan.HDBSCAN(min_cluster_size=minClusterSize,gen_min_span_tree=True,min_samples=1)
         #clusterer = hdbscan.HDBSCAN(min_cluster_size=10,metric='haversine',gen_min_span_tree=False,allow_single_cluster=True)
@@ -815,18 +822,19 @@ def cluster_tag(toptag,preview=None,silent=None):
         #Start clusterer on different thread to prevent GUI from freezing
         #See: http://stupidpythonideas.blogspot.de/2013/10/why-your-gui-app-freezes.html
         #https://stackoverflow.com/questions/6893968/how-to-get-the-return-value-from-a-thread-in-python
-        if silent:
-            #on silent command line operation, don't use multiprocessing
-            clusterer = fit_cluster(clusterer,tagRadiansData)
-        else:
-            async_result = pool.apply_async(fit_cluster, (clusterer, tagRadiansData))
-            clusterer = async_result.get()
+        #if silent:
+        #    #on silent command line operation, don't use multiprocessing
+        #    clusterer = fit_cluster(clusterer,tagRadiansData)
+        #else:
+        async_result = pool.apply_async(fit_cluster, (clusterer, tagRadiansData))
+        clusterer = async_result.get()
             #clusterer.fit(tagRadiansData)
             #updateNeeded = False
+
         if autoselectClusters:
             sel_labels = clusterer.labels_ #auto selected clusters
         else:
-            sel_labels = clusterer.single_linkage_tree_.get_clusters(getRadiansFromMeters(clusterTreeCuttingDist), min_cluster_size=2) #0.000035 without haversine: 223 m (or 95 m for 0.000015)
+            sel_labels = clusterer.single_linkage_tree_.get_clusters(def_functions.getRadiansFromMeters(clusterTreeCuttingDist), min_cluster_size=2) #0.000035 without haversine: 223 m (or 95 m for 0.000015)
 
         #exit function in case final processing loop (no figure generating)
         if silent:
@@ -897,14 +905,14 @@ def cluster_tag(toptag,preview=None,silent=None):
             ax = clusterer.single_linkage_tree_.plot(truncate_mode='lastp',p=max(50,min(number_of_clusters*10,256))) #p is the number of max count of leafs in the tree, this should at least be the number of clusters*10, not lower than 50 [but max 500 to not crash]
             #tkinter.messagebox.showinfo("messagr", str(type(ax)))
             #plot cutting distance
-            y = getRadiansFromMeters(clusterTreeCuttingDist)
+            y = def_functions.getRadiansFromMeters(clusterTreeCuttingDist)
             xmin = ax.get_xlim()[0]
             xmax = ax.get_xlim()[1]
             line, = ax.plot([xmin, xmax], [y, y], color='k', label='Cluster (Cut) Distance ' + str(clusterTreeCuttingDist) +'m')
             line.set_label('Cluster (Cut) Distance ' + str(clusterTreeCuttingDist) +'m')             
             ax.legend(fontsize=10)
             vals = ax.get_yticks()
-            ax.set_yticklabels(['{:3.1f}m'.format(getMetersFromRadians(x)) for x in vals])
+            ax.set_yticklabels(['{:3.1f}m'.format(def_functions.getMetersFromRadians(x)) for x in vals])
         else:
             plt.figure(3).canvas.set_window_title('Single Linkage Tree')
             fig3 = clusterer.single_linkage_tree_.plot(truncate_mode='lastp',p=max(50,min(number_of_clusters*10,256)))
@@ -912,14 +920,14 @@ def cluster_tag(toptag,preview=None,silent=None):
             plt.title('Single Linkage Tree', fontsize=12,loc='center')
             #tkinter.messagebox.showinfo("messagr", str(type(fig3)))
             #plot cutting distance
-            y = getRadiansFromMeters(clusterTreeCuttingDist)
+            y = def_functions.getRadiansFromMeters(clusterTreeCuttingDist)
             xmin = fig3.get_xlim()[0]
             xmax = fig3.get_xlim()[1]
             line, = fig3.plot([xmin, xmax], [y, y], color='k', label='Cluster (Cut) Distance ' + str(clusterTreeCuttingDist) +'m')
             line.set_label('Cluster (Cut) Distance ' + str(clusterTreeCuttingDist) +'m')
             fig3.legend(fontsize=10)
             vals = fig3.get_yticks()
-            fig3.set_yticklabels(['{:3.1f}m'.format(getMetersFromRadians(x)) for x in vals])     
+            fig3.set_yticklabels(['{:3.1f}m'.format(def_functions.getMetersFromRadians(x)) for x in vals])     
         plt.tick_params(labelsize=10)
         if createMinimumSpanningTree:
             if fig4:
@@ -960,27 +968,6 @@ def cluster_tag(toptag,preview=None,silent=None):
         global tkScalebar
         tkScalebar.configure(from_=(clusterTreeCuttingDist/100), to=(clusterTreeCuttingDist*2))
         
-def getRadiansFromMeters(dist):
-    dist = dist/1000
-    degreesDist = dist/111.325
-    radiansDist = degreesDist/57.2958
-    return radiansDist
-    #https://www.mathsisfun.com/geometry/radians.html
-    #1 Radian is about 57.2958 degrees.
-    #then see https://sciencing.com/convert-distances-degrees-meters-7858322.html
-    #Multiply the number of degrees by 111.325
-    #To convert this to meters, multiply by 1,000. So, 2 degrees is 222,65 meters.    
-def getMetersFromRadians(dist):
-    dist = dist * 57.2958
-    dist = dist * 111.325
-    metersDist = round(dist * 1000,1)
-
-    return metersDist
-    #1 Radian is about 57.2958 degrees.
-    #then see https://sciencing.com/convert-distances-degrees-meters-7858322.html
-    #Multiply the number of degrees by 111.325
-    #To convert this to meters, multiply by 1,000. So, 2 degrees is 222,65 meters.    
-    #plt.close('all') #clear memory
 def change_clusterDist(val):
     #tkinter.messagebox.showinfo("messagr", val)
     global clusterTreeCuttingDist
@@ -1041,7 +1028,7 @@ scroll.configure(command=listbox.yview)
 scroll.pack(side="right", fill="y")
 listbox.pack()
 listbox.config(yscrollcommand=scroll.set)
-for item in topTagsList[:500]: #only for first 100 entries
+for item in topTagsList: #only for first 500 entries: use topTagsList[:500]
     listbox.insert(tk.END, item[0] + " ("+ str(item[1]) + " user)")
 canvas.pack(fill='both',padx=0, pady=0)
 listboxFrame.pack(fill='both',padx=0, pady=0)
@@ -1083,6 +1070,7 @@ def plot_polygon(polygon):
 from shapely.ops import cascaded_union, polygonize
 from scipy.spatial import Delaunay
 import math
+from math import sqrt
 def alpha_shape(points, alpha):
     """
     Alpha Shapes Code by KEVIN DWYER
@@ -1132,6 +1120,8 @@ def alpha_shape(points, alpha):
         s = (a + b + c)/2.0
         # Area of triangle by Heron's formula
         area = math.sqrt(s*(s-a)*(s-b)*(s-c))
+        if area == 0:
+            return False
         circum_r = a*b*c/(4.0*area)
         # Here's the radius filter.
         #print circum_r
@@ -1200,7 +1190,8 @@ if proceedClusting:
         #    break
             #plt.savefig('foo.png')
             #sys.exit()
-    print("########## STEP 4 of 5: Generating Alpha Shapes ##########")
+    print("########## STEP 4 of 6: Generating Alpha Shapes ##########")
+    #if (tnum % 50 == 0):#modulo: if division has no remainder, force update cmd output
     sys.stdout.flush()
     #for each cluster of points, calculate boundary shape and add statistics (HImpTag etc.)
     listOfAlphashapesAndMeta = []
@@ -1248,7 +1239,12 @@ if proceedClusting:
                                 if type(result_polygon) is geometry.multipolygon.MultiPolygon:
                                     #if still of type multipolygon, try to remove holes and do a convex_hull
                                     result_polygon = result_polygon.convex_hull
-                        result_polygon = result_polygon.buffer((limLngMax-limLngMin)/200,resolution=3)
+                        if type(result_polygon) is bool:
+                            #in case there was a problem with generating alpha shapes (circum_r = a*b*c/(4.0*area) --> ZeroDivisionError: float division by zero)
+                            result_polygon = point_collection.convex_hull #convex hull
+                            result_polygon = result_polygon.buffer((limLngMax-limLngMin)/200,resolution=3)
+                        else:
+                            result_polygon = result_polygon.buffer((limLngMax-limLngMin)/200,resolution=3)
                 elif 2 <= len(points) < 5: 
                     #calc distance between points http://www.mathwarehouse.com/algebra/distance_formula/index.php
                     #bdist = math.sqrt((points[0].coords.xy[0][0]-points[1].coords.xy[0][0])**2 + (points[0].coords.xy[1][0]-points[1].coords.xy[1][0])**2)
@@ -1260,8 +1256,8 @@ if proceedClusting:
                 if type(result_polygon) is geometry.multipolygon.MultiPolygon:
                         result_polygon = result_polygon.convex_hull
                 #Geom, Join_Count, Views,  COUNT_User,ImpTag,TagCountG,HImpTag
-
-                listOfAlphashapesAndMeta.append((result_polygon,len(photo_guids),sumViews,uniqueUserCount,toptag[0],toptag[1],HImP))
+                if result_polygon is not None:
+                    listOfAlphashapesAndMeta.append((result_polygon,len(photo_guids),sumViews,uniqueUserCount,toptag[0],toptag[1],HImP))
                 #print(str(listOfPolygons[len(listOfPolygons)-1])+'\n')
                 #plot_polygon(result_polygon)
                 #plt.suptitle(toptag[0].upper(), fontsize=18, fontweight='bold')
@@ -1274,17 +1270,21 @@ if proceedClusting:
         if singlePhotoGuidList:
             #print("Single: " + str(len(singlePhotoGuidList)))
             photos = [cleanedPhotoDict[x] for x in singlePhotoGuidList]
-            points = [geometry.Point(photo.lng, photo.lat)
-                      for photo in photos]
-            x = [p.coords.xy[0] for p in points]
-            y = [p.coords.xy[1] for p in points]
-            point_collection = geometry.MultiPoint(list(points))
-            result_polygon = point_collection.buffer((limLngMax-limLngMin)/200,resolution=3)
-            if type(result_polygon) is geometry.multipolygon.MultiPolygon:
-                for polygon in result_polygon:
-                    listOfAlphashapesAndMeta.append((result_polygon,1,0,1,toptag[0],toptag[1],0))
-            else:
-                listOfAlphashapesAndMeta.append((result_polygon,1,0,1,toptag[0],toptag[1],0))
+            for single_photo in photos:
+                pcoordinate = geometry.Point(single_photo.lng, single_photo.lat)
+                result_polygon = pcoordinate.buffer((limLngMax-limLngMin)/200,resolution=3)
+                listOfAlphashapesAndMeta.append((result_polygon,1,single_photo.photo_views,1,toptag[0],toptag[1],0))
+            #points = [geometry.Point(photo.lng, photo.lat)
+            #          for photo in photos]
+            #x = [p.coords.xy[0] for p in points]
+            #y = [p.coords.xy[1] for p in points]                
+            #point_collection = geometry.MultiPoint(list(points))
+            #result_polygon = point_collection.buffer((limLngMax-limLngMin)/200,resolution=3)
+            #if type(result_polygon) is geometry.multipolygon.MultiPolygon:
+            #    for polygon in result_polygon:
+            #        listOfAlphashapesAndMeta.append((polygon,1,0,1,toptag[0],toptag[1],0))
+            #else:
+            #    listOfAlphashapesAndMeta.append((result_polygon,1,0,1,toptag[0],toptag[1],0))
             
         #if tnum == 50:
         #    break
@@ -1306,7 +1306,7 @@ if proceedClusting:
             
     print(str(len(listOfAlphashapesAndMeta)) + " Alpha Shapes. Done.")
     ##Output Boundary Shapes in merged Shapefile##
-    print("########## STEP 5 of 5: Writing Results to Shapefile ##########")
+    print("########## STEP 5 of 6: Writing Results to Shapefile ##########")
     
     # Define a polygon feature geometry with one attribute
     schema = {
@@ -1316,16 +1316,22 @@ if proceedClusting:
                        'COUNT_User': 'int',
                        'ImpTag': 'str',
                        'TagCountG': 'int',
-                       'HImpTag': 'int'},
+                       'HImpTag': 'int',                       
+                       'Weights': 'float',
+                       'WeightsV2': 'float',
+                       'WeightsV3': 'float'},
     }
     
     # Write a new Shapefile
     # WGS1984
-    with fiona.open('Output/allTagClusters.shp', mode='w', driver='ESRI Shapefile', schema=schema,crs=from_epsg(4326)) as c:
+    with fiona.open('Output/allTagClusters.shp', mode='w', encoding='utf-8', driver='ESRI Shapefile', schema=schema,crs=from_epsg(4326)) as c:
         ## If there are multiple geometries, put the "for" loop here
         idx = 0
         for alphaShapeAndMeta in listOfAlphashapesAndMeta:
             idx += 1
+            weightsv1 = 1+ alphaShapeAndMeta[1] *(sqrt(1/( alphaShapeAndMeta[1] / alphaShapeAndMeta[3] )**3)) #-> Standard weighting formula (x**y means x raised to the power y)
+            weightsv2 = 1+ alphaShapeAndMeta[1] *(sqrt(1/( alphaShapeAndMeta[1] / alphaShapeAndMeta[3] )**2)) #-> less importance on User_Count in correlation to photo count [Join_Count]
+            weightsv3 = sqrt((alphaShapeAndMeta[1]+(2*sqrt(alphaShapeAndMeta[1])))*2) #-> Ignores User_Count, this will emphasize individual and very active users
             c.write({
                 'geometry': geometry.mapping(alphaShapeAndMeta[0]),
                 'properties': {'Join_Count': alphaShapeAndMeta[1], 
@@ -1333,9 +1339,80 @@ if proceedClusting:
                                'COUNT_User': alphaShapeAndMeta[3],
                                'ImpTag': alphaShapeAndMeta[4],
                                'TagCountG': alphaShapeAndMeta[5],
-                               'HImpTag': alphaShapeAndMeta[6]},
+                               'HImpTag': alphaShapeAndMeta[6],
+                               'Weights': weightsv1,
+                               'WeightsV2': weightsv2,
+                               'WeightsV3': weightsv3},
             })
+
+    print("########## STEP 6 of 6: Calculating Overall Photo Location Clusters ##########")
+
+    selectedPhotoList_Guids = []
+    for cleanedPhotoLocation in cleanedPhotoList:
+        selectedPhotoList_Guids.append(cleanedPhotoLocation.photo_guid)
+    selectedPhotoList = cleanedPhotoList
+    df = pd.DataFrame(selectedPhotoList)
+    points = df.as_matrix(['lng','lat'])
+    tagRadiansData = np.radians(points)
+    clusterer = hdbscan.HDBSCAN(min_cluster_size=2,gen_min_span_tree=False,allow_single_cluster=False,min_samples=1)
+    #clusterer.fit(tagRadiansData)
+    with warnings.catch_warnings():
+        #disable joblist multithread warning
+        warnings.simplefilter('ignore', UserWarning)
+        async_result = pool.apply_async(fit_cluster, (clusterer, tagRadiansData))
+        clusterer = async_result.get()
+    clusters = clusterer.single_linkage_tree_.get_clusters(def_functions.getRadiansFromMeters(clusterTreeCuttingDist/8), min_cluster_size=2)
+    listOfPhotoClusters = []
+    numpy_selectedPhotoList_Guids = np.asarray(selectedPhotoList_Guids)
+    mask_noisy = (clusters == -1)
+    number_of_clusters = len(np.unique(clusters[~mask_noisy])) #mit noisy (=0)
+    print("--> " + str(number_of_clusters) + " Photo cluster.")
+    tnum += 1
+    photo_num = 0
+    #clusternum_photolist = zip(clusters,selectedPhotoList)
+    #clusterPhotosList = [[] for x in range(number_of_clusters)]
+    clusterPhotosGuidsList = []
+    for x in range(number_of_clusters):
+        currentClusterPhotoGuids = numpy_selectedPhotoList_Guids[clusters==x]
+        clusterPhotosGuidsList.append(currentClusterPhotoGuids)
+    noClusterPhotos = list(numpy_selectedPhotoList_Guids[clusters==-1])   
+    clusterPhotosGuidsList.sort(key=len,reverse=True)
     
+    for photo_cluster in clusterPhotosGuidsList:
+        photos = [cleanedPhotoDict[x] for x in photo_cluster]
+        uniqueUserCount = len(set([photo.userid for photo in photos]))
+        points = [geometry.Point(photo.lng, photo.lat)
+                  for photo in photos]
+        x = [p.coords.xy[0] for p in points]
+        y = [p.coords.xy[1] for p in points]
+        point_collection = geometry.MultiPoint(list(points))
+        result_polygon = point_collection.convex_hull #convex hull
+        result_centroid = result_polygon.centroid
+        listOfPhotoClusters.append((result_centroid,uniqueUserCount))
+        #clusterPhotoGuidList = clustersPerTag.get(None, None)
+    noclusterphotos = [cleanedPhotoDict[x] for x in singlePhotoGuidList]
+    for photoGuid_noCluster in noClusterPhotos:
+        photo = cleanedPhotoDict[photoGuid_noCluster]
+        pcenter = geometry.Point(photo.lng, photo.lat)
+        listOfPhotoClusters.append((pcenter,1))
+    # Define a polygon feature geometry with one attribute
+    schema = {
+        'geometry': 'Point',
+        'properties': {'Join_Count': 'int'},
+    }
+    
+    # Write a new Shapefile
+    # WGS1984
+    with fiona.open('Output/allPhotoClusters.shp', mode='w', driver='ESRI Shapefile', schema=schema,crs=from_epsg(4326)) as c:
+        ## If there are multiple geometries, put the "for" loop here
+        idx = 0
+        for photoCluster in listOfPhotoClusters:
+            idx += 1
+            c.write({
+                'geometry': geometry.mapping(photoCluster[0]),
+                'properties': {'Join_Count': photoCluster[1]},
+                })
+            
     print("\n" + "Done.")
 else:
     print("\n" + "User abort.")
