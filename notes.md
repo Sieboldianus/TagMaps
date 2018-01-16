@@ -31,7 +31,9 @@ https://stackoverflow.com/questions/11436777/is-there-a-way-to-embed-dependencie
 https://stackoverflow.com/questions/5458048/how-to-make-a-python-script-standalone-executable-to-run-without-any-dependency
 **py2exe**:
     http://docs.python-guide.org/en/latest/shipping/freezing/
-    
+**cx_Freeze**
+    http://cx-freeze.readthedocs.io/en/latest/distutils.html
+    run >python setup.py build
 
 #other cluster algorithms
 

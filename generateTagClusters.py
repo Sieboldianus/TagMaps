@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # coding: utf8
-# iExtractAllGeoMedia
+# generateTagClusters
 
 """
 generateTagClusters.py
@@ -10,8 +10,13 @@ generateTagClusters.py
 - will output Alpha Shapes/Delauney for cluster cut at specific distance
 """
 
+__author__      = "Alexander Dunkel"
+__license__   = "GNU GPLv3"
+__version__ = "0.9.1"
+
 import csv
 import os
+os.system('mode con: cols=197 lines=40')
 import sys
 import re
 from glob import glob
@@ -39,6 +44,7 @@ import hdbscan
 
 from multiprocessing.pool import ThreadPool
 pool = ThreadPool(processes=1)
+import time
 from time import sleep
 
 
@@ -64,11 +70,25 @@ __version__ = "0.9.1"
 ######################    
 ####config section####
 ######################
-log_file = "Output/log.txt"
+log_file = "02_Output/log.txt"
+log_texts_list = []
+
+def print_store_log(text,end=None):
+    if end is None:
+        addEnd = False
+        end = '\n'
+    else:
+        addEnd = True
+    #watch out for non-printable characters in console
+    try:
+        print(text,end=end)
+    except UnicodeEncodeError:
+        print("#".join(re.findall("[a-zA-Z]+", text)))
+    log_texts_list.append(text + end)
 
 ##Load Filterlists
-SortOutAlways_file = "SortOutAlways.txt"
-SortOutAlways_inStr_file = "SortOutAlways_inStr.txt"
+SortOutAlways_file = "00_Config/SortOutAlways.txt"
+SortOutAlways_inStr_file = "00_Config/SortOutAlways_inStr.txt"
 SortOutAlways_set = set()
 SortOutAlways_inStr_set = set()
 if not os.path.isfile(SortOutAlways_file):
@@ -91,17 +111,17 @@ writeGISCompLine = True # writes placeholder entry after headerline for avoiding
 #Choose one of four options for Input data type:
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument("source")     # naming it "source"
+parser.add_argument('-s', "--source", default= "fromFlickr_CSV")     # naming it "source"
 args = parser.parse_args()    # returns data from the options specified (source)
 DSource = args.source
 
 pathname = os.getcwd()
-if not os.path.exists(pathname + '/Output/'):
-    os.makedirs(pathname + '/Output/')
-    print("Folder /Output was created")
-if not os.path.exists(pathname + '/Output/ClusterImg/'):
-    os.makedirs(pathname + '/Output/ClusterImg/')
-    print("Folder /Output/ClusterImg/ was created")
+if not os.path.exists(pathname + '/02_Output/'):
+    os.makedirs(pathname + '/02_Output/')
+    print("Folder /02_Output was created")
+#if not os.path.exists(pathname + '/Output/ClusterImg/'):
+#    os.makedirs(pathname + '/Output/ClusterImg/')
+#    print("Folder /Output/ClusterImg/ was created")
 
 # READ All JSON in Current Folder and join to list
 #partnum = 0
@@ -110,7 +130,7 @@ count_glob = 0
 partcount = 0
 #filenameprev = ""
 if (DSource == "fromFlickr_CSV"):
-    filelist = glob('Input/*.txt')
+    filelist = glob('01_Input/*.txt')
     timestamp_columnNameID = 8 #DateTaken
     GMTTimetransform = 0
     guid_columnNameID = 5 #guid   
@@ -119,11 +139,16 @@ else:
     sys.exit("Source not supported yet.")
 
 print('\n')
-print("########## STEP 1 of 6: Data Cleanup ##########")
+print_store_log("########## STEP 1 of 6: Data Cleanup ##########")
 if (len(filelist) == 0):
     sys.exit("No *.json/csv files found.")
 else:
-    print("Files to process: " + str(len(filelist)))
+    inputtext = input("Files to process: " + str(len(filelist)) + ". \nOptional: Enter a Number for the variety of Tags to process (Standard is 1000)\nPress Enter to proceed.. \n")
+if inputtext == "" or not inputtext.isdigit():
+    tmax = 1000
+else:
+    tmax = int(inputtext)
+   
 skippedCount = 0
 appendToAlreadyExist = False
 count_non_geotagged = 0
@@ -166,10 +191,10 @@ UserDict_TagCounters_global = defaultdict(set)
 distinctLocations_set = set()
 count_loc = 0
 for file_name in filelist:
-    filename = "Output/" + os.path.basename(file_name)
-    with open(filename, 'a', encoding='utf8') as file:
-        file.write("ID_Date,SOURCE,Latitude,Longitude,PhotoID,Owner,UserID,Name,URL,DateTaken,UploadDate,Views,Tags,MTags,Likes,Comments,Shortcode,Type,LocName,LocID" + '\n')
-        file.write('"2000-01-01 00:00:00","TESTLINE","43.2544706","28.023467","24PHOTOID3534","testowner","812643S9812644","testcaption","https://scontent.cdninstagram.com/t/s640x640/22344798_1757535311005731_6649353052090269696_n.jpg","2000-01-01 00:00:00","2000-01-01 00:00:00","22",";blacksea;romania;ig;seaside;mareaneagra;travel;getfit;trip;travelog;sun;beachy;avenit;mytinyatlas;islandhopping;flashesofdelight;beachvibes;beautiful;waves;barbershop;sea;love;photooftheday;picoftheday;vsco;vscocam;snapshot;instatravel;instamood;ich;io;summer;photography;europa;happy;end;je;lacrusesc;contrejour;chiaroscuro;morninsunshine;treadmill;gainz;workout;sunshine;getstrong;eu;rumunsko;calatoriecupasiune;superduper;selfie;lazyday;","TESTMTAG","50","25","BaE5OZpgfRu","Image","Sunshine Boulevard Sunshine Boulevard Sunshine Bou","821648SS21642"' +'\n')
+    #filename = "02_Output/" + os.path.basename(file_name)
+    #with open(filename, 'a', encoding='utf8') as file:
+    #    file.write("ID_Date,SOURCE,Latitude,Longitude,PhotoID,Owner,UserID,Name,URL,DateTaken,UploadDate,Views,Tags,MTags,Likes,Comments,Shortcode,Type,LocName,LocID" + '\n')
+    #    file.write('"2000-01-01 00:00:00","TESTLINE","43.2544706","28.023467","24PHOTOID3534","testowner","812643S9812644","testcaption","https://scontent.cdninstagram.com/t/s640x640/22344798_1757535311005731_6649353052090269696_n.jpg","2000-01-01 00:00:00","2000-01-01 00:00:00","22",";blacksea;romania;ig;seaside;mareaneagra;travel;getfit;trip;travelog;sun;beachy;avenit;mytinyatlas;islandhopping;flashesofdelight;beachvibes;beautiful;waves;barbershop;sea;love;photooftheday;picoftheday;vsco;vscocam;snapshot;instatravel;instamood;ich;io;summer;photography;europa;happy;end;je;lacrusesc;contrejour;chiaroscuro;morninsunshine;treadmill;gainz;workout;sunshine;getstrong;eu;rumunsko;calatoriecupasiune;superduper;selfie;lazyday;","TESTMTAG","50","25","BaE5OZpgfRu","Image","Sunshine Boulevard Sunshine Boulevard Sunshine Bou","821648SS21642"' +'\n')
 
     photolist = [] # clear photolist for every file
     ##f_count += 1
@@ -479,17 +504,17 @@ for file_name in filelist:
                 UserDict_TagCounters_global[photo_userid].update(photo_tags) #add tagcount of this media to overall tagcount or this user, initialize counter for user if not already done 
             print("Cleaned output to " + "%02d" % (count_loc,)  + " photolocations from " + "%02d" % (count_glob,)+ " (File " + str(partcount) + " of " + str(len(filelist)) + ") - Skipped Media: " + str(skippedCount) + " - Skipped Tags: " + str(count_tags_skipped) +" of " + str(count_tags_global), end='\r')
             
-
+log_texts_list.append("Cleaned output to " + "%02d" % (count_loc,)  + " photolocations from " + "%02d" % (count_glob,)+ " (File " + str(partcount) + " of " + str(len(filelist)) + ") - Skipped Media: " + str(skippedCount) + " - Skipped Tags: " + str(count_tags_skipped) +" of " + str(count_tags_global))
 total_distinct_locations = len(distinctLocations_set)
-print("\nTotal distinct locations: " + str(total_distinct_locations))
+print_store_log("\nTotal distinct locations: " + str(total_distinct_locations))
 #boundary:
-print("Bounds are: Min " + str(float(limLngMin)) + " " + str(float(limLatMin)) + " Max " + str(float(limLngMax)) + " " + str(float(limLatMax)))
+print_store_log("Bounds are: Min " + str(float(limLngMin)) + " " + str(float(limLatMin)) + " Max " + str(float(limLngMax)) + " " + str(float(limLatMax)))
 #cleanedPhotoList = []
 
 #create structure for tuple with naming for easy referencing
 cleanedPhotoLocation_tuple = namedtuple('cleanedPhotoLocation_tuple', 'source lat lng photo_guid photo_owner userid photo_caption photo_dateTaken photo_uploadDate photo_views photo_tags photo_thumbnail photo_mTags photo_likes photo_comments photo_shortcode photo_mediatype photo_locName photo_locID')
 cleanedPhotoDict = defaultdict(cleanedPhotoLocation_tuple)
-with open("Output/Output_cleaned.txt", 'w', encoding='utf8') as csvfile:
+with open("02_Output/Output_cleaned.txt", 'w', encoding='utf8') as csvfile:
     csvfile.write("SOURCE,Latitude,Longitude,PhotoID,Owner,UserID,Name,DateTaken,UploadDate,Views,Tags,URL,MTags,Likes,Comments,Shortcode,Type,LocName,LocID," + '\n')
     datawriter = csv.writer(csvfile, delimiter=',', lineterminator='\n', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
     for user_key, locationhash in LocationsPerUserID_dict.items():
@@ -540,14 +565,14 @@ with open("Output/Output_cleaned.txt", 'w', encoding='utf8') as csvfile:
                           cleanedPhotoLocation.photo_locID]#photo_locID = 18
                           )
             cleanedPhotoDict[cleanedPhotoLocation.photo_guid] = cleanedPhotoLocation
-
-print("########## STEP 2 of 6: Tag Ranking ##########")
+now = time.time()
+print_store_log("########## STEP 2 of 6: Tag Ranking ##########")
 overallNumOfUsersPerTag_global = collections.Counter()
 for user_key, taghash in UserDict_TagCounters_global.items():
     #taghash contains unique values (= strings) for each user, thus summing up these taghashes counts each user only once per tag
     overallNumOfUsersPerTag_global.update(taghash)
 
-tmax = 1000
+
 topTagsList = overallNumOfUsersPerTag_global.most_common(tmax)
 
 from itertools import dropwhile
@@ -556,10 +581,10 @@ for key, count in dropwhile(lambda key_count: key_count[1] >= 2, topTagsList):
     
 #optional write toptags to file
 toptags = ''.join("%s,%i" % v + '\n' for v in topTagsList)
-with open("Output/Output_toptags.txt", 'w', encoding="utf8") as file: #overwrite
+with open("02_Output/Output_toptags.txt", 'w', encoding="utf8") as file: #overwrite
     file.write(toptags)
 
-print("########## STEP 3 of 6: Tag Location Clustering ##########")
+print_store_log("########## STEP 3 of 6: Tag Location Clustering ##########")
 #prepare some variables
 tnum = 0
 first = True
@@ -766,10 +791,8 @@ def cluster_tag(toptag=None,preview=None,silent=None):
     percentageOfTotalLocations = distinctLocalLocationCount/(total_distinct_locations/100)
     #tkinter.messagebox.showinfo("Num of clusters: ", "(" + str(tnum) + " of " + str(tmax) + ") Found " + str(len(selectedPhotoList)) + " photos for tag " + "'" + toptag[0] + "' (" + str(round(percentageOfTotalLocations,0)) + "% of total distinct locations in area)")
     if silent:
-        try:
-           print("(" + str(tnum) + " of " + str(tmax) + ") Found " + str(len(selectedPhotoList_Guids)) + " photos for tag " + "'" + toptag[0] + "' (" + str(round(percentageOfTotalLocations,0)) + "% of total distinct locations in area)", end=" ")
-        except UnicodeEncodeError:
-           print("(" + str(tnum) + " of " + str(tmax) + ") Found " + str(len(selectedPhotoList_Guids)) + " photos for tag " + "'" + "#".join(re.findall("[a-zA-Z]+", toptag[0])) + "' (" + str(round(percentageOfTotalLocations,0)) + "% of total distinct locations in area)", end=" ")
+        print_store_log("(" + str(tnum) + " of " + str(tmax) + ") Found " + str(len(selectedPhotoList_Guids)) + " photos for tag " + "'" + toptag[0] + "' (" + str(round(percentageOfTotalLocations,0)) + "% of total distinct locations in area)", end=" ")
+
     
     #clustering
 
@@ -1157,7 +1180,7 @@ if proceedClusting:
         numpy_selectedPhotoList_Guids = np.asarray(selectedPhotoList_Guids)
         mask_noisy = (clusters == -1)
         number_of_clusters = len(np.unique(clusters[~mask_noisy])) #mit noisy (=0)
-        print("--> " + str(number_of_clusters) + " cluster.")
+        print_store_log("--> " + str(number_of_clusters) + " cluster.")
         tnum += 1
         photo_num = 0
         #clusternum_photolist = zip(clusters,selectedPhotoList)
@@ -1190,7 +1213,7 @@ if proceedClusting:
         #    break
             #plt.savefig('foo.png')
             #sys.exit()
-    print("########## STEP 4 of 6: Generating Alpha Shapes ##########")
+    print_store_log("########## STEP 4 of 6: Generating Alpha Shapes ##########")
     #if (tnum % 50 == 0):#modulo: if division has no remainder, force update cmd output
     sys.stdout.flush()
     #for each cluster of points, calculate boundary shape and add statistics (HImpTag etc.)
@@ -1304,9 +1327,9 @@ if proceedClusting:
         #    else:
         #        listOfPolygons.append(result_polygon)
             
-    print(str(len(listOfAlphashapesAndMeta)) + " Alpha Shapes. Done.")
+    print_store_log(str(len(listOfAlphashapesAndMeta)) + " Alpha Shapes. Done.")
     ##Output Boundary Shapes in merged Shapefile##
-    print("########## STEP 5 of 6: Writing Results to Shapefile ##########")
+    print_store_log("########## STEP 5 of 6: Writing Results to Shapefile ##########")
     
     # Define a polygon feature geometry with one attribute
     schema = {
@@ -1324,7 +1347,7 @@ if proceedClusting:
     
     # Write a new Shapefile
     # WGS1984
-    with fiona.open('Output/allTagClusters.shp', mode='w', encoding='utf-8', driver='ESRI Shapefile', schema=schema,crs=from_epsg(4326)) as c:
+    with fiona.open('02_Output/allTagClusters.shp', mode='w', encoding='utf-8', driver='ESRI Shapefile', schema=schema,crs=from_epsg(4326)) as c:
         ## If there are multiple geometries, put the "for" loop here
         idx = 0
         for alphaShapeAndMeta in listOfAlphashapesAndMeta:
@@ -1345,7 +1368,7 @@ if proceedClusting:
                                'WeightsV3': weightsv3},
             })
 
-    print("########## STEP 6 of 6: Calculating Overall Photo Location Clusters ##########")
+    print_store_log("########## STEP 6 of 6: Calculating Overall Photo Location Clusters ##########")
 
     selectedPhotoList_Guids = []
     for cleanedPhotoLocation in cleanedPhotoList:
@@ -1366,7 +1389,7 @@ if proceedClusting:
     numpy_selectedPhotoList_Guids = np.asarray(selectedPhotoList_Guids)
     mask_noisy = (clusters == -1)
     number_of_clusters = len(np.unique(clusters[~mask_noisy])) #mit noisy (=0)
-    print("--> " + str(number_of_clusters) + " Photo cluster.")
+    print_store_log("--> " + str(number_of_clusters) + " Photo cluster.")
     tnum += 1
     photo_num = 0
     #clusternum_photolist = zip(clusters,selectedPhotoList)
@@ -1403,7 +1426,7 @@ if proceedClusting:
     
     # Write a new Shapefile
     # WGS1984
-    with fiona.open('Output/allPhotoClusters.shp', mode='w', driver='ESRI Shapefile', schema=schema,crs=from_epsg(4326)) as c:
+    with fiona.open('02_Output/allPhotoClusters.shp', mode='w', driver='ESRI Shapefile', schema=schema,crs=from_epsg(4326)) as c:
         ## If there are multiple geometries, put the "for" loop here
         idx = 0
         for photoCluster in listOfPhotoClusters:
@@ -1412,8 +1435,18 @@ if proceedClusting:
                 'geometry': geometry.mapping(photoCluster[0]),
                 'properties': {'Join_Count': photoCluster[1]},
                 })
-            
-    print("\n" + "Done.")
+    print("Writing log file..")
+    later = time.time()
+    hours, rem = divmod(later-now, 3600)
+    minutes, seconds = divmod(rem, 60)
+    print()
+    difference = int(later - now)
+    log_texts_list.append("\n" + "Done." + "\n{:0>2} Hours {:0>2} Minutes and {:05.2f} Seconds".format(int(hours),int(minutes),seconds) + " passed.")
+    with open(log_file, "w", encoding='utf-8') as logfile_a:
+        for logtext in log_texts_list:
+            logfile_a.write(logtext)        
+    print("\n" + "Done." + "\n{:0>2} Hours {:0>2} Minutes and {:05.2f} Seconds".format(int(hours),int(minutes),seconds) + " passed.")
+    input("Press any key to continue...")
 else:
     print("\n" + "User abort.")
 
