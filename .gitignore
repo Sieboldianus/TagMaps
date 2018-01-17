@@ -6,3 +6,7 @@ Fig_Screens/
 Literature/
 build/
 notes.md
+__pycache__
+delauney_versus_alphaShapes.png
+foo.png
+graph.png
