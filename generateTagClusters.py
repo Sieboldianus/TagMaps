@@ -141,9 +141,9 @@ else:
 print('\n')
 print_store_log("########## STEP 1 of 6: Data Cleanup ##########")
 if (len(filelist) == 0):
-    sys.exit("No *.json/csv files found.")
+    sys.exit("No *.json/csv/txt files found.")
 else:
-    inputtext = input("Files to process: " + str(len(filelist)) + ". \nOptional: Enter a Number for the variety of Tags to process (Standard is 1000)\nPress Enter to proceed.. \n")
+    inputtext = input("Files to process: " + str(len(filelist)) + ". \nOptional: Enter a Number for the variety of Tags to process (Default is 1000)\nPress Enter to proceed.. \n")
 if inputtext == "" or not inputtext.isdigit():
     tmax = 1000
 else:
@@ -849,8 +849,11 @@ def cluster_tag(toptag=None,preview=None,silent=None):
         #    #on silent command line operation, don't use multiprocessing
         #    clusterer = fit_cluster(clusterer,tagRadiansData)
         #else:
-        async_result = pool.apply_async(fit_cluster, (clusterer, tagRadiansData))
-        clusterer = async_result.get()
+        with warnings.catch_warnings():
+            #disable joblist multithread warning
+            warnings.simplefilter('ignore', UserWarning)
+            async_result = pool.apply_async(fit_cluster, (clusterer, tagRadiansData))
+            clusterer = async_result.get()
             #clusterer.fit(tagRadiansData)
             #updateNeeded = False
 
@@ -1279,7 +1282,7 @@ if proceedClusting:
                 if type(result_polygon) is geometry.multipolygon.MultiPolygon:
                         result_polygon = result_polygon.convex_hull
                 #Geom, Join_Count, Views,  COUNT_User,ImpTag,TagCountG,HImpTag
-                if result_polygon is not None:
+                if result_polygon is not None and not result_polygon.is_empty:
                     listOfAlphashapesAndMeta.append((result_polygon,len(photo_guids),sumViews,uniqueUserCount,toptag[0],toptag[1],HImP))
                 #print(str(listOfPolygons[len(listOfPolygons)-1])+'\n')
                 #plot_polygon(result_polygon)
@@ -1296,7 +1299,8 @@ if proceedClusting:
             for single_photo in photos:
                 pcoordinate = geometry.Point(single_photo.lng, single_photo.lat)
                 result_polygon = pcoordinate.buffer((limLngMax-limLngMin)/200,resolution=3)
-                listOfAlphashapesAndMeta.append((result_polygon,1,single_photo.photo_views,1,toptag[0],toptag[1],0))
+                if result_polygon is not None and not result_polygon.is_empty:
+                    listOfAlphashapesAndMeta.append((result_polygon,1,single_photo.photo_views,1,toptag[0],toptag[1],0))
             #points = [geometry.Point(photo.lng, photo.lat)
             #          for photo in photos]
             #x = [p.coords.xy[0] for p in points]
@@ -1411,13 +1415,15 @@ if proceedClusting:
         point_collection = geometry.MultiPoint(list(points))
         result_polygon = point_collection.convex_hull #convex hull
         result_centroid = result_polygon.centroid
-        listOfPhotoClusters.append((result_centroid,uniqueUserCount))
+        if result_centroid is not None and not result_centroid.is_empty:
+            listOfPhotoClusters.append((result_centroid,uniqueUserCount))
         #clusterPhotoGuidList = clustersPerTag.get(None, None)
     noclusterphotos = [cleanedPhotoDict[x] for x in singlePhotoGuidList]
     for photoGuid_noCluster in noClusterPhotos:
         photo = cleanedPhotoDict[photoGuid_noCluster]
         pcenter = geometry.Point(photo.lng, photo.lat)
-        listOfPhotoClusters.append((pcenter,1))
+        if pcenter is not None and not pcenter.is_empty:
+            listOfPhotoClusters.append((pcenter,1))
     # Define a polygon feature geometry with one attribute
     schema = {
         'geometry': 'Point',

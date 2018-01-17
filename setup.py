@@ -17,7 +17,10 @@ includes_mod = ['numpy.core._methods',
                 'scipy.sparse.csgraph',
                 'scipy.sparse.csgraph._validation',
                 ]#,'scipy.spatial.ckdtree'
-include_folders_files = ['01_Input/',
+
+include_folders_files = ["C:/Python36/DLLs/tcl86t.dll", 
+                         "C:/Python36/DLLs/tk86t.dll",
+                        '01_Input/',
                          '00_Config/',
                         ("D:/03_EvaVGI/05_Code/Py/standalone_tag_cluster_hdbscan/matplotlibrc","matplotlibrc")
                         ]
