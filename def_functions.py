@@ -3,6 +3,8 @@
 # TimeTransponse_from_json definition of functions file
 import sys
 import tkinter as tk
+import emoji
+import unicodedata
 
 def query_yes_no(question, default="yes"):
     """Ask a yes/no question via raw_input() and return their answer.
@@ -79,6 +81,37 @@ def getMetersFromRadians(dist):
     #Multiply the number of degrees by 111.325
     #To convert this to meters, multiply by 1,000. So, 2 degrees is 222,65 meters.    
     #plt.close('all') #clear memory
+
+
+def checkEmojiType(strEmo):
+    if unicodedata.name(strEmo).startswith("EMOJI MODIFIER"):
+        return None
+    else:
+        return strEmo
+#    #see https://stackoverflow.com/questions/43852668/using-collections-counter-to-count-emojis-with-different-colors
+#    # we want to ignore fitzpatrick modifiers and treat all differently colored emojis the same
+#    #https://stackoverflow.com/questions/38100329/some-emojis-e-g-have-two-unicode-u-u2601-and-u-u2601-ufe0f-what-does
+#COOKING
+#OK HAND SIGN
+#EMOJI MODIFIER FITZPATRICK TYPE-1-2
+#GRINNING FACE WITH SMILING EYES
+#HEAVY BLACK HEART
+#WEARY CAT FACE
+#SMILING FACE WITH HEART-SHAPED EYES
+#OK HAND SIGN
+#EMOJI MODIFIER FITZPATRICK TYPE-1-2
+#GRINNING FACE WITH SMILING EYES
+#PERSON WITH FOLDED HANDS
+#EMOJI MODIFIER FITZPATRICK TYPE-3
+#WEARY CAT FACE
+
+
+    
+#https://github.com/carpedm20/emoji/
+#https://github.com/carpedm20/emoji/issues/75
+def extract_emojis(str):
+  return list(c for c in str if c in emoji.UNICODE_EMOJI and checkEmojiType(c) is not None)
+  #return list(emoji.emojize(c,use_aliases=True) for c in str if c in emoji.UNICODE_EMOJI)
 #this class is needed to override tkinter window with drag&drop option when overrideredirect = true
 #class App:
 #    global tk
@@ -101,7 +134,19 @@ def getMetersFromRadians(dist):
 #        self.root._offsetx = event.x
 #        self.root._offsety = event.y
 
-
+#tc unicode problem
+#https://stackoverflow.com/questions/40222971/python-find-equivalent-surrogate-pair-from-non-bmp-unicode-char
+import re
+_nonbmp = re.compile(r'[\U00010000-\U0010FFFF]')
+def _surrogatepair(match):
+    char = match.group()
+    assert ord(char) > 0xffff
+    encoded = char.encode('utf-16-le')
+    return (
+        chr(int.from_bytes(encoded[:2], 'little')) + 
+        chr(int.from_bytes(encoded[2:], 'little')))
+def with_surrogates(text):
+    return _nonbmp.sub(_surrogatepair, text)
 
 
 #class WinImg(Frame):

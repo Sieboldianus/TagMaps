@@ -31,6 +31,7 @@ import tkinter.messagebox
 import def_functions
 import datetime
 import warnings
+from unicodedata import name as unicode_name
 
 #Cluster stuff
 import numpy as np
@@ -62,6 +63,10 @@ import shapely.geometry as geometry
 #from shapely.geometry import shape
 #from shapely.geometry import Point
 from decimal import Decimal
+
+#alternative Shapefile module pure Python
+#https://github.com/GeospatialPython/pyshp#writing-shapefiles
+import shapefile
 
 __author__      = "Alexander Dunkel"
 __license__   = "GNU GPLv3"
@@ -135,6 +140,14 @@ if (DSource == "fromFlickr_CSV"):
     GMTTimetransform = 0
     guid_columnNameID = 5 #guid   
     Sourcecode = 2
+    quoting_opt = csv.QUOTE_NONE
+elif (DSource == "fromInstagram_PGlbsn"):
+    filelist = glob('01_Input/*.csv')
+    timestamp_columnNameID = 7 #DateTaken
+    GMTTimetransform = 0    
+    guid_columnNameID = 2 #guid    
+    Sourcecode = 1
+    quoting_opt = csv.QUOTE_ALL 
 else:
     sys.exit("Source not supported yet.")
 
@@ -203,12 +216,12 @@ for file_name in filelist:
     #    guid_list.clear() #duplicate detection only for last 500k items
     with open(file_name, newline='', encoding='utf8') as f: # On input, if newline is None, universal newlines mode is enabled. Lines in the input can end in '\n', '\r', or '\r\n', and these are translated into '\n' before being returned to the caller.
         partcount += 1
-        if (DSource == "fromInstagram_LocMedia_CSV" or DSource == "fromInstagram_UserMedia_CSV" or DSource == "fromFlickr_CSV"):
-            photolist = csv.reader(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_NONE) #QUOTE_NONE is important because media saved from php/Flickr does not contain any " check; only ',' are replaced
+        if (DSource == "fromInstagram_LocMedia_CSV" or DSource == "fromInstagram_UserMedia_CSV" or DSource == "fromFlickr_CSV" or DSource == "fromInstagram_PGlbsn"):
+            photolist = csv.reader(f, delimiter=',', quotechar='"', quoting=quoting_opt) #QUOTE_NONE is important because media saved from php/Flickr does not contain any " check; only ',' are replaced
             next(photolist, None)  # skip headerline
         elif (DSource == "fromInstagram_HashMedia_JSON"):
             photolist = photolist + json.loads(f.read())
-        PhotosPerDayLists = defaultdict(list)
+        #PhotosPerDayLists = defaultdict(list)
         #keyCreatedHash = set()     
         for item in photolist:
             if (DSource == "fromInstagram_LocMedia_CSV"):
@@ -468,6 +481,46 @@ for file_name in filelist:
                 photo_mTags = ""
                 photo_dateTaken = ""
                 photo_views = ""
+            elif DSource == "fromInstagram_PGlbsn":
+                if len(item) < 15:
+                    #skip
+                    skippedCount += 1
+                    continue
+                else:
+                    photo_source = Sourcecode #LocMediaCode
+                    photo_guid = item[1] #guid
+                    photo_userid = item[7] #guid
+                    photo_owner = ""#item[1] ##!!!
+                    photo_shortcode = item[18]
+                    photo_uploadDate = item[8] #guid
+                    photo_idDate = photo_uploadDate #use upload date as sorting ID
+                    photo_caption = item[9]
+                    photo_likes = item[13]
+                    #photo_tags = ";" + item[11] + ";"
+                    tags_filtered = set(def_functions.extract_emojis(photo_caption))
+                    if len(tags_filtered) == 0:
+                        photo_tags = set()
+                    else:
+                        count_tags_global += len(tags_filtered)
+                        photo_tags = tags_filtered
+                    #photo_emojis = extract_emojis(photo_caption)
+                    photo_thumbnail = item[17]
+                    photo_comments = item[14]
+                    photo_mediatype = item[19]
+                       
+                    photo_locName = item[4] #guid
+                    if item[2] == "" or item[3] == "":
+                        count_non_geotagged += 1
+                        continue #skip non-geotagged medias
+                    else:
+                        photo_latitude = Decimal(item[2]) #guid
+                        photo_longitude = Decimal(item[3]) #guid
+                        setLatLngBounds(photo_latitude,photo_longitude)
+                    photo_locID = str(photo_latitude) + ':' + str(photo_longitude) #create loc_id from lat/lng      
+                    #empty for Instagram:
+                    photo_mTags = ""
+                    photo_dateTaken = ""
+                    photo_views = 0
             
             #this code will union all tags of a single user for each location
             #further information is derived from the first omage for each user-location
@@ -574,10 +627,16 @@ for user_key, taghash in UserDict_TagCounters_global.items():
 
 
 topTagsList = overallNumOfUsersPerTag_global.most_common(tmax)
+#remove all tags that are used by less than two photographers
+indexMin = next((i for i, (t1, t2) in enumerate(topTagsList) if t2 < 2), None)
+if indexMin:
+    lenBefore = len(topTagsList)
+    del topTagsList[indexMin:]
+    lenAfter = len(topTagsList)
+    tmax = lenAfter
+    if not lenBefore == lenAfter:
+        print("Filtered " + str(lenBefore - lenAfter) + " Tags that were only used by less than 2 users.")
 
-from itertools import dropwhile
-for key, count in dropwhile(lambda key_count: key_count[1] >= 2, topTagsList):
-    del topTagsList[key]
     
 #optional write toptags to file
 toptags = ''.join("%s,%i" % v + '\n' for v in topTagsList)
@@ -1047,7 +1106,12 @@ l = tk.Label(canvas, text="Optional: Exclude tags.", background="gray7",fg="gray
 l.pack(padx=10, pady=10)
 l = tk.Label(canvas, text="Select all tags you wish to exclude from analysis \n and click on remove to proceed.", background="gray7",fg="gray80")
 l.pack(padx=10, pady=10)
-listbox = tk.Listbox(canvas,selectmode=tk.MULTIPLE, bd=0,background="gray29",fg="gray91",width=30)
+#if DSource == "fromInstagram_PGlbsn":
+#    listbox_font = ("twitter Color Emoji", 12, "bold")
+#    #listbox_font = ("Symbola", 12, "bold")
+#else:
+listbox_font = None
+listbox = tk.Listbox(canvas,selectmode=tk.MULTIPLE, bd=0,background="gray29",fg="gray91",width=30,font=listbox_font)
 listbox.bind('<<ListboxSelect>>', onselect)
 scroll = tk.Scrollbar(canvas, orient=tk.VERTICAL,background="gray20",borderwidth=0)
 scroll.configure(command=listbox.yview)
@@ -1055,7 +1119,11 @@ scroll.pack(side="right", fill="y")
 listbox.pack()
 listbox.config(yscrollcommand=scroll.set)
 for item in topTagsList: #only for first 500 entries: use topTagsList[:500]
-    listbox.insert(tk.END, item[0] + " ("+ str(item[1]) + " user)")
+    try:
+        listbox.insert(tk.END, "{} ({} user)".format(item[0], item[1]))
+    except tk.TclError:
+        emoji = unicode_name(item[0]) #def_functions.with_surrogates()
+        listbox.insert(tk.END, "{} ({} user)".format(emoji, item[1]))
 canvas.pack(fill='both',padx=0, pady=0)
 listboxFrame.pack(fill='both',padx=0, pady=0)
 buttonsFrame = tk.Frame(app.floater)
@@ -1235,7 +1303,7 @@ if proceedClusting:
                     HImP = 1
                     firstCluster = False
                 else:
-                    HImP = 0
+                    HImP = 0                
                 #try:
                 #    print(*photos[:10])
                 #except UnicodeEncodeError:
@@ -1245,14 +1313,20 @@ if proceedClusting:
                 
                 uniqueUserCount = len(set([photo.userid for photo in photos]))
                 sumViews = sum([photo.photo_views for photo in photos])
-                points = [geometry.Point(photo.lng, photo.lat)
-                          for photo in photos]
+                #points = [geometry.Point(photo.lng, photo.lat)
+                #          for photo in photos]
+                #instead of lat/lng for each photo, we use photo_locID to identify a list of distinct locations 
+                distinctLocations = set([photo.photo_locID
+                          for photo in photos])
+                #afterwards, we derice lat/lng pairs from locIDs by splitting ( photo_locID = (str(photo_latitude) + ':' + str(photo_longitude))
+                points = [geometry.Point(Decimal(location.split(':')[1]), Decimal(location.split(':')[0]))
+                          for location in distinctLocations]
                 x = [p.coords.xy[0] for p in points]
                 y = [p.coords.xy[1] for p in points]
                 point_collection = geometry.MultiPoint(list(points))
                 result_polygon = None
-                if len(points) > 10:
-                    if len(points) < 20:
+                if len(points) >= 5:
+                    if len(points) < 10:
                         result_polygon = point_collection.convex_hull #convex hull
                         result_polygon = result_polygon.buffer((limLngMax-limLngMin)/200,resolution=3)
                     else:
@@ -1271,7 +1345,7 @@ if proceedClusting:
                             result_polygon = result_polygon.buffer((limLngMax-limLngMin)/200,resolution=3)
                         else:
                             result_polygon = result_polygon.buffer((limLngMax-limLngMin)/200,resolution=3)
-                elif 2 <= len(points) < 5: 
+                elif 2 <= len(points) < 5:
                     #calc distance between points http://www.mathwarehouse.com/algebra/distance_formula/index.php
                     #bdist = math.sqrt((points[0].coords.xy[0][0]-points[1].coords.xy[0][0])**2 + (points[0].coords.xy[1][0]-points[1].coords.xy[1][0])**2)
                     #print(str(bdist))
@@ -1283,7 +1357,7 @@ if proceedClusting:
                         result_polygon = result_polygon.convex_hull
                 #Geom, Join_Count, Views,  COUNT_User,ImpTag,TagCountG,HImpTag
                 if result_polygon is not None and not result_polygon.is_empty:
-                    listOfAlphashapesAndMeta.append((result_polygon,len(photo_guids),sumViews,uniqueUserCount,toptag[0],toptag[1],HImP))
+                    listOfAlphashapesAndMeta.append((result_polygon,len(photo_guids),sumViews,uniqueUserCount,str(toptag[0]),toptag[1],HImP))
                 #print(str(listOfPolygons[len(listOfPolygons)-1])+'\n')
                 #plot_polygon(result_polygon)
                 #plt.suptitle(toptag[0].upper(), fontsize=18, fontweight='bold')
@@ -1300,7 +1374,7 @@ if proceedClusting:
                 pcoordinate = geometry.Point(single_photo.lng, single_photo.lat)
                 result_polygon = pcoordinate.buffer((limLngMax-limLngMin)/200,resolution=3)
                 if result_polygon is not None and not result_polygon.is_empty:
-                    listOfAlphashapesAndMeta.append((result_polygon,1,single_photo.photo_views,1,toptag[0],toptag[1],0))
+                    listOfAlphashapesAndMeta.append((result_polygon,1,single_photo.photo_views,1,str(toptag[0]),toptag[1],0))
             #points = [geometry.Point(photo.lng, photo.lat)
             #          for photo in photos]
             #x = [p.coords.xy[0] for p in points]
@@ -1347,6 +1421,7 @@ if proceedClusting:
                        'Weights': 'float',
                        'WeightsV2': 'float',
                        'WeightsV3': 'float'},
+                       #'EmojiName': 'str'},
     }
     
     # Write a new Shapefile
@@ -1355,6 +1430,7 @@ if proceedClusting:
         ## If there are multiple geometries, put the "for" loop here
         idx = 0
         for alphaShapeAndMeta in listOfAlphashapesAndMeta:
+            #emoName = unicode_name(alphaShapeAndMeta[4])
             idx += 1
             weightsv1 = 1+ alphaShapeAndMeta[1] *(sqrt(1/( alphaShapeAndMeta[1] / alphaShapeAndMeta[3] )**3)) #-> Standard weighting formula (x**y means x raised to the power y)
             weightsv2 = 1+ alphaShapeAndMeta[1] *(sqrt(1/( alphaShapeAndMeta[1] / alphaShapeAndMeta[3] )**2)) #-> less importance on User_Count in correlation to photo count [Join_Count]
@@ -1370,6 +1446,7 @@ if proceedClusting:
                                'Weights': weightsv1,
                                'WeightsV2': weightsv2,
                                'WeightsV3': weightsv3},
+                               #'EmojiName': emoName},
             })
 
     print_store_log("########## STEP 6 of 6: Calculating Overall Photo Location Clusters ##########")
@@ -1455,39 +1532,3 @@ if proceedClusting:
     input("Press any key to continue...")
 else:
     print("\n" + "User abort.")
-
-##see https://pypkg.com/pypi/hdbscan-with-cosine-distance/f/hdbscan/plots.py for retrieving clusters at specific lambda values
-##class CondensedTree(object):
-##    def __init__(self, condensed_tree_array):
-##        self._raw_tree = condensed_tree_array
-##
-##    def get_plot_data(self, leaf_separation=1, log_size=False):
-##        """Generates data for use in plotting the 'icicle plot' or dendrogram 
-##        plot of the condensed tree generated by HDBSCAN.
-##
-##        Parameters
-##        ----------
-##        leaf_separation : float, optional
-##                          How far apart to space the final leaves of the 
-##                          dendrogram. (default 1)
-##
-##        log_size : boolean, optional
-##                   Use log scale for the 'size' of clusters (i.e. number of
-##                   points in the cluster at a given lambda value).
-##                   (default False)
-##        
-##        Returns
-##        -------
-##        plot_data : dict
-##                    Data associated to bars in a bar plot:
-##                        `bar_centers` x coordinate centers for bars
-##                        `bar_tops` heights of bars in lambda scale
-##                        `bar_bottoms` y coordinate of bottoms of bars
-##                        `bar_widths` widths of the bars (in x coord scale)
-##                        `bar_bounds` a 4-tuple of [left, right, bottom, top]
-##                                     giving the bounds on a full set of 
-##                                     cluster bars
-##                    Data associates with cluster splits:
-##                        `line_xs` x coordinates for horiontal dendrogram lines
-##                        `line_ys` y coordinates for horiontal dendrogram lines
-##        """
