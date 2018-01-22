@@ -117,9 +117,11 @@ writeGISCompLine = True # writes placeholder entry after headerline for avoiding
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('-s', "--source", default= "fromFlickr_CSV")     # naming it "source"
+parser.add_argument('-r', "--removeLongTail", default= True)   
 args = parser.parse_args()    # returns data from the options specified (source)
 DSource = args.source
-
+removeLongTail = args.removeLongTail
+#print(str(removeLongTail))
 pathname = os.getcwd()
 if not os.path.exists(pathname + '/02_Output/'):
     os.makedirs(pathname + '/02_Output/')
@@ -147,7 +149,14 @@ elif (DSource == "fromInstagram_PGlbsn"):
     GMTTimetransform = 0    
     guid_columnNameID = 2 #guid    
     Sourcecode = 1
-    quoting_opt = csv.QUOTE_ALL 
+    quoting_opt = csv.QUOTE_ALL
+elif (DSource == "fromSensorData_InfWuerz"):
+    filelist = glob('01_Input/*.csv')
+    timestamp_columnNameID = 2 #DateTaken
+    GMTTimetransform = 0    
+    guid_columnNameID = 1 #guid    
+    Sourcecode = 11
+    quoting_opt = csv.QUOTE_NONE
 else:
     sys.exit("Source not supported yet.")
 
@@ -216,7 +225,7 @@ for file_name in filelist:
     #    guid_list.clear() #duplicate detection only for last 500k items
     with open(file_name, newline='', encoding='utf8') as f: # On input, if newline is None, universal newlines mode is enabled. Lines in the input can end in '\n', '\r', or '\r\n', and these are translated into '\n' before being returned to the caller.
         partcount += 1
-        if (DSource == "fromInstagram_LocMedia_CSV" or DSource == "fromInstagram_UserMedia_CSV" or DSource == "fromFlickr_CSV" or DSource == "fromInstagram_PGlbsn"):
+        if (DSource == "fromInstagram_LocMedia_CSV" or DSource == "fromInstagram_UserMedia_CSV" or DSource == "fromFlickr_CSV" or DSource == "fromInstagram_PGlbsn" or DSource == "fromSensorData_InfWuerz"):
             photolist = csv.reader(f, delimiter=',', quotechar='"', quoting=quoting_opt) #QUOTE_NONE is important because media saved from php/Flickr does not contain any " check; only ',' are replaced
             next(photolist, None)  # skip headerline
         elif (DSource == "fromInstagram_HashMedia_JSON"):
@@ -521,9 +530,59 @@ for file_name in filelist:
                     photo_mTags = ""
                     photo_dateTaken = ""
                     photo_views = 0
-            
+            elif DSource == "fromSensorData_InfWuerz":
+                if len(item) < 5:
+                    #skip
+                    skippedCount += 1
+                    continue
+                else:                
+                    photo_source = Sourcecode #LocMediaCode
+                    photo_guid = item[1] #guid
+                    photo_userid = item[5] #guid
+                    photo_owner = ""#item[1] ##!!!
+                    photo_shortcode = ""
+                    photo_uploadDate = item[3] #meta_timestamp_received
+                    photo_idDate = item[2] #meta_timestamp_recorded
+                    photo_caption = item[8]
+                    if not len(photo_caption) == 0:
+                        removeSpecialChars = photo_caption.translate ({ord(c): " " for c in "?.!/;:,[]()'-"})
+                        wordlist = [word for word in removeSpecialChars.lower().split(' ') if not word == "" and len(word) > 1]
+                        photo_tags = set(wordlist)
+                    else:
+                        photo_tags = set()
+                    photo_tags_filtered = set()
+                    for tag in photo_tags:
+                        count_tags_global += 1
+                        #exclude numbers and those tags that are in SortOutAlways_set
+                        if tag.isdigit() or tag in SortOutAlways_set:
+                            count_tags_skipped += 1
+                            continue
+                        for inStr in SortOutAlways_inStr_set:
+                            if inStr in tag:
+                                count_tags_skipped += 1
+                                break
+                        else:
+                            photo_tags_filtered.add(tag)
+                    photo_tags = photo_tags_filtered
+                    if item[6] == "" or item[7] == "":
+                        count_non_geotagged += 1
+                        continue #skip non-geotagged medias
+                    else:
+                        photo_latitude = Decimal(item[7]) #guid
+                        photo_longitude = Decimal(item[6]) #guid
+                        setLatLngBounds(photo_latitude,photo_longitude)
+                    photo_locID = str(photo_latitude) + ':' + str(photo_longitude) #create loc_id from lat/lng      
+                    #empty for SensorWuerz:
+                    photo_likes = ""                
+                    photo_thumbnail = ""
+                    photo_comments = ""
+                    photo_mediatype = ""
+                    photo_locName = ""                
+                    photo_mTags = ""
+                    photo_dateTaken = ""
+                    photo_views = 0            
             #this code will union all tags of a single user for each location
-            #further information is derived from the first omage for each user-location
+            #further information is derived from the first image for each user-location
             photo_locIDUserID =  photo_locID + '::' + str(photo_userid) #create userid_loc_id
             distinctLocations_set.add(photo_locID)
             if not photo_userid in LocationsPerUserID_dict or not photo_locID in LocationsPerUserID_dict[photo_userid]:
@@ -628,14 +687,15 @@ for user_key, taghash in UserDict_TagCounters_global.items():
 
 topTagsList = overallNumOfUsersPerTag_global.most_common(tmax)
 #remove all tags that are used by less than two photographers
-indexMin = next((i for i, (t1, t2) in enumerate(topTagsList) if t2 < 2), None)
-if indexMin:
-    lenBefore = len(topTagsList)
-    del topTagsList[indexMin:]
-    lenAfter = len(topTagsList)
-    tmax = lenAfter
-    if not lenBefore == lenAfter:
-        print("Filtered " + str(lenBefore - lenAfter) + " Tags that were only used by less than 2 users.")
+if removeLongTail is True:
+    indexMin = next((i for i, (t1, t2) in enumerate(topTagsList) if t2 < 2), None)
+    if indexMin:
+        lenBefore = len(topTagsList)
+        del topTagsList[indexMin:]
+        lenAfter = len(topTagsList)
+        tmax = lenAfter
+        if not lenBefore == lenAfter:
+            print("Filtered " + str(lenBefore - lenAfter) + " Tags that were only used by less than 2 users.")
 
     
 #optional write toptags to file
@@ -854,7 +914,8 @@ def cluster_tag(toptag=None,preview=None,silent=None):
 
     
     #clustering
-
+    if len(selectedPhotoList_Guids) < 2:
+        return [], selectedPhotoList_Guids
     selectedPhotoList = [cleanedPhotoDict[x] for x in selectedPhotoList_Guids]
     #only used for tag clustering, otherwise (photo location clusters), global vars are used (df, points)
     df = pd.DataFrame(selectedPhotoList)
@@ -1249,18 +1310,22 @@ if proceedClusting:
         #clusters contains the cluster values (-1 = no cluster, 0 maybe, >0 = cluster
         # in the same order, selectedPhotoList contains all original photo data, thus clusters[10] and selectedPhotoList[10] refer to the same photo
         numpy_selectedPhotoList_Guids = np.asarray(selectedPhotoList_Guids)
-        mask_noisy = (clusters == -1)
-        number_of_clusters = len(np.unique(clusters[~mask_noisy])) #mit noisy (=0)
-        print_store_log("--> " + str(number_of_clusters) + " cluster.")
-        tnum += 1
-        photo_num = 0
-        #clusternum_photolist = zip(clusters,selectedPhotoList)
-        #clusterPhotosList = [[] for x in range(number_of_clusters)]
-        clusterPhotosGuidsList = []
-        for x in range(number_of_clusters):
-            currentClusterPhotoGuids = numpy_selectedPhotoList_Guids[clusters==x]
-            clusterPhotosGuidsList.append(currentClusterPhotoGuids)
-        noClusterPhotos_perTag_DictOfLists[toptag[0]] = list(numpy_selectedPhotoList_Guids[clusters==-1])
+        if not len(clusters) == 0:
+            mask_noisy = (clusters == -1)
+            number_of_clusters = len(np.unique(clusters[~mask_noisy])) #mit noisy (=0)
+            print_store_log("--> " + str(number_of_clusters) + " cluster.")
+            tnum += 1
+            photo_num = 0
+            #clusternum_photolist = zip(clusters,selectedPhotoList)
+            #clusterPhotosList = [[] for x in range(number_of_clusters)]
+            clusterPhotosGuidsList = []
+            for x in range(number_of_clusters):
+                currentClusterPhotoGuids = numpy_selectedPhotoList_Guids[clusters==x]
+                clusterPhotosGuidsList.append(currentClusterPhotoGuids)
+            noClusterPhotos_perTag_DictOfLists[toptag[0]] = list(numpy_selectedPhotoList_Guids[clusters==-1])
+        else:
+            print_store_log("--> No cluster.")
+            noClusterPhotos_perTag_DictOfLists[toptag[0]] = list(numpy_selectedPhotoList_Guids)
         #for x in clusters:
         #    #photolist = []
         #    if x >= 0: # no clusters: x = -1
