@@ -48,7 +48,7 @@ pool = ThreadPool(processes=1)
 import time
 from time import sleep
 
-
+import copy
 
 ##Needed for Shapefilestuff
 
@@ -538,14 +538,14 @@ for file_name in filelist:
                 else:                
                     photo_source = Sourcecode #LocMediaCode
                     photo_guid = item[1] #guid
-                    photo_userid = item[5] #guid
+                    photo_userid = item[4] #meta_device_id
                     photo_owner = ""#item[1] ##!!!
                     photo_shortcode = ""
                     photo_uploadDate = item[3] #meta_timestamp_received
                     photo_idDate = item[2] #meta_timestamp_recorded
                     photo_caption = item[8]
                     if not len(photo_caption) == 0:
-                        removeSpecialChars = photo_caption.translate ({ord(c): " " for c in "?.!/;:,[]()'-"})
+                        removeSpecialChars = photo_caption.translate ({ord(c): " " for c in "?.!/;:,[]()'-&#"})
                         wordlist = [word for word in removeSpecialChars.lower().split(' ') if not word == "" and len(word) > 1]
                         photo_tags = set(wordlist)
                     else:
@@ -606,7 +606,7 @@ for file_name in filelist:
                                                                    photo_locName,
                                                                    photo_locID)
             UserLocationTagList_dict[photo_locIDUserID] |= photo_tags #union tags per userid/unique location
-            removeSpecialChars = photo_caption.translate ({ord(c): " " for c in "?.!/;:,[]()'-"})
+            removeSpecialChars = photo_caption.translate ({ord(c): " " for c in "?.!/;:,[]()'-&#"})
             wordlist = [word for word in removeSpecialChars.split(' ') if len(word) > 2]  #first replace specia characters in caption, then split by space-character
             UserLocationWordList_dict[photo_locIDUserID] |= set(wordlist) #union words per userid/unique location              
             count_glob += 1
@@ -1309,10 +1309,14 @@ if proceedClusting:
         #print(clusters)
         #clusters contains the cluster values (-1 = no cluster, 0 maybe, >0 = cluster
         # in the same order, selectedPhotoList contains all original photo data, thus clusters[10] and selectedPhotoList[10] refer to the same photo
+        
         numpy_selectedPhotoList_Guids = np.asarray(selectedPhotoList_Guids)
-        if not len(clusters) == 0:
-            mask_noisy = (clusters == -1)
+        mask_noisy = (clusters == -1)
+        if len(selectedPhotoList_Guids) == 1:
+            number_of_clusters = 0 
+        else:  
             number_of_clusters = len(np.unique(clusters[~mask_noisy])) #mit noisy (=0)
+        if not number_of_clusters == 0:
             print_store_log("--> " + str(number_of_clusters) + " cluster.")
             tnum += 1
             photo_num = 0
@@ -1323,6 +1327,10 @@ if proceedClusting:
                 currentClusterPhotoGuids = numpy_selectedPhotoList_Guids[clusters==x]
                 clusterPhotosGuidsList.append(currentClusterPhotoGuids)
             noClusterPhotos_perTag_DictOfLists[toptag[0]] = list(numpy_selectedPhotoList_Guids[clusters==-1])
+            # Sort descending based on size of cluster: https://stackoverflow.com/questions/30346356/how-to-sort-list-of-lists-according-to-length-of-sublists
+            clusterPhotosGuidsList.sort(key=len, reverse=True)
+            if not len(clusterPhotosGuidsList) == 0:
+                clustersPerTag[toptag[0]] = clusterPhotosGuidsList            
         else:
             print_store_log("--> No cluster.")
             noClusterPhotos_perTag_DictOfLists[toptag[0]] = list(numpy_selectedPhotoList_Guids)
@@ -1338,11 +1346,8 @@ if proceedClusting:
         #print("resultList: ")
         #for s in clusterPhotosList[:2]:
         #    print(*s)
-        #print(str(toptag) + " - Number of clusters: " + str(len(clusterPhotosList)) + " Photo num: " + str(photo_num))
-        # Sort descending based on size of cluster: https://stackoverflow.com/questions/30346356/how-to-sort-list-of-lists-according-to-length-of-sublists
-        clusterPhotosGuidsList.sort(key=len, reverse=True)
-        if not len(clusterPhotosGuidsList) == 0:
-            clustersPerTag[toptag[0]] = clusterPhotosGuidsList
+        #print(str(toptag) + " - Number of clusters: " + str(len(clusterPhotosList)) + " Photo num: " + str(photo_num))      
+
         #plt.autoscale(enable=True)
         
         #if tnum == 50:
@@ -1360,24 +1365,17 @@ if proceedClusting:
         clusterPhotoGuidList = clustersPerTag.get(toptag[0], None)
         #print(toptag[0])
         if clusterPhotoGuidList:
-            #clusterPhotoList = clustersPerTag[toptag[0]]
-            #print(str(len(clusterPhotoGuidList)))
-            firstCluster = True
+            #we define a new list of Temp Alpha Shapes outside the loop, so that it is not overwritten each time
+            listOfAlphashapesAndMeta_tmp = []
             for photo_guids in clusterPhotoGuidList:
-                if firstCluster:
-                    HImP = 1
-                    firstCluster = False
-                else:
-                    HImP = 0                
-                #try:
-                #    print(*photos[:10])
-                #except UnicodeEncodeError:
-                #    print("skipped\n")
-                #get full photo data from dict as list
                 photos = [cleanedPhotoDict[x] for x in photo_guids]
-                
+                photoCount = len(photo_guids)
                 uniqueUserCount = len(set([photo.userid for photo in photos]))
                 sumViews = sum([photo.photo_views for photo in photos])
+                #calculate different weighting formulas
+                weightsv1 = 1+ photoCount *(sqrt(1/( photoCount / uniqueUserCount )**3)) #-> Standard weighting formula (x**y means x raised to the power y)
+                weightsv2 = 1+ photoCount *(sqrt(1/( photoCount / uniqueUserCount )**2)) #-> less importance on User_Count in correlation to photo count [Join_Count]
+                weightsv3 = sqrt((photoCount+(2*sqrt(photoCount)))*2) #-> Ignores User_Count, this will emphasize individual and very active users                  
                 #points = [geometry.Point(photo.lng, photo.lat)
                 #          for photo in photos]
                 #instead of lat/lng for each photo, we use photo_locID to identify a list of distinct locations 
@@ -1422,15 +1420,18 @@ if proceedClusting:
                         result_polygon = result_polygon.convex_hull
                 #Geom, Join_Count, Views,  COUNT_User,ImpTag,TagCountG,HImpTag
                 if result_polygon is not None and not result_polygon.is_empty:
-                    listOfAlphashapesAndMeta.append((result_polygon,len(photo_guids),sumViews,uniqueUserCount,str(toptag[0]),toptag[1],HImP))
-                #print(str(listOfPolygons[len(listOfPolygons)-1])+'\n')
-                #plot_polygon(result_polygon)
-                #plt.suptitle(toptag[0].upper(), fontsize=18, fontweight='bold')
-                #plt.gca().set_xlim([float(limLngMin), float(limLngMax)]) 
-                #plt.gca().set_ylim([float(limLatMin), float(limLatMax)])
-                #plt.plot(x,y,'o',ms=5)
-                #plt.waitforbuttonpress()
-                #plt.close()
+                    listOfAlphashapesAndMeta_tmp.append((result_polygon,photoCount,sumViews,uniqueUserCount,str(toptag[0]),toptag[1],weightsv1,weightsv2,weightsv3))
+            if len(listOfAlphashapesAndMeta_tmp) > 0:
+                #Sort on Weights1 Formula
+                listOfAlphashapesAndMeta_tmp = sorted(listOfAlphashapesAndMeta_tmp,key=lambda x: -x[6])
+                listOfAlphashapesAndMeta.extend(listOfAlphashapesAndMeta_tmp)
+                    #plot_polygon(result_polygon)
+                    #plt.suptitle(toptag[0].upper(), fontsize=18, fontweight='bold')
+                    #plt.gca().set_xlim([float(limLngMin), float(limLngMax)]) 
+                    #plt.gca().set_ylim([float(limLatMin), float(limLatMax)])
+                    #plt.plot(x,y,'o',ms=5)
+                    #plt.waitforbuttonpress()
+                    #plt.close()
         singlePhotoGuidList = noClusterPhotos_perTag_DictOfLists.get(toptag[0], None)
         if singlePhotoGuidList:
             #print("Single: " + str(len(singlePhotoGuidList)))
@@ -1439,7 +1440,7 @@ if proceedClusting:
                 pcoordinate = geometry.Point(single_photo.lng, single_photo.lat)
                 result_polygon = pcoordinate.buffer((limLngMax-limLngMin)/200,resolution=3)
                 if result_polygon is not None and not result_polygon.is_empty:
-                    listOfAlphashapesAndMeta.append((result_polygon,1,single_photo.photo_views,1,str(toptag[0]),toptag[1],0))
+                    listOfAlphashapesAndMeta.append((result_polygon,1,single_photo.photo_views,1,str(toptag[0]),toptag[1],1,1,1))
             #points = [geometry.Point(photo.lng, photo.lat)
             #          for photo in photos]
             #x = [p.coords.xy[0] for p in points]
@@ -1482,7 +1483,7 @@ if proceedClusting:
                        'COUNT_User': 'int',
                        'ImpTag': 'str',
                        'TagCountG': 'int',
-                       'HImpTag': 'int',                       
+                       'HImpTag': 'int',
                        'Weights': 'float',
                        'WeightsV2': 'float',
                        'WeightsV3': 'float'},
@@ -1493,13 +1494,17 @@ if proceedClusting:
     # WGS1984
     with fiona.open('02_Output/allTagClusters.shp', mode='w', encoding='utf-8', driver='ESRI Shapefile', schema=schema,crs=from_epsg(4326)) as c:
         ## If there are multiple geometries, put the "for" loop here
-        idx = 0
+        idx = 0  
         for alphaShapeAndMeta in listOfAlphashapesAndMeta:
+            if idx == 0:
+                HImP = 1
+            else:
+                if listOfAlphashapesAndMeta[idx][4] != listOfAlphashapesAndMeta[idx-1][4]:      
+                    HImP = 1
+                else:
+                    HImP = 0
             #emoName = unicode_name(alphaShapeAndMeta[4])
             idx += 1
-            weightsv1 = 1+ alphaShapeAndMeta[1] *(sqrt(1/( alphaShapeAndMeta[1] / alphaShapeAndMeta[3] )**3)) #-> Standard weighting formula (x**y means x raised to the power y)
-            weightsv2 = 1+ alphaShapeAndMeta[1] *(sqrt(1/( alphaShapeAndMeta[1] / alphaShapeAndMeta[3] )**2)) #-> less importance on User_Count in correlation to photo count [Join_Count]
-            weightsv3 = sqrt((alphaShapeAndMeta[1]+(2*sqrt(alphaShapeAndMeta[1])))*2) #-> Ignores User_Count, this will emphasize individual and very active users
             c.write({
                 'geometry': geometry.mapping(alphaShapeAndMeta[0]),
                 'properties': {'Join_Count': alphaShapeAndMeta[1], 
@@ -1507,10 +1512,10 @@ if proceedClusting:
                                'COUNT_User': alphaShapeAndMeta[3],
                                'ImpTag': alphaShapeAndMeta[4],
                                'TagCountG': alphaShapeAndMeta[5],
-                               'HImpTag': alphaShapeAndMeta[6],
-                               'Weights': weightsv1,
-                               'WeightsV2': weightsv2,
-                               'WeightsV3': weightsv3},
+                               'HImpTag': HImP,
+                               'Weights': alphaShapeAndMeta[6],
+                               'WeightsV2': alphaShapeAndMeta[7],
+                               'WeightsV3': alphaShapeAndMeta[8]},
                                #'EmojiName': emoName},
             })
 
