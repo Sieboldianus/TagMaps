@@ -5,6 +5,7 @@ import sys
 import tkinter as tk
 import emoji
 import unicodedata
+import math
 
 def query_yes_no(question, default="yes"):
     """Ask a yes/no question via raw_input() and return their answer.
@@ -82,12 +83,12 @@ def getMetersFromRadians(dist):
     #To convert this to meters, multiply by 1,000. So, 2 degrees is 222,65 meters.    
     #plt.close('all') #clear memory
 
-
-def checkEmojiType(strEmo):
-    if unicodedata.name(strEmo).startswith("EMOJI MODIFIER"):
-        return None
-    else:
-        return strEmo
+#This function is not really needed, makes no difference! (really?)
+#def checkEmojiType(strEmo):
+#    if unicodedata.name(strEmo).startswith(("EMOJI MODIFIER","VARIATION SELECTOR","ZERO WIDTH JOINER")):
+#        return False
+#    else:
+#        return True
 #    #see https://stackoverflow.com/questions/43852668/using-collections-counter-to-count-emojis-with-different-colors
 #    # we want to ignore fitzpatrick modifiers and treat all differently colored emojis the same
 #    #https://stackoverflow.com/questions/38100329/some-emojis-e-g-have-two-unicode-u-u2601-and-u-u2601-ufe0f-what-does
@@ -105,13 +106,26 @@ def checkEmojiType(strEmo):
 #EMOJI MODIFIER FITZPATRICK TYPE-3
 #WEARY CAT FACE
 
+##Emojitest
+#n = '❤️👨‍⚕️'
+##n = '👨‍⚕️' #medical emoji with zero-width joiner (http://www.unicode.org/emoji/charts/emoji-zwj-sequences.html)
+#nlist = def_functions.extract_emojis(n)
+#with open("emojifile.txt", "w", encoding='utf-8') as emojifile:
+#    emojifile.write("Original: " + n + '\n')
+#    for xstr in nlist:
+#        emojifile.write('Emoji Extract: U+%04x' % ord(xstr) + '\n')
+#        emojifile.write(xstr + '\n')
+#    for _c in n:
+#        emojifile.write(str(unicode_name(_c)) + '\n')
+#        emojifile.write('Each Codepoint: U+%04x' % ord(_c) +  '\n')
 
     
 #https://github.com/carpedm20/emoji/
 #https://github.com/carpedm20/emoji/issues/75
 def extract_emojis(str):
-  return list(c for c in str if c in emoji.UNICODE_EMOJI and checkEmojiType(c) is not None)
-  #return list(emoji.emojize(c,use_aliases=True) for c in str if c in emoji.UNICODE_EMOJI)
+  #str = str.decode('utf-32').encode('utf-32', 'surrogatepass')
+  return list(c for c in str if c in emoji.UNICODE_EMOJI)
+  #return list(c for c in str if c in emoji.UNICODE_EMOJI and checkEmojiType(c) is True)
 #this class is needed to override tkinter window with drag&drop option when overrideredirect = true
 #class App:
 #    global tk
@@ -148,6 +162,16 @@ def _surrogatepair(match):
 def with_surrogates(text):
     return _nonbmp.sub(_surrogatepair, text)
 
+#https://stackoverflow.com/questions/40132542/get-a-cartesian-projection-accurate-around-a-lat-lng-pair
+def convert_wgs_to_utm(lon, lat):
+    utm_band = str((math.floor((lon + 180) / 6 ) % 60) + 1)
+    if len(utm_band) == 1:
+        utm_band = '0'+utm_band
+    if lat >= 0:
+        epsg_code = '326' + utm_band
+    else:
+        epsg_code = '327' + utm_band
+    return epsg_code
 
 #class WinImg(Frame):
 #    def __init__(self,parent):

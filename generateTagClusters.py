@@ -50,8 +50,6 @@ from time import sleep
 
 import copy
 
-##Needed for Shapefilestuff
-
 #enable for map display
 #from mpl_toolkits.basemap import Basemap
 #from PIL import Image
@@ -59,6 +57,9 @@ import copy
 import fiona #Fiona needed for reading Shapefile
 from fiona.crs import from_epsg
 import shapely.geometry as geometry
+import pyproj #import Proj, transform
+#https://gis.stackexchange.com/questions/127427/transforming-shapely-polygon-and-multipolygon-objects
+from shapely.ops import transform
 #from shapely.geometry import Polygon
 #from shapely.geometry import shape
 #from shapely.geometry import Point
@@ -143,7 +144,7 @@ if (DSource == "fromFlickr_CSV"):
     guid_columnNameID = 5 #guid   
     Sourcecode = 2
     quoting_opt = csv.QUOTE_NONE
-elif (DSource == "fromInstagram_PGlbsn"):
+elif (DSource == "fromInstagram_PGlbsnEmoji"):
     filelist = glob('01_Input/*.csv')
     timestamp_columnNameID = 7 #DateTaken
     GMTTimetransform = 0    
@@ -225,7 +226,7 @@ for file_name in filelist:
     #    guid_list.clear() #duplicate detection only for last 500k items
     with open(file_name, newline='', encoding='utf8') as f: # On input, if newline is None, universal newlines mode is enabled. Lines in the input can end in '\n', '\r', or '\r\n', and these are translated into '\n' before being returned to the caller.
         partcount += 1
-        if (DSource == "fromInstagram_LocMedia_CSV" or DSource == "fromInstagram_UserMedia_CSV" or DSource == "fromFlickr_CSV" or DSource == "fromInstagram_PGlbsn" or DSource == "fromSensorData_InfWuerz"):
+        if (DSource == "fromInstagram_LocMedia_CSV" or DSource == "fromInstagram_UserMedia_CSV" or DSource == "fromFlickr_CSV" or DSource == "fromInstagram_PGlbsnEmoji" or DSource == "fromSensorData_InfWuerz"):
             photolist = csv.reader(f, delimiter=',', quotechar='"', quoting=quoting_opt) #QUOTE_NONE is important because media saved from php/Flickr does not contain any " check; only ',' are replaced
             next(photolist, None)  # skip headerline
         elif (DSource == "fromInstagram_HashMedia_JSON"):
@@ -490,7 +491,7 @@ for file_name in filelist:
                 photo_mTags = ""
                 photo_dateTaken = ""
                 photo_views = ""
-            elif DSource == "fromInstagram_PGlbsn":
+            elif DSource == "fromInstagram_PGlbsnEmoji":
                 if len(item) < 15:
                     #skip
                     skippedCount += 1
@@ -506,12 +507,12 @@ for file_name in filelist:
                     photo_caption = item[9]
                     photo_likes = item[13]
                     #photo_tags = ";" + item[11] + ";"
-                    tags_filtered = set(def_functions.extract_emojis(photo_caption))
-                    if len(tags_filtered) == 0:
-                        photo_tags = set()
-                    else:
+                    tags_filtered = def_functions.extract_emojis(photo_caption)
+                    if not len(tags_filtered) == 0:
                         count_tags_global += len(tags_filtered)
-                        photo_tags = tags_filtered
+                        photo_tags = set(tags_filtered)
+                    else:
+                        photo_tags = set()
                     #photo_emojis = extract_emojis(photo_caption)
                     photo_thumbnail = item[17]
                     photo_comments = item[14]
@@ -823,12 +824,13 @@ limYMin = np.min(points.T[1])
 limYMax = np.max(points.T[1])    
 limXMin = np.min(points.T[0])       
 limXMax = np.max(points.T[0])
-distY = limYMax - limYMin
-distX = limXMax - limXMin
-imgRatio = distX/(distY*2) 
+bound_points_shapely = geometry.MultiPoint([(limXMin, limYMin), (limXMax, limYMax)])
+distYLat = limYMax - limYMin
+distXLng = limXMax - limXMin
+imgRatio = distXLng/(distYLat*2) 
 distY = def_functions.haversine(limXMin, limYMin, limXMin, limYMax)
 distX = def_functions.haversine(limXMin, limYMin, limXMax, limYMin) 
-clusterTreeCuttingDist = (distX/100)*4 #4% of research area width = default value #223.245922725 #= 0.000035 radians dist
+clusterTreeCuttingDist = (max(distX,distY)/100)*4 #4% of research area width/height (max) = default value #223.245922725 #= 0.000035 radians dist
 
 #tkinter.messagebox.showinfo("messagr", str(distY))
 #tkinter.messagebox.showinfo("messagr", str(distX))
@@ -1167,7 +1169,7 @@ l = tk.Label(canvas, text="Optional: Exclude tags.", background="gray7",fg="gray
 l.pack(padx=10, pady=10)
 l = tk.Label(canvas, text="Select all tags you wish to exclude from analysis \n and click on remove to proceed.", background="gray7",fg="gray80")
 l.pack(padx=10, pady=10)
-#if DSource == "fromInstagram_PGlbsn":
+#if DSource == "fromInstagram_PGlbsnEmoji":
 #    listbox_font = ("twitter Color Emoji", 12, "bold")
 #    #listbox_font = ("Symbola", 12, "bold")
 #else:
@@ -1373,8 +1375,10 @@ if proceedClusting:
                 uniqueUserCount = len(set([photo.userid for photo in photos]))
                 sumViews = sum([photo.photo_views for photo in photos])
                 #calculate different weighting formulas
-                weightsv1 = 1+ photoCount *(sqrt(1/( photoCount / uniqueUserCount )**3)) #-> Standard weighting formula (x**y means x raised to the power y)
-                weightsv2 = 1+ photoCount *(sqrt(1/( photoCount / uniqueUserCount )**2)) #-> less importance on User_Count in correlation to photo count [Join_Count]
+                #weightsv1 = 1+ photoCount *(sqrt(1/( photoCount / uniqueUserCount )**3)) #-> Standard weighting formula (x**y means x raised to the power y); +1 to UserCount: prevent 1-2 Range from being misaligned
+                #weightsv2 = 1+ photoCount *(sqrt(1/( photoCount / uniqueUserCount )**2))
+                weightsv1 = photoCount *(sqrt(1/( photoCount / (uniqueUserCount+1) )**3)) #-> Standard weighting formula (x**y means x raised to the power y); +1 to UserCount: prevent 1-2 Range from being misaligned
+                weightsv2 = photoCount *(sqrt(1/( photoCount / (uniqueUserCount+1) )**2)) #-> less importance on User_Count in correlation to photo count [Join_Count]; +1 to UserCount: prevent 1-2 Range from being misaligned
                 weightsv3 = sqrt((photoCount+(2*sqrt(photoCount)))*2) #-> Ignores User_Count, this will emphasize individual and very active users                  
                 #points = [geometry.Point(photo.lng, photo.lat)
                 #          for photo in photos]
@@ -1391,7 +1395,7 @@ if proceedClusting:
                 if len(points) >= 5:
                     if len(points) < 10:
                         result_polygon = point_collection.convex_hull #convex hull
-                        result_polygon = result_polygon.buffer((limLngMax-limLngMin)/200,resolution=3)
+                        result_polygon = result_polygon.buffer(max(distXLng,distYLat)/200,resolution=3)
                     else:
                         result_polygon = alpha_shape(points,alpha=clusterTreeCuttingDist*10) #concave hull/alpha shape
                         if type(result_polygon) is geometry.multipolygon.MultiPolygon:
@@ -1405,16 +1409,16 @@ if proceedClusting:
                         if type(result_polygon) is bool:
                             #in case there was a problem with generating alpha shapes (circum_r = a*b*c/(4.0*area) --> ZeroDivisionError: float division by zero)
                             result_polygon = point_collection.convex_hull #convex hull
-                            result_polygon = result_polygon.buffer((limLngMax-limLngMin)/200,resolution=3)
+                            result_polygon = result_polygon.buffer(max(distXLng,distYLat)/200,resolution=3)
                         else:
-                            result_polygon = result_polygon.buffer((limLngMax-limLngMin)/200,resolution=3)
+                            result_polygon = result_polygon.buffer(max(distXLng,distYLat)/200,resolution=3)
                 elif 2 <= len(points) < 5:
                     #calc distance between points http://www.mathwarehouse.com/algebra/distance_formula/index.php
                     #bdist = math.sqrt((points[0].coords.xy[0][0]-points[1].coords.xy[0][0])**2 + (points[0].coords.xy[1][0]-points[1].coords.xy[1][0])**2)
                     #print(str(bdist))
-                    result_polygon = point_collection.buffer((limLngMax-limLngMin)/200,resolution=3) #single dots are presented as buffer with 0.5% of width-area
+                    result_polygon = point_collection.buffer(max(distXLng,distYLat)/200,resolution=3) #single dots are presented as buffer with 0.5% of width-area
                 elif len(points)==1 or type(result_polygon) is geometry.point.Point or result_polygon is None:
-                    result_polygon = point_collection.buffer((limLngMax-limLngMin)/200,resolution=3) #single dots are presented as buffer with 0.5% of width-area
+                    result_polygon = point_collection.buffer(max(distXLng,distYLat)/200,resolution=3) #single dots are presented as buffer with 0.5% of width-area
                 #final check for multipolygon
                 if type(result_polygon) is geometry.multipolygon.MultiPolygon:
                         result_polygon = result_polygon.convex_hull
@@ -1438,7 +1442,7 @@ if proceedClusting:
             photos = [cleanedPhotoDict[x] for x in singlePhotoGuidList]
             for single_photo in photos:
                 pcoordinate = geometry.Point(single_photo.lng, single_photo.lat)
-                result_polygon = pcoordinate.buffer((limLngMax-limLngMin)/200,resolution=3)
+                result_polygon = pcoordinate.buffer(max(distXLng,distYLat)/200,resolution=3)
                 if result_polygon is not None and not result_polygon.is_empty:
                     listOfAlphashapesAndMeta.append((result_polygon,1,single_photo.photo_views,1,str(toptag[0]),toptag[1],1,1,1))
             #points = [geometry.Point(photo.lng, photo.lat)
@@ -1475,6 +1479,12 @@ if proceedClusting:
     ##Output Boundary Shapes in merged Shapefile##
     print_store_log("########## STEP 5 of 6: Writing Results to Shapefile ##########")
     
+    #Calculate best UTM Zone SRID/EPSG Code
+    input_lon_center = bound_points_shapely.centroid.coords[0][0] #True centroid (coords may be multipoint)
+    input_lat_center = bound_points_shapely.centroid.coords[0][1]
+    utm_code = def_functions.convert_wgs_to_utm(input_lon_center, input_lat_center)
+    project = lambda x, y: pyproj.transform(pyproj.Proj(init='epsg:4326'), pyproj.Proj(init='epsg:{0}'.format(utm_code)), x, y)
+
     # Define a polygon feature geometry with one attribute
     schema = {
         'geometry': 'Polygon',
@@ -1489,11 +1499,31 @@ if proceedClusting:
                        'WeightsV3': 'float'},
                        #'EmojiName': 'str'},
     }
-    
+ 
+    #Normalization of Values (1-1000 Range), precalc Step:
+    #######################################
+    weightsv1_range = [x[6] for x in listOfAlphashapesAndMeta] #get the n'th column out for calculating the max/min
+    weightsv2_range = [x[7] for x in listOfAlphashapesAndMeta]
+    weightsv3_range = [x[8] for x in listOfAlphashapesAndMeta]
+    weightsv1_min = min(weightsv1_range)
+    weightsv1_max = max(weightsv1_range)
+    weightsv2_min = min(weightsv2_range)
+    weightsv2_max = max(weightsv2_range)
+    weightsv3_min = min(weightsv3_range)
+    weightsv3_max = max(weightsv3_range)   
+    #precalc
+    #https://stats.stackexchange.com/questions/70801/how-to-normalize-data-to-0-1-range
+    weightsv1_mod_a = (1000-1)/(weightsv1_max-weightsv1_min)
+    weightsv1_mod_b = 1000 - weightsv1_mod_a * weightsv1_max   
+    weightsv2_mod_a = (1000-1)/(weightsv2_max-weightsv2_min)
+    weightsv2_mod_b = 1000 - weightsv2_mod_a * weightsv2_max
+    weightsv3_mod_a = (1000-1)/(weightsv3_max-weightsv3_min)
+    weightsv3_mod_b = 1000 - weightsv3_mod_a * weightsv3_max
+    ####################################### 
     # Write a new Shapefile
     # WGS1984
-    with fiona.open('02_Output/allTagClusters.shp', mode='w', encoding='utf-8', driver='ESRI Shapefile', schema=schema,crs=from_epsg(4326)) as c:
-        ## If there are multiple geometries, put the "for" loop here
+    with fiona.open('02_Output/allTagClusters.shp', mode='w', encoding='utf-8', driver='ESRI Shapefile', schema=schema,crs=from_epsg(utm_code)) as c:
+        # Normalize Weights to 0-1000 Range
         idx = 0  
         for alphaShapeAndMeta in listOfAlphashapesAndMeta:
             if idx == 0:
@@ -1504,18 +1534,24 @@ if proceedClusting:
                 else:
                     HImP = 0
             #emoName = unicode_name(alphaShapeAndMeta[4])
+            #Calculate Normalized Weights Values based on precalc Step
+            weight1_normalized = weightsv1_mod_a * alphaShapeAndMeta[6] + weightsv1_mod_b
+            weight2_normalized = weightsv2_mod_a * alphaShapeAndMeta[7] + weightsv2_mod_b
+            weight3_normalized = weightsv3_mod_a * alphaShapeAndMeta[8] + weightsv3_mod_b
             idx += 1
+            #project data
+            geom_proj = transform(project, alphaShapeAndMeta[0])
             c.write({
-                'geometry': geometry.mapping(alphaShapeAndMeta[0]),
+                'geometry': geometry.mapping(geom_proj),
                 'properties': {'Join_Count': alphaShapeAndMeta[1], 
                                'Views': alphaShapeAndMeta[2],
                                'COUNT_User': alphaShapeAndMeta[3],
                                'ImpTag': alphaShapeAndMeta[4],
                                'TagCountG': alphaShapeAndMeta[5],
                                'HImpTag': HImP,
-                               'Weights': alphaShapeAndMeta[6],
-                               'WeightsV2': alphaShapeAndMeta[7],
-                               'WeightsV3': alphaShapeAndMeta[8]},
+                               'Weights': weight1_normalized,
+                               'WeightsV2': weight2_normalized,
+                               'WeightsV3': weight3_normalized},
                                #'EmojiName': emoName},
             })
 
@@ -1579,7 +1615,7 @@ if proceedClusting:
     
     # Write a new Shapefile
     # WGS1984
-    with fiona.open('02_Output/allPhotoClusters.shp', mode='w', driver='ESRI Shapefile', schema=schema,crs=from_epsg(4326)) as c:
+    with fiona.open('02_Output/allPhotoClusters.shp', mode='w', driver='ESRI Shapefile', schema=schema,crs=from_epsg(utm_code)) as c:
         ## If there are multiple geometries, put the "for" loop here
         idx = 0
         for photoCluster in listOfPhotoClusters:
