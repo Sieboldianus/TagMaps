@@ -67,11 +67,11 @@ from decimal import Decimal
 
 #alternative Shapefile module pure Python
 #https://github.com/GeospatialPython/pyshp#writing-shapefiles
-import shapefile
+#import shapefile
 
 __author__      = "Alexander Dunkel"
 __license__   = "GNU GPLv3"
-__version__ = "0.9.1"
+__version__ = "0.9.2"
 
 ######################    
 ####config section####
@@ -714,6 +714,43 @@ label_size = 10
 plot_kwds = {'alpha' : 0.5, 's' : 10, 'linewidths':0}
 sys.stdout.flush()
 proceedClusting = False
+
+distY = 0
+distX = 0
+imgRatio = 0
+
+#Optional: set global plotting bounds
+#plt.gca().set_xlim([limXMin, limXMax])
+#plt.gca().set_ylim([limYMin, limYMax])
+cleanedPhotoList = list(cleanedPhotoDict.values())
+df = pd.DataFrame(cleanedPhotoList)
+points = df.as_matrix(['lng','lat'])
+limYMin = np.min(points.T[1])       
+limYMax = np.max(points.T[1])    
+limXMin = np.min(points.T[0])       
+limXMax = np.max(points.T[0])
+bound_points_shapely = geometry.MultiPoint([(limXMin, limYMin), (limXMax, limYMax)])
+distYLat = limYMax - limYMin
+distXLng = limXMax - limXMin
+#distYLat = def_functions.haversine(limXMin,limYMax,limXMin,limYMin)
+#distXLng = def_functions.haversine(limXMax,limYMin,limXMin,limYMin)
+#imgRatio = distXLng/(distYLat*2)
+imgRatio = distXLng/distYLat
+distY = def_functions.haversine(limXMin, limYMin, limXMin, limYMax)
+distX = def_functions.haversine(limXMin, limYMin, limXMax, limYMin) 
+clusterTreeCuttingDist = (min(distX,distY)/100)*7 #4% of research area width/height (max) = default value #223.245922725 #= 0.000035 radians dist
+
+#print("distYLat DDegrees: " + str(limYMax - limYMin) + " distXLng DDegrees: " + str(limXMax - limXMin) + " Bsp:" + str(points[0]))
+#print("DDegree Buffer dist: " + str(max(distXLng,distYLat)/200) + " Cluster Dist: " + str(clusterTreeCuttingDist) + " Alpha: " + str(clusterTreeCuttingDist*10))
+#input_lon_center = bound_points_shapely.centroid.coords[0][0] #True centroid (coords may be multipoint)
+#input_lat_center = bound_points_shapely.centroid.coords[0][1]
+#utm_code = def_functions.convert_wgs_to_utm(input_lon_center, input_lat_center)
+#crs_wgs = pyproj.Proj(init='epsg:4326')
+#crs_utm = pyproj.Proj(init='epsg:{0}'.format(utm_code))
+
+#x, y = pyproj.transform(crs_wgs, crs_utm, Decimal(points[0][0]), Decimal(points[0][1]))
+#print("distY Meters: " + str(distY) + " distX Meters: " + str(distX) + " Bsp:" + str(x) + " " + str(y))
+#print("Meters Buffer dist: " + str(clusterTreeCuttingDist/4) + " Cluster Dist: " + str(clusterTreeCuttingDist) + " Alpha: " + str(clusterTreeCuttingDist*100))
 #Tkinter Stuff
 #####################################################################################################################################################
 #def center(win):
@@ -776,7 +813,6 @@ class FloatingWindow(tk.Toplevel):
         y = self.winfo_y() + deltay
         self.geometry("+%s+%s" % (x, y))
         
-clusterTreeCuttingDist = 0
 app = App()
 #necessary override for error reporting during tkinter mode
 def report_callback_exception(self, exc, val, tb):
@@ -790,9 +826,6 @@ tk.Tk.report_callback_exception = report_callback_exception
 ######################################################################################################################################################
 
 #definition of global vars for interface and graph design
-distY = 0
-distX = 0
-imgRatio = 0
 canvasWidth = 1320
 canvasHeight = 440
 floaterX = 0
@@ -814,49 +847,6 @@ fig1 = None
 fig2 = None
 fig3 = None
 fig4 = None
-#Optional: set global plotting bounds
-#plt.gca().set_xlim([limXMin, limXMax])
-#plt.gca().set_ylim([limYMin, limYMax])
-cleanedPhotoList = list(cleanedPhotoDict.values())
-df = pd.DataFrame(cleanedPhotoList)
-points = df.as_matrix(['lng','lat'])
-limYMin = np.min(points.T[1])       
-limYMax = np.max(points.T[1])    
-limXMin = np.min(points.T[0])       
-limXMax = np.max(points.T[0])
-bound_points_shapely = geometry.MultiPoint([(limXMin, limYMin), (limXMax, limYMax)])
-distYLat = limYMax - limYMin
-distXLng = limXMax - limXMin
-imgRatio = distXLng/(distYLat*2) 
-distY = def_functions.haversine(limXMin, limYMin, limXMin, limYMax)
-distX = def_functions.haversine(limXMin, limYMin, limXMax, limYMin) 
-clusterTreeCuttingDist = (max(distX,distY)/100)*4 #4% of research area width/height (max) = default value #223.245922725 #= 0.000035 radians dist
-
-#tkinter.messagebox.showinfo("messagr", str(distY))
-#tkinter.messagebox.showinfo("messagr", str(distX))
-
-#if first == True: #init
-#    #calculate once boundary for all points
-#    df = pd.DataFrame(cleanedPhotoList)
-#    points = df.as_matrix(['lng','lat'])
-#    limYMin = np.min(points.T[1])
-#    limYMax = np.max(points.T[1])
-#    limXMin = np.min(points.T[0])
-#    limXMax = np.max(points.T[0])
-#    #set global plotting bounds for matplotlib
-#    plt.gca().set_xlim([limXMin, limXMax]) 
-#    plt.gca().set_ylim([limYMin, limYMax])
-#    #calculate imageRatio from distance covered
-#    distY = limYMax - limYMin
-#    distX = limXMax - limXMin
-#    imgRatio = distX/(distY*2) #multiply by 2 because lat = 90 and lng = 180!
-#    ws = app.winfo_screenwidth()
-#    hs = app.winfo_screenheight()
-#    floaterX = (ws/2) - (canvasWidth/2)
-#    floaterY = (hs/2) - (canvasHeight/2)
-#    #app.floater.geometry('+%d+%d' % (floaterX, floaterY))
-#    #app.title("Select Cluster Distance")
-#    first = False
 
 def quitTkinter():
     #exits Tkinter gui and continues with code execution after mainloop()
@@ -899,7 +889,7 @@ def cluster_tag(toptag=None,preview=None,silent=None):
         silent = False        
     global first
     global currentDisplayTag
-    global limYMin, limYMax, limXMin, limXMax, distY, distX, imgRatio, floaterX, floaterY
+    global limYMin, limYMax, limXMin, limXMax, imgRatio, floaterX, floaterY
     global fig1, fig2, fig3, fig4
     #global graphFrame
     #if graphFrame: #if 
@@ -1296,6 +1286,16 @@ noClusterPhotos_perTag_DictOfLists = defaultdict(list)
 clustersPerTag = defaultdict(list)
 if proceedClusting:
     #Proceed with clustering all tags
+    
+    #Calculate best UTM Zone SRID/EPSG Code
+    input_lon_center = bound_points_shapely.centroid.coords[0][0] #True centroid (coords may be multipoint)
+    input_lat_center = bound_points_shapely.centroid.coords[0][1]
+    utm_code = def_functions.convert_wgs_to_utm(input_lon_center, input_lat_center)
+    crs_wgs = pyproj.Proj(init='epsg:4326')
+    crs_utm = pyproj.Proj(init='epsg:{0}'.format(utm_code))
+    project = lambda x, y: pyproj.transform(pyproj.Proj(init='epsg:4326'), pyproj.Proj(init='epsg:{0}'.format(utm_code)), x, y)
+    #geom_proj = transform(project, alphaShapeAndMeta[0])
+    
     tnum = 1
     for toptag in topTagsList:
         
@@ -1369,6 +1369,7 @@ if proceedClusting:
         if clusterPhotoGuidList:
             #we define a new list of Temp Alpha Shapes outside the loop, so that it is not overwritten each time
             listOfAlphashapesAndMeta_tmp = []
+            #points = []
             for photo_guids in clusterPhotoGuidList:
                 photos = [cleanedPhotoDict[x] for x in photo_guids]
                 photoCount = len(photo_guids)
@@ -1384,47 +1385,78 @@ if proceedClusting:
                 #          for photo in photos]
                 #instead of lat/lng for each photo, we use photo_locID to identify a list of distinct locations 
                 distinctLocations = set([photo.photo_locID
-                          for photo in photos])
-                #afterwards, we derice lat/lng pairs from locIDs by splitting ( photo_locID = (str(photo_latitude) + ':' + str(photo_longitude))
-                points = [geometry.Point(Decimal(location.split(':')[1]), Decimal(location.split(':')[0]))
+                          for photo in photos])               
+                #simple list comprehension without projection:
+                #points = [geometry.Point(Decimal(location.split(':')[1]), Decimal(location.split(':')[0]))
+                #          for location in distinctLocations]
+                points = [geometry.Point(pyproj.transform(crs_wgs, crs_utm, Decimal(location.split(':')[1]), Decimal(location.split(':')[0])))
                           for location in distinctLocations]
-                x = [p.coords.xy[0] for p in points]
-                y = [p.coords.xy[1] for p in points]
                 point_collection = geometry.MultiPoint(list(points))
                 result_polygon = None
+                
                 if len(points) >= 5:
                     if len(points) < 10:
                         result_polygon = point_collection.convex_hull #convex hull
-                        result_polygon = result_polygon.buffer(max(distXLng,distYLat)/200,resolution=3)
+                        result_polygon = result_polygon.buffer(clusterTreeCuttingDist/4,resolution=3)
+                        shapetype = "between 5 and 10 points_conexHull"
+                        #result_polygon = result_polygon.buffer(min(distXLng,distYLat)/100,resolution=3)
                     else:
-                        result_polygon = alpha_shape(points,alpha=clusterTreeCuttingDist*10) #concave hull/alpha shape
-                        if type(result_polygon) is geometry.multipolygon.MultiPolygon:
+                        result_polygon = alpha_shape(points,alpha=clusterTreeCuttingDist/10000) #concave hull/alpha shape /50000
+                        shapetype = "Initial Alpha Shape + Buffer"
+                        if type(result_polygon) is geometry.multipolygon.MultiPolygon or type(result_polygon) is bool:
                             #repeat generating alpha shapes with smaller alpha value if Multigon is generated
-                            result_polygon = alpha_shape(points,alpha=clusterTreeCuttingDist*5)
-                            if type(result_polygon) is geometry.multipolygon.MultiPolygon:
-                                result_polygon = alpha_shape(points,alpha=clusterTreeCuttingDist)
+                            
+                            #smaller alpha values mean less granularity of resulting polygon
+                            #but too large alpha may result in empty polygon
+                            #(this branch is sometimes executed for larger scales)
+                            result_polygon = alpha_shape(points,alpha=clusterTreeCuttingDist/20000)#/100000
+                            shapetype = "Multipolygon Alpha Shape /20000"
+                            if type(result_polygon) is geometry.multipolygon.MultiPolygon or type(result_polygon) is bool:
+                                result_polygon = alpha_shape(points,alpha=clusterTreeCuttingDist/50000)#/500000
+                                shapetype = "Multipolygon Alpha Shape /50000"
                                 if type(result_polygon) is geometry.multipolygon.MultiPolygon:
+                                    shapetype = "Multipolygon Alpha Shape -> Convex Hull"
                                     #if still of type multipolygon, try to remove holes and do a convex_hull
                                     result_polygon = result_polygon.convex_hull
-                        if type(result_polygon) is bool:
-                            #in case there was a problem with generating alpha shapes (circum_r = a*b*c/(4.0*area) --> ZeroDivisionError: float division by zero)
-                            result_polygon = point_collection.convex_hull #convex hull
-                            result_polygon = result_polygon.buffer(max(distXLng,distYLat)/200,resolution=3)
-                        else:
-                            result_polygon = result_polygon.buffer(max(distXLng,distYLat)/200,resolution=3)
+                                #OR: in case there was a problem with generating alpha shapes (circum_r = a*b*c/(4.0*area) --> ZeroDivisionError: float division by zero) 
+                                #this branch is rarely executed for large point clusters where alpha is perhaps set too small
+                                elif type(result_polygon) is bool:
+                                    shapetype = "BoolAlpha -> Fallback to PointCloud Convex Hull"
+                                    result_polygon = point_collection.convex_hull #convex hull
+                                    result_polygon = result_polygon.buffer(clusterTreeCuttingDist/4,resolution=3)
+                        #alpha too small, this branch is (usually) not executed
+                        if type(result_polygon) is not bool and result_polygon.is_empty:
+                            shapetype = "Empty Alpha Shape * 5000"
+                            result_polygon = alpha_shape(points,alpha=clusterTreeCuttingDist/5000)#/100000
+                            if type(result_polygon) is not bool and result_polygon.is_empty:
+                                shapetype = "Empty Alpha Shape * 10000"
+                                result_polygon = alpha_shape(points,alpha=clusterTreeCuttingDist/1000)#/500000
+                                if type(result_polygon) is not bool and result_polygon.is_empty:
+                                    shapetype = "Empty Alpha Shape --> Convex Hull"
+                                    #if still of type multipolygon, try to remove holes and do a convex_hull
+                                    result_polygon = result_polygon.convex_hull                            
+                        #Finally do a buffer to smooth alpha
+                        result_polygon = result_polygon.buffer(clusterTreeCuttingDist/4,resolution=3)
+                        #result_polygon = result_polygon.buffer(min(distXLng,distYLat)/100,resolution=3)
                 elif 2 <= len(points) < 5:
+                    shapetype = "between 2 and 5 points_buffer"
                     #calc distance between points http://www.mathwarehouse.com/algebra/distance_formula/index.php
                     #bdist = math.sqrt((points[0].coords.xy[0][0]-points[1].coords.xy[0][0])**2 + (points[0].coords.xy[1][0]-points[1].coords.xy[1][0])**2)
                     #print(str(bdist))
-                    result_polygon = point_collection.buffer(max(distXLng,distYLat)/200,resolution=3) #single dots are presented as buffer with 0.5% of width-area
+                    result_polygon = point_collection.buffer(clusterTreeCuttingDist/4,resolution=3) #single dots are presented as buffer with 0.5% of width-area
+                    result_polygon = result_polygon.convex_hull
+                    #result_polygon = point_collection.buffer(min(distXLng,distYLat)/100,resolution=3) #single dots are presented as buffer with 0.5% of width-area
                 elif len(points)==1 or type(result_polygon) is geometry.point.Point or result_polygon is None:
-                    result_polygon = point_collection.buffer(max(distXLng,distYLat)/200,resolution=3) #single dots are presented as buffer with 0.5% of width-area
+                    shapetype = "1 point cluster"
+                    result_polygon = point_collection.buffer(clusterTreeCuttingDist/4,resolution=3) #single dots are presented as buffer with 0.5% of width-area
+                    #result_polygon = point_collection.buffer(min(distXLng,distYLat)/100,resolution=3) #single dots are presented as buffer with 0.5% of width-area
                 #final check for multipolygon
                 if type(result_polygon) is geometry.multipolygon.MultiPolygon:
-                        result_polygon = result_polygon.convex_hull
+                    #usually not executed
+                    result_polygon = result_polygon.convex_hull
                 #Geom, Join_Count, Views,  COUNT_User,ImpTag,TagCountG,HImpTag
                 if result_polygon is not None and not result_polygon.is_empty:
-                    listOfAlphashapesAndMeta_tmp.append((result_polygon,photoCount,sumViews,uniqueUserCount,str(toptag[0]),toptag[1],weightsv1,weightsv2,weightsv3))
+                    listOfAlphashapesAndMeta_tmp.append((result_polygon,photoCount,sumViews,uniqueUserCount,str(toptag[0]),toptag[1],weightsv1,weightsv2,weightsv3,shapetype))
             if len(listOfAlphashapesAndMeta_tmp) > 0:
                 #Sort on Weights1 Formula
                 listOfAlphashapesAndMeta_tmp = sorted(listOfAlphashapesAndMeta_tmp,key=lambda x: -x[6])
@@ -1438,52 +1470,26 @@ if proceedClusting:
                     #plt.close()
         singlePhotoGuidList = noClusterPhotos_perTag_DictOfLists.get(toptag[0], None)
         if singlePhotoGuidList:
+            shapetype = "Single cluster"
             #print("Single: " + str(len(singlePhotoGuidList)))
             photos = [cleanedPhotoDict[x] for x in singlePhotoGuidList]
             for single_photo in photos:
-                pcoordinate = geometry.Point(single_photo.lng, single_photo.lat)
-                result_polygon = pcoordinate.buffer(max(distXLng,distYLat)/200,resolution=3)
+                #project lat/lng to UTM
+                x, y = pyproj.transform(crs_wgs, crs_utm, single_photo.lng, single_photo.lat)
+                pcoordinate = geometry.Point(x, y)
+                result_polygon = pcoordinate.buffer(clusterTreeCuttingDist/4,resolution=3) #single dots are presented as buffer with 0.5% of width-area
+                #result_polygon = pcoordinate.buffer(min(distXLng,distYLat)/100,resolution=3)
                 if result_polygon is not None and not result_polygon.is_empty:
-                    listOfAlphashapesAndMeta.append((result_polygon,1,single_photo.photo_views,1,str(toptag[0]),toptag[1],1,1,1))
-            #points = [geometry.Point(photo.lng, photo.lat)
-            #          for photo in photos]
-            #x = [p.coords.xy[0] for p in points]
-            #y = [p.coords.xy[1] for p in points]                
-            #point_collection = geometry.MultiPoint(list(points))
-            #result_polygon = point_collection.buffer((limLngMax-limLngMin)/200,resolution=3)
-            #if type(result_polygon) is geometry.multipolygon.MultiPolygon:
-            #    for polygon in result_polygon:
-            #        listOfAlphashapesAndMeta.append((polygon,1,0,1,toptag[0],toptag[1],0))
-            #else:
-            #    listOfAlphashapesAndMeta.append((result_polygon,1,0,1,toptag[0],toptag[1],0))
-            
-        #if tnum == 50:
-        #    break
-        #if toptag in noClusterPhotos_perTag_DictOfLists:
-        #    singlePhotoList = noClusterPhotos_perTag_DictOfLists[toptag]
-        #    #for singlePhoto in singlePhotoList:
-        #    #point = geometry.Point(singlePhoto[2], singlePhoto[1])
-        #    points = [geometry.Point(point[2], point[1])
-        #              for point in singlePhotoList]
-        #    x = [p.coords.xy[0] for p in points]
-        #    y = [p.coords.xy[1] for p in points]
-        #    point_collection = geometry.MultiPoint(list(points))
-        #    result_polygon = point_collection.buffer((limLngMax-limLngMin)/200,resolution=3)
-        #    if type(result_polygon) is geometry.multipolygon.MultiPolygon:
-        #        for polygon in result_polygon:
-        #            listOfPolygons.append(result_polygon)
-        #    else:
-        #        listOfPolygons.append(result_polygon)
-            
+                    listOfAlphashapesAndMeta.append((result_polygon,1,single_photo.photo_views,1,str(toptag[0]),toptag[1],1,1,1,shapetype))   
     print_store_log(str(len(listOfAlphashapesAndMeta)) + " Alpha Shapes. Done.")
     ##Output Boundary Shapes in merged Shapefile##
     print_store_log("########## STEP 5 of 6: Writing Results to Shapefile ##########")
     
-    #Calculate best UTM Zone SRID/EPSG Code
-    input_lon_center = bound_points_shapely.centroid.coords[0][0] #True centroid (coords may be multipoint)
-    input_lat_center = bound_points_shapely.centroid.coords[0][1]
-    utm_code = def_functions.convert_wgs_to_utm(input_lon_center, input_lat_center)
-    project = lambda x, y: pyproj.transform(pyproj.Proj(init='epsg:4326'), pyproj.Proj(init='epsg:{0}'.format(utm_code)), x, y)
+   ##Calculate best UTM Zone SRID/EPSG Code
+   #input_lon_center = bound_points_shapely.centroid.coords[0][0] #True centroid (coords may be multipoint)
+   #input_lat_center = bound_points_shapely.centroid.coords[0][1]
+   #utm_code = def_functions.convert_wgs_to_utm(input_lon_center, input_lat_center)
+   #project = lambda x, y: pyproj.transform(pyproj.Proj(init='epsg:4326'), pyproj.Proj(init='epsg:{0}'.format(utm_code)), x, y)
 
     # Define a polygon feature geometry with one attribute
     schema = {
@@ -1496,7 +1502,8 @@ if proceedClusting:
                        'HImpTag': 'int',
                        'Weights': 'float',
                        'WeightsV2': 'float',
-                       'WeightsV3': 'float'},
+                       'WeightsV3': 'float',
+                       'shapetype': 'str'},
                        #'EmojiName': 'str'},
     }
  
@@ -1540,9 +1547,11 @@ if proceedClusting:
             weight3_normalized = weightsv3_mod_a * alphaShapeAndMeta[8] + weightsv3_mod_b
             idx += 1
             #project data
-            geom_proj = transform(project, alphaShapeAndMeta[0])
+            #geom_proj = transform(project, alphaShapeAndMeta[0])
+            #c.write({
+            #    'geometry': geometry.mapping(geom_proj),            
             c.write({
-                'geometry': geometry.mapping(geom_proj),
+                'geometry': geometry.mapping(alphaShapeAndMeta[0]),
                 'properties': {'Join_Count': alphaShapeAndMeta[1], 
                                'Views': alphaShapeAndMeta[2],
                                'COUNT_User': alphaShapeAndMeta[3],
@@ -1551,7 +1560,8 @@ if proceedClusting:
                                'HImpTag': HImP,
                                'Weights': weight1_normalized,
                                'WeightsV2': weight2_normalized,
-                               'WeightsV3': weight3_normalized},
+                               'WeightsV3': weight3_normalized,
+                               'shapetype': alphaShapeAndMeta[9]},
                                #'EmojiName': emoName},
             })
 
@@ -1587,14 +1597,12 @@ if proceedClusting:
         clusterPhotosGuidsList.append(currentClusterPhotoGuids)
     noClusterPhotos = list(numpy_selectedPhotoList_Guids[clusters==-1])   
     clusterPhotosGuidsList.sort(key=len,reverse=True)
-    
     for photo_cluster in clusterPhotosGuidsList:
         photos = [cleanedPhotoDict[x] for x in photo_cluster]
         uniqueUserCount = len(set([photo.userid for photo in photos]))
-        points = [geometry.Point(photo.lng, photo.lat)
-                  for photo in photos]
-        x = [p.coords.xy[0] for p in points]
-        y = [p.coords.xy[1] for p in points]
+        #get points and project coordinates to suitable UTM
+        points = [geometry.Point(pyproj.transform(crs_wgs, crs_utm, photo.lng, photo.lat))
+                  for photo in photos]   
         point_collection = geometry.MultiPoint(list(points))
         result_polygon = point_collection.convex_hull #convex hull
         result_centroid = result_polygon.centroid
@@ -1604,7 +1612,8 @@ if proceedClusting:
     noclusterphotos = [cleanedPhotoDict[x] for x in singlePhotoGuidList]
     for photoGuid_noCluster in noClusterPhotos:
         photo = cleanedPhotoDict[photoGuid_noCluster]
-        pcenter = geometry.Point(photo.lng, photo.lat)
+        x, y = pyproj.transform(crs_wgs, crs_utm, photo.lng, photo.lat)  
+        pcenter = geometry.Point(x, y)
         if pcenter is not None and not pcenter.is_empty:
             listOfPhotoClusters.append((pcenter,1))
     # Define a polygon feature geometry with one attribute
