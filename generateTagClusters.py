@@ -1266,7 +1266,10 @@ def alpha_shape(points, alpha):
         # Semiperimeter of triangle
         s = (a + b + c)/2.0
         # Area of triangle by Heron's formula
-        area = math.sqrt(s*(s-a)*(s-b)*(s-c))
+        try:
+            area = math.sqrt(s*(s-a)*(s-b)*(s-c))
+        except ValueError:
+            return False
         if area == 0:
             return False
         circum_r = a*b*c/(4.0*area)
