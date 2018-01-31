@@ -735,7 +735,7 @@ distXLng = limXMax - limXMin
 #distYLat = def_functions.haversine(limXMin,limYMax,limXMin,limYMin)
 #distXLng = def_functions.haversine(limXMax,limYMin,limXMin,limYMin)
 #imgRatio = distXLng/(distYLat*2)
-imgRatio = distXLng/distYLat
+imgRatio = distXLng/(distYLat*2) 
 distY = def_functions.haversine(limXMin, limYMin, limXMin, limYMax)
 distX = def_functions.haversine(limXMin, limYMin, limXMax, limYMin) 
 clusterTreeCuttingDist = (min(distX,distY)/100)*7 #4% of research area width/height (max) = default value #223.245922725 #= 0.000035 radians dist
@@ -1404,40 +1404,43 @@ if proceedClusting:
                         shapetype = "between 5 and 10 points_conexHull"
                         #result_polygon = result_polygon.buffer(min(distXLng,distYLat)/100,resolution=3)
                     else:
-                        result_polygon = alpha_shape(points,alpha=clusterTreeCuttingDist/10000) #concave hull/alpha shape /50000
+                        if len(points) > 100:
+                            startalpha = 1000000
+                        else:
+                            startalpha = 10000
+                        result_polygon = alpha_shape(points,alpha=clusterTreeCuttingDist/startalpha) #concave hull/alpha shape /50000
                         shapetype = "Initial Alpha Shape + Buffer"
-                        if type(result_polygon) is geometry.multipolygon.MultiPolygon or type(result_polygon) is bool:
+                        if type(result_polygon) is geometry.multipolygon.MultiPolygon or isinstance(result_polygon, bool):
                             #repeat generating alpha shapes with smaller alpha value if Multigon is generated
-                            
                             #smaller alpha values mean less granularity of resulting polygon
                             #but too large alpha may result in empty polygon
                             #(this branch is sometimes executed for larger scales)
-                            result_polygon = alpha_shape(points,alpha=clusterTreeCuttingDist/20000)#/100000
-                            shapetype = "Multipolygon Alpha Shape /20000"
-                            if type(result_polygon) is geometry.multipolygon.MultiPolygon or type(result_polygon) is bool:
-                                result_polygon = alpha_shape(points,alpha=clusterTreeCuttingDist/50000)#/500000
-                                shapetype = "Multipolygon Alpha Shape /50000"
-                                if type(result_polygon) is geometry.multipolygon.MultiPolygon:
-                                    shapetype = "Multipolygon Alpha Shape -> Convex Hull"
-                                    #if still of type multipolygon, try to remove holes and do a convex_hull
-                                    result_polygon = result_polygon.convex_hull
-                                #OR: in case there was a problem with generating alpha shapes (circum_r = a*b*c/(4.0*area) --> ZeroDivisionError: float division by zero) 
-                                #this branch is rarely executed for large point clusters where alpha is perhaps set too small
-                                elif type(result_polygon) is bool:
-                                    shapetype = "BoolAlpha -> Fallback to PointCloud Convex Hull"
-                                    result_polygon = point_collection.convex_hull #convex hull
-                                    result_polygon = result_polygon.buffer(clusterTreeCuttingDist/4,resolution=3)
-                        #alpha too small, this branch is (usually) not executed
-                        if type(result_polygon) is not bool and result_polygon.is_empty:
-                            shapetype = "Empty Alpha Shape * 5000"
-                            result_polygon = alpha_shape(points,alpha=clusterTreeCuttingDist/5000)#/100000
-                            if type(result_polygon) is not bool and result_polygon.is_empty:
-                                shapetype = "Empty Alpha Shape * 10000"
-                                result_polygon = alpha_shape(points,alpha=clusterTreeCuttingDist/1000)#/500000
-                                if type(result_polygon) is not bool and result_polygon.is_empty:
-                                    shapetype = "Empty Alpha Shape --> Convex Hull"
-                                    #if still of type multipolygon, try to remove holes and do a convex_hull
-                                    result_polygon = result_polygon.convex_hull                            
+                            for i in range(1,6):
+                                #try decreasing alpha
+                                alpha = startalpha + (startalpha * (i**i)) #** means cube
+                                result_polygon = alpha_shape(points,alpha=clusterTreeCuttingDist/alpha)#/100000
+                                if not type(result_polygon) is geometry.multipolygon.MultiPolygon and not isinstance(result_polygon, bool):
+                                    shapetype = "Multipolygon Alpha Shape /" + str(alpha)
+                                    break
+                            if type(result_polygon) is geometry.multipolygon.MultiPolygon or isinstance(result_polygon, bool):
+                                #try increasing alpha
+                                for i in range(1,6):
+                                    #try decreasing alpha
+                                    alpha = startalpha / (i*i)
+                                    result_polygon = alpha_shape(points,alpha=clusterTreeCuttingDist/alpha)#/100000
+                                    if not type(result_polygon) is geometry.multipolygon.MultiPolygon and not isinstance(result_polygon, bool):
+                                        shapetype = "Multipolygon Alpha Shape /" + str(alpha)
+                                        break                            
+                            if type(result_polygon) is geometry.multipolygon.MultiPolygon:
+                                shapetype = "Multipolygon Alpha Shape -> Convex Hull"
+                                #if still of type multipolygon, try to remove holes and do a convex_hull
+                                result_polygon = result_polygon.convex_hull
+                            #OR: in case there was a problem with generating alpha shapes (circum_r = a*b*c/(4.0*area) --> ZeroDivisionError: float division by zero) 
+                            #this branch is rarely executed for large point clusters where alpha is perhaps set too small
+                            elif isinstance(result_polygon, bool) or result_polygon.is_empty:
+                                shapetype = "BoolAlpha -> Fallback to PointCloud Convex Hull"
+                                result_polygon = point_collection.convex_hull #convex hull
+                                result_polygon = result_polygon.buffer(clusterTreeCuttingDist/4,resolution=3)                           
                         #Finally do a buffer to smooth alpha
                         result_polygon = result_polygon.buffer(clusterTreeCuttingDist/4,resolution=3)
                         #result_polygon = result_polygon.buffer(min(distXLng,distYLat)/100,resolution=3)
