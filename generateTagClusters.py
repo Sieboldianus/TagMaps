@@ -69,10 +69,6 @@ from decimal import Decimal
 #https://github.com/GeospatialPython/pyshp#writing-shapefiles
 #import shapefile
 
-__author__      = "Alexander Dunkel"
-__license__   = "GNU GPLv3"
-__version__ = "0.9.2"
-
 ######################    
 ####config section####
 ######################
@@ -118,10 +114,19 @@ writeGISCompLine = True # writes placeholder entry after headerline for avoiding
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('-s', "--source", default= "fromFlickr_CSV")     # naming it "source"
-parser.add_argument('-r', "--removeLongTail", default= True)   
+parser.add_argument('-r', "--removeLongTail", default= True)
+parser.add_argument('-e', "--EPSG", default= None)  
 args = parser.parse_args()    # returns data from the options specified (source)
 DSource = args.source
 removeLongTail = args.removeLongTail
+overrideCRS = args.EPSG
+if overrideCRS is not None and overrideCRS.isdigit() is False:
+    overrideCRS = None
+else:
+    #try loading Custom CRS at beginning
+    crs_proj = pyproj.Proj(init='epsg:{0}'.format(overrideCRS))
+    print("Custom CRS set: " + str(crs_proj.srs))
+    epsg_code = overrideCRS
 #print(str(removeLongTail))
 pathname = os.getcwd()
 if not os.path.exists(pathname + '/02_Output/'):
@@ -744,11 +749,11 @@ clusterTreeCuttingDist = (min(distX,distY)/100)*7 #4% of research area width/hei
 #print("DDegree Buffer dist: " + str(max(distXLng,distYLat)/200) + " Cluster Dist: " + str(clusterTreeCuttingDist) + " Alpha: " + str(clusterTreeCuttingDist*10))
 #input_lon_center = bound_points_shapely.centroid.coords[0][0] #True centroid (coords may be multipoint)
 #input_lat_center = bound_points_shapely.centroid.coords[0][1]
-#utm_code = def_functions.convert_wgs_to_utm(input_lon_center, input_lat_center)
+#epsg_code = def_functions.convert_wgs_to_utm(input_lon_center, input_lat_center)
 #crs_wgs = pyproj.Proj(init='epsg:4326')
-#crs_utm = pyproj.Proj(init='epsg:{0}'.format(utm_code))
+#crs_proj = pyproj.Proj(init='epsg:{0}'.format(epsg_code))
 
-#x, y = pyproj.transform(crs_wgs, crs_utm, Decimal(points[0][0]), Decimal(points[0][1]))
+#x, y = pyproj.transform(crs_wgs, crs_proj, Decimal(points[0][0]), Decimal(points[0][1]))
 #print("distY Meters: " + str(distY) + " distX Meters: " + str(distX) + " Bsp:" + str(x) + " " + str(y))
 #print("Meters Buffer dist: " + str(clusterTreeCuttingDist/4) + " Cluster Dist: " + str(clusterTreeCuttingDist) + " Alpha: " + str(clusterTreeCuttingDist*100))
 #Tkinter Stuff
@@ -1289,14 +1294,14 @@ noClusterPhotos_perTag_DictOfLists = defaultdict(list)
 clustersPerTag = defaultdict(list)
 if proceedClusting:
     #Proceed with clustering all tags
-    
-    #Calculate best UTM Zone SRID/EPSG Code
-    input_lon_center = bound_points_shapely.centroid.coords[0][0] #True centroid (coords may be multipoint)
-    input_lat_center = bound_points_shapely.centroid.coords[0][1]
-    utm_code = def_functions.convert_wgs_to_utm(input_lon_center, input_lat_center)
-    crs_wgs = pyproj.Proj(init='epsg:4326')
-    crs_utm = pyproj.Proj(init='epsg:{0}'.format(utm_code))
-    project = lambda x, y: pyproj.transform(pyproj.Proj(init='epsg:4326'), pyproj.Proj(init='epsg:{0}'.format(utm_code)), x, y)
+    crs_wgs = pyproj.Proj(init='epsg:4326') #data always in lat/lng WGS1984
+    if overrideCRS is None:
+        #Calculate best UTM Zone SRID/EPSG Code
+        input_lon_center = bound_points_shapely.centroid.coords[0][0] #True centroid (coords may be multipoint)
+        input_lat_center = bound_points_shapely.centroid.coords[0][1]
+        epsg_code = def_functions.convert_wgs_to_utm(input_lon_center, input_lat_center)
+        crs_proj = pyproj.Proj(init='epsg:{0}'.format(epsg_code))
+    project = lambda x, y: pyproj.transform(pyproj.Proj(init='epsg:4326'), pyproj.Proj(init='epsg:{0}'.format(epsg_code)), x, y)
     #geom_proj = transform(project, alphaShapeAndMeta[0])
     
     tnum = 1
@@ -1392,7 +1397,7 @@ if proceedClusting:
                 #simple list comprehension without projection:
                 #points = [geometry.Point(Decimal(location.split(':')[1]), Decimal(location.split(':')[0]))
                 #          for location in distinctLocations]
-                points = [geometry.Point(pyproj.transform(crs_wgs, crs_utm, Decimal(location.split(':')[1]), Decimal(location.split(':')[0])))
+                points = [geometry.Point(pyproj.transform(crs_wgs, crs_proj, Decimal(location.split(':')[1]), Decimal(location.split(':')[0])))
                           for location in distinctLocations]
                 point_collection = geometry.MultiPoint(list(points))
                 result_polygon = None
@@ -1439,8 +1444,7 @@ if proceedClusting:
                             #this branch is rarely executed for large point clusters where alpha is perhaps set too small
                             elif isinstance(result_polygon, bool) or result_polygon.is_empty:
                                 shapetype = "BoolAlpha -> Fallback to PointCloud Convex Hull"
-                                result_polygon = point_collection.convex_hull #convex hull
-                                result_polygon = result_polygon.buffer(clusterTreeCuttingDist/4,resolution=3)                           
+                                result_polygon = point_collection.convex_hull #convex hull                        
                         #Finally do a buffer to smooth alpha
                         result_polygon = result_polygon.buffer(clusterTreeCuttingDist/4,resolution=3)
                         #result_polygon = result_polygon.buffer(min(distXLng,distYLat)/100,resolution=3)
@@ -1481,7 +1485,7 @@ if proceedClusting:
             photos = [cleanedPhotoDict[x] for x in singlePhotoGuidList]
             for single_photo in photos:
                 #project lat/lng to UTM
-                x, y = pyproj.transform(crs_wgs, crs_utm, single_photo.lng, single_photo.lat)
+                x, y = pyproj.transform(crs_wgs, crs_proj, single_photo.lng, single_photo.lat)
                 pcoordinate = geometry.Point(x, y)
                 result_polygon = pcoordinate.buffer(clusterTreeCuttingDist/4,resolution=3) #single dots are presented as buffer with 0.5% of width-area
                 #result_polygon = pcoordinate.buffer(min(distXLng,distYLat)/100,resolution=3)
@@ -1494,10 +1498,10 @@ if proceedClusting:
    ##Calculate best UTM Zone SRID/EPSG Code
    #input_lon_center = bound_points_shapely.centroid.coords[0][0] #True centroid (coords may be multipoint)
    #input_lat_center = bound_points_shapely.centroid.coords[0][1]
-   #utm_code = def_functions.convert_wgs_to_utm(input_lon_center, input_lat_center)
-   #project = lambda x, y: pyproj.transform(pyproj.Proj(init='epsg:4326'), pyproj.Proj(init='epsg:{0}'.format(utm_code)), x, y)
+   #epsg_code = def_functions.convert_wgs_to_utm(input_lon_center, input_lat_center)
+   #project = lambda x, y: pyproj.transform(pyproj.Proj(init='epsg:4326'), pyproj.Proj(init='epsg:{0}'.format(epsg_code)), x, y)
 
-    # Define a polygon feature geometry with one attribute
+    # Define polygon feature geometry
     schema = {
         'geometry': 'Polygon',
         'properties': {'Join_Count': 'int', 
@@ -1535,7 +1539,7 @@ if proceedClusting:
     ####################################### 
     # Write a new Shapefile
     # WGS1984
-    with fiona.open('02_Output/allTagClusters.shp', mode='w', encoding='utf-8', driver='ESRI Shapefile', schema=schema,crs=from_epsg(utm_code)) as c:
+    with fiona.open('02_Output/allTagClusters.shp', mode='w', encoding='utf-8', driver='ESRI Shapefile', schema=schema,crs=from_epsg(epsg_code)) as c:
         # Normalize Weights to 0-1000 Range
         idx = 0  
         for alphaShapeAndMeta in listOfAlphashapesAndMeta:
@@ -1607,7 +1611,7 @@ if proceedClusting:
         photos = [cleanedPhotoDict[x] for x in photo_cluster]
         uniqueUserCount = len(set([photo.userid for photo in photos]))
         #get points and project coordinates to suitable UTM
-        points = [geometry.Point(pyproj.transform(crs_wgs, crs_utm, photo.lng, photo.lat))
+        points = [geometry.Point(pyproj.transform(crs_wgs, crs_proj, photo.lng, photo.lat))
                   for photo in photos]   
         point_collection = geometry.MultiPoint(list(points))
         result_polygon = point_collection.convex_hull #convex hull
@@ -1618,7 +1622,7 @@ if proceedClusting:
     noclusterphotos = [cleanedPhotoDict[x] for x in singlePhotoGuidList]
     for photoGuid_noCluster in noClusterPhotos:
         photo = cleanedPhotoDict[photoGuid_noCluster]
-        x, y = pyproj.transform(crs_wgs, crs_utm, photo.lng, photo.lat)  
+        x, y = pyproj.transform(crs_wgs, crs_proj, photo.lng, photo.lat)  
         pcenter = geometry.Point(x, y)
         if pcenter is not None and not pcenter.is_empty:
             listOfPhotoClusters.append((pcenter,1))
@@ -1630,7 +1634,7 @@ if proceedClusting:
     
     # Write a new Shapefile
     # WGS1984
-    with fiona.open('02_Output/allPhotoClusters.shp', mode='w', driver='ESRI Shapefile', schema=schema,crs=from_epsg(utm_code)) as c:
+    with fiona.open('02_Output/allPhotoClusters.shp', mode='w', driver='ESRI Shapefile', schema=schema,crs=from_epsg(epsg_code)) as c:
         ## If there are multiple geometries, put the "for" loop here
         idx = 0
         for photoCluster in listOfPhotoClusters:
