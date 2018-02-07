@@ -215,3 +215,4 @@ x100
 sigma
 photomatix
 instagram
+picoftheday

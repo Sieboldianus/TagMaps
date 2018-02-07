@@ -115,12 +115,11 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('-s', "--source", default= "fromFlickr_CSV")     # naming it "source"
 parser.add_argument('-r', "--removeLongTail", default= True)
-parser.add_argument('-e', "--EPSG", default= None)  
+parser.add_argument('-e', "--EPSG")  
 args = parser.parse_args()    # returns data from the options specified (source)
 DSource = args.source
 removeLongTail = args.removeLongTail
-overrideCRS = args.EPSG
-if overrideCRS is not None and overrideCRS.isdigit() is False:
+if args.EPSG is None:
     overrideCRS = None
 else:
     #try loading Custom CRS at beginning
@@ -149,7 +148,7 @@ if (DSource == "fromFlickr_CSV"):
     guid_columnNameID = 5 #guid   
     Sourcecode = 2
     quoting_opt = csv.QUOTE_NONE
-elif (DSource == "fromInstagram_PGlbsnEmoji"):
+elif (DSource == "fromInstagram_PGlbsnEmoji") or (DSource == "fromLBSN"):
     filelist = glob('01_Input/*.csv')
     timestamp_columnNameID = 7 #DateTaken
     GMTTimetransform = 0    
@@ -231,7 +230,7 @@ for file_name in filelist:
     #    guid_list.clear() #duplicate detection only for last 500k items
     with open(file_name, newline='', encoding='utf8') as f: # On input, if newline is None, universal newlines mode is enabled. Lines in the input can end in '\n', '\r', or '\r\n', and these are translated into '\n' before being returned to the caller.
         partcount += 1
-        if (DSource == "fromInstagram_LocMedia_CSV" or DSource == "fromInstagram_UserMedia_CSV" or DSource == "fromFlickr_CSV" or DSource == "fromInstagram_PGlbsnEmoji" or DSource == "fromSensorData_InfWuerz"):
+        if (DSource == "fromInstagram_LocMedia_CSV" or DSource == "fromLBSN" or DSource == "fromInstagram_UserMedia_CSV" or DSource == "fromFlickr_CSV" or DSource == "fromInstagram_PGlbsnEmoji" or DSource == "fromSensorData_InfWuerz"):
             photolist = csv.reader(f, delimiter=',', quotechar='"', quoting=quoting_opt) #QUOTE_NONE is important because media saved from php/Flickr does not contain any " check; only ',' are replaced
             next(photolist, None)  # skip headerline
         elif (DSource == "fromInstagram_HashMedia_JSON"):
@@ -536,6 +535,54 @@ for file_name in filelist:
                     photo_mTags = ""
                     photo_dateTaken = ""
                     photo_views = 0
+            elif DSource == "fromLBSN":
+                if len(item) < 15:
+                    #skip
+                    skippedCount += 1
+                    continue
+                else:
+                    photo_source = Sourcecode #LocMediaCode
+                    photo_guid = item[1] #guid
+                    photo_userid = item[7] #guid
+                    photo_owner = ""#item[1] ##!!!
+                    photo_shortcode = None#item[18]
+                    photo_uploadDate = item[8] #guid
+                    photo_idDate = None#photo_uploadDate #use upload date as sorting ID
+                    photo_caption = item[9]
+                    photo_likes = None#item[13]
+                    photo_tags = set(filter(None, item[11][1:-1].lower().split(","))) #[1:-1] removes curly brackets
+                    #Filter tags based on two stoplists
+                    photo_tags_filtered = set()
+                    for tag in photo_tags:
+                        count_tags_global += 1
+                        #exclude numbers and those tags that are in SortOutAlways_set
+                        if tag == '""' or tag.isdigit() or tag in SortOutAlways_set:
+                            count_tags_skipped += 1
+                            continue
+                        for inStr in SortOutAlways_inStr_set:
+                            if inStr in tag:
+                                count_tags_skipped += 1
+                                break
+                        else:
+                            photo_tags_filtered.add(tag)
+                    photo_tags = photo_tags_filtered
+                    #photo_tags = ";" + item[11] + ";"
+                    photo_thumbnail = None#item[17]
+                    photo_comments = None#item[14]
+                    photo_mediatype = None#item[19]
+                    photo_locName = item[4] #guid
+                    if item[2] == "" or item[3] == "":
+                        count_non_geotagged += 1
+                        continue #skip non-geotagged medias
+                    else:
+                        photo_latitude = Decimal(item[2]) #guid
+                        photo_longitude = Decimal(item[3]) #guid
+                        setLatLngBounds(photo_latitude,photo_longitude)
+                    photo_locID = str(photo_latitude) + ':' + str(photo_longitude) #create loc_id from lat/lng      
+                    #empty for Instagram:
+                    photo_mTags = ""
+                    photo_dateTaken = ""
+                    photo_views = 0                    
             elif DSource == "fromSensorData_InfWuerz":
                 if len(item) < 5:
                     #skip
@@ -820,8 +867,38 @@ class FloatingWindow(tk.Toplevel):
         
 app = App()
 #necessary override for error reporting during tkinter mode
+
+import traceback
 def report_callback_exception(self, exc, val, tb):
+    #exc_type, exc_obj, tb = sys.exc_info()
+    #f = tb.tb_frame
+    #lineno = tb.tb_lineno
+    #filename = f.f_code.co_filename
+    #linecache.checkcache(filename)
+    #line = linecache.getline(filename, lineno, f.f_globals)
+    #showerror("Error",'EXCEPTION IN ({}, LINE {} "{}"): {}'.format(filename, lineno, line.strip(), exc_obj))
     showerror("Error", message=str(val))
+    
+    exc_type, exc_value, exc_traceback = sys.exc_info()
+    print("*** print_tb:")
+    traceback.print_tb(exc_traceback, limit=1, file=sys.stdout)
+    print("*** print_exception:")
+    traceback.print_exception(exc_type, exc_value, exc_traceback,
+                              limit=2, file=sys.stdout)
+    print("*** print_exc:")
+    traceback.print_exc()
+    print("*** format_exc, first and last line:")
+    formatted_lines = traceback.format_exc().splitlines()
+    print(formatted_lines[0])
+    print(formatted_lines[-1])
+    print("*** format_exception:")
+    print(repr(traceback.format_exception(exc_type, exc_value,
+                                          exc_traceback)))
+    print("*** extract_tb:")
+    print(repr(traceback.extract_tb(exc_traceback)))
+    print("*** format_tb:")
+    print(repr(traceback.format_tb(exc_traceback)))
+    print("*** tb_lineno:", exc_traceback.tb_lineno)
 tk.Tk.report_callback_exception = report_callback_exception
 
 
@@ -1115,7 +1192,7 @@ def change_clusterDist(val):
     #tkinter.messagebox.showinfo("messagr", val)
     global clusterTreeCuttingDist
     #global canvas
-    global tkScalebar
+    #global tkScalebar
     clusterTreeCuttingDist = float(val)#tkScalebar.get()
     
 def onselect(evt):
@@ -1142,6 +1219,52 @@ def cluster_currentDisplayTag():
     else:
         cluster_tag(topTagsList[0])
     #plt.close('all')
+def scaletest_currentDisplayTag():
+    global tkScalebar
+    global fig1
+    if currentDisplayTag:
+        clustertag = currentDisplayTag
+    else:
+        clustertag = topTagsList[0]
+    #loop through range:
+        #Min: clusterTreeCuttingDist/10
+        #Max: clusterTreeCuttingDist*10
+        #How many times? Max-Min/100 -> 100 Times
+    #currentClusterDistance = copy.deepcopy(clusterTreeCuttingDist)
+    scalecalclist = []
+    dmax = int(clusterTreeCuttingDist*10)
+    dmin = int(clusterTreeCuttingDist/10)
+    dstep = int(((clusterTreeCuttingDist*10)-(clusterTreeCuttingDist/10))/100)
+    for i in range(dmin,dmax,dstep):
+        change_clusterDist(i)
+        tkScalebar.set(i)
+        app.update()
+        #clusterTreeCuttingDist = i
+        clusters, selectedPhotoList_Guids = cluster_tag(clustertag, None, True)
+        mask_noisy = (clusters == -1)
+        number_of_clusters = len(np.unique(clusters[~mask_noisy])) #mit noisy (=0)
+        if number_of_clusters == 1:
+            break
+        string = ''.join([str(i),",",str(number_of_clusters),",",str(mask_noisy.sum()),",",str(len(mask_noisy)),"\n"])
+        scalecalclist.append(string)
+    with open('02_Output/scaletest_' + clustertag[0] + ".txt", "w", encoding='utf-8') as logfile_a:
+        for scalecalc in scalecalclist:
+            logfile_a.write(scalecalc)
+    plt.figure(1).clf()
+    plt.suptitle(clustertag[0].upper(), fontsize=18, fontweight='bold') #plt references the last figure accessed
+    #ax = plt.scatter(points.T[0], points.T[1], color=sel_colors, **plot_kwds)
+    fig1 = plt.figure(num=1,figsize=(11, int(11*imgRatio)), dpi=80)
+    fig1.canvas.set_window_title('Cluster Preview')
+    distText = ''
+    if autoselectClusters == False:
+        distText = '@ ' + str(clusterTreeCuttingDist) +'m'    
+    plt.title('Cluster Preview ' + distText, fontsize=12,loc='center')
+    #plt.title('Cluster Preview')
+    #xmax = ax.get_xlim()[1]
+    #ymax = ax.get_ylim()[1]
+    noisyTxt = '{}/{}'.format(mask_noisy.sum(), len(mask_noisy))
+    plt.text(limXMax, limYMax,str(number_of_clusters) + ' Cluster (Noise: ' + noisyTxt + ')',fontsize=10,horizontalalignment='right',verticalalignment='top',fontweight='bold')
+            
 def delete(listbox):
     global topTagsList
     global lastselectionList
@@ -1194,11 +1317,13 @@ tkScalebar = tk.Scale(canvas, from_=(clusterTreeCuttingDist/100), to=(clusterTre
 tkScalebar.set(clusterTreeCuttingDist)#(clusterTreeCuttingDist*10) - (clusterTreeCuttingDist/10)/2) #set position of slider to center
 tkScalebar.pack()
 b = tk.Button(canvas, text = "Cluster Preview", command=cluster_currentDisplayTag, background="gray20",fg="gray80",borderwidth=0,font="Arial 10 bold")
-b.pack(padx=10, pady=10)
-b = tk.Button(canvas, text = "Proceed", command=proceedWithCluster, background="gray20",fg="gray80",borderwidth=0,font="Arial 10 bold")
-b.pack(padx=10, pady=10)
+b.pack(padx=10, pady=10,side="left")
+b = tk.Button(canvas, text = "Scale Test", command=scaletest_currentDisplayTag, background="gray20",fg="gray80",borderwidth=0,font="Arial 10 bold")
+b.pack(padx=10, pady=10,side="left")
+b = tk.Button(canvas, text = "Proceed..", command=proceedWithCluster, background="gray20",fg="gray80",borderwidth=0,font="Arial 10 bold")
+b.pack(padx=10, pady=10,side="left")
 b = tk.Button(canvas, text = "Quit", command=quitTkinter, background="gray20",fg="gray80",borderwidth=0,font="Arial 10 bold")
-b.pack(padx=10, pady=10)
+b.pack(padx=10, pady=10,side="left")
 canvas.pack(fill='both',padx=0, pady=0)
 buttonsFrame.pack(fill='both',padx=0, pady=0)
 
@@ -1326,6 +1451,9 @@ if proceedClusting:
             number_of_clusters = 0 
         else:  
             number_of_clusters = len(np.unique(clusters[~mask_noisy])) #mit noisy (=0)
+        if number_of_clusters > 100:
+            print_store_log("--> Too many, skipped for this scale.")
+            continue
         if not number_of_clusters == 0:
             print_store_log("--> " + str(number_of_clusters) + " cluster.")
             tnum += 1
@@ -1369,7 +1497,8 @@ if proceedClusting:
     sys.stdout.flush()
     #for each cluster of points, calculate boundary shape and add statistics (HImpTag etc.)
     listOfAlphashapesAndMeta = []
-    tnum = 1
+    tnum = 0
+    toptagArea = 0
     for toptag in topTagsList:
         tnum += 1
         clusterPhotoGuidList = clustersPerTag.get(toptag[0], None)
@@ -1378,7 +1507,9 @@ if proceedClusting:
             #we define a new list of Temp Alpha Shapes outside the loop, so that it is not overwritten each time
             listOfAlphashapesAndMeta_tmp = []
             #points = []
+            tagArea = 0
             for photo_guids in clusterPhotoGuidList:
+                #for each cluster for this toptag
                 photos = [cleanedPhotoDict[x] for x in photo_guids]
                 photoCount = len(photo_guids)
                 uniqueUserCount = len(set([photo.userid for photo in photos]))
@@ -1406,7 +1537,7 @@ if proceedClusting:
                     if len(points) < 10:
                         result_polygon = point_collection.convex_hull #convex hull
                         result_polygon = result_polygon.buffer(clusterTreeCuttingDist/4,resolution=3)
-                        shapetype = "between 5 and 10 points_conexHull"
+                        shapetype = "between 5 and 10 points_convexHull"
                         #result_polygon = result_polygon.buffer(min(distXLng,distYLat)/100,resolution=3)
                     else:
                         if len(points) > 100:
@@ -1466,18 +1597,21 @@ if proceedClusting:
                     result_polygon = result_polygon.convex_hull
                 #Geom, Join_Count, Views,  COUNT_User,ImpTag,TagCountG,HImpTag
                 if result_polygon is not None and not result_polygon.is_empty:
+                    tagArea += result_polygon.area                           
                     listOfAlphashapesAndMeta_tmp.append((result_polygon,photoCount,sumViews,uniqueUserCount,str(toptag[0]),toptag[1],weightsv1,weightsv2,weightsv3,shapetype))
             if len(listOfAlphashapesAndMeta_tmp) > 0:
-                #Sort on Weights1 Formula
+                if tnum == 1:
+                    #calculate total area of Top1-Tag for 80% saturation check for lower level tags
+                    toptagArea = tagArea #copy.copy(tagArea) #copy.copy(tagArea)                       
+                else:
+                    if tagArea/(toptagArea/100) > 85:
+                        #skip tag entirely due to saturation (if total area > 80% of total area of toptag clusters)
+                        print("Skipped: " + toptag[0] + " due to saturation (" + str(tagArea/(toptagArea/100)) + "%).")
+                        continue #next toptag
+                # finally sort and append all cluster shapes for this tag
                 listOfAlphashapesAndMeta_tmp = sorted(listOfAlphashapesAndMeta_tmp,key=lambda x: -x[6])
-                listOfAlphashapesAndMeta.extend(listOfAlphashapesAndMeta_tmp)
-                    #plot_polygon(result_polygon)
-                    #plt.suptitle(toptag[0].upper(), fontsize=18, fontweight='bold')
-                    #plt.gca().set_xlim([float(limLngMin), float(limLngMax)]) 
-                    #plt.gca().set_ylim([float(limLatMin), float(limLatMax)])
-                    #plt.plot(x,y,'o',ms=5)
-                    #plt.waitforbuttonpress()
-                    #plt.close()
+                listOfAlphashapesAndMeta.extend(listOfAlphashapesAndMeta_tmp)                       
+
         singlePhotoGuidList = noClusterPhotos_perTag_DictOfLists.get(toptag[0], None)
         if singlePhotoGuidList:
             shapetype = "Single cluster"
@@ -1552,9 +1686,18 @@ if proceedClusting:
                     HImP = 0
             #emoName = unicode_name(alphaShapeAndMeta[4])
             #Calculate Normalized Weights Values based on precalc Step
-            weight1_normalized = weightsv1_mod_a * alphaShapeAndMeta[6] + weightsv1_mod_b
-            weight2_normalized = weightsv2_mod_a * alphaShapeAndMeta[7] + weightsv2_mod_b
-            weight3_normalized = weightsv3_mod_a * alphaShapeAndMeta[8] + weightsv3_mod_b
+            if not alphaShapeAndMeta[6] == 1:
+                weight1_normalized = weightsv1_mod_a * alphaShapeAndMeta[6] + weightsv1_mod_b
+            else:
+                weight1_normalized = 1
+            if not alphaShapeAndMeta[7] == 1:
+                weight2_normalized = weightsv2_mod_a * alphaShapeAndMeta[7] + weightsv2_mod_b
+            else:
+                weight2_normalized = 1
+            if not alphaShapeAndMeta[8] == 1:
+                weight3_normalized = weightsv3_mod_a * alphaShapeAndMeta[8] + weightsv3_mod_b
+            else:
+                weight3_normalized = 1                
             idx += 1
             #project data
             #geom_proj = transform(project, alphaShapeAndMeta[0])
@@ -1597,8 +1740,6 @@ if proceedClusting:
     mask_noisy = (clusters == -1)
     number_of_clusters = len(np.unique(clusters[~mask_noisy])) #mit noisy (=0)
     print_store_log("--> " + str(number_of_clusters) + " Photo cluster.")
-    tnum += 1
-    photo_num = 0
     #clusternum_photolist = zip(clusters,selectedPhotoList)
     #clusterPhotosList = [[] for x in range(number_of_clusters)]
     clusterPhotosGuidsList = []
