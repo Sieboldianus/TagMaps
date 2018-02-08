@@ -119,6 +119,7 @@ parser.add_argument('-e', "--EPSG")
 parser.add_argument('-t', "--clusterTags", type=def_functions.str2bool, nargs='?', const=True,default= True)  
 parser.add_argument('-p', "--clusterPhotos", type=def_functions.str2bool, nargs='?', const=True,default= True)
 parser.add_argument('-c', "--localSaturationCheck", type=def_functions.str2bool, nargs='?', const=True, default= False)
+parser.add_argument('-j', "--tokenizeJapanese", type=def_functions.str2bool, nargs='?', const=True, default= False)
 args = parser.parse_args()    # returns data from the options specified (source)
 DSource = args.source
 clusterTags = args.clusterTags
@@ -132,6 +133,10 @@ else:
     crs_proj = pyproj.Proj(init='epsg:{0}'.format(overrideCRS))
     print("Custom CRS set: " + str(crs_proj.srs))
     epsg_code = overrideCRS
+
+tokenizeJapanese = args.tokenizeJapanese
+if tokenizeJapanese:
+    from jNlp.jTokenize import jTokenize
 #print(str(removeLongTail))
 pathname = os.getcwd()
 if not os.path.exists(pathname + '/02_Output/'):
@@ -555,7 +560,10 @@ for file_name in filelist:
                     photo_shortcode = None#item[18]
                     photo_uploadDate = item[8] #guid
                     photo_idDate = None#photo_uploadDate #use upload date as sorting ID
-                    photo_caption = item[9]
+                    if clusterTags:
+                        photo_caption = item[9]
+                    else:
+                        photo_caption = ""
                     photo_likes = None#item[13]
                     if clusterTags:
                         photo_tags = set(filter(None, item[11][1:-1].lower().split(","))) #[1:-1] removes curly brackets
@@ -670,7 +678,10 @@ for file_name in filelist:
                                                                    photo_locID)
             UserLocationTagList_dict[photo_locIDUserID] |= photo_tags #union tags per userid/unique location
             removeSpecialChars = photo_caption.translate ({ord(c): " " for c in "?.!/;:,[]()'-&#"})
-            wordlist = [word for word in removeSpecialChars.split(' ') if len(word) > 2]  #first replace specia characters in caption, then split by space-character
+            if tokenizeJapanese:
+                wordlist = [word for word in jTokenize(input_sentence) for input_sentence in removeSpecialChars.split(' ')]
+            else:                  
+                wordlist = [word for word in removeSpecialChars.split(' ') if len(word) > 2]  #first replace specia characters in caption, then split by space-character
             UserLocationWordList_dict[photo_locIDUserID] |= set(wordlist) #union words per userid/unique location              
             count_glob += 1
             
@@ -788,10 +799,7 @@ if clusterTags == True:
     cleanedPhotoList = list(cleanedPhotoDict.values())
     df = pd.DataFrame(cleanedPhotoList)
     points = df.as_matrix(['lng','lat'])
-    limYMin = np.min(points.T[1])       
-    limYMax = np.max(points.T[1])    
-    limXMin = np.min(points.T[0])       
-    limXMax = np.max(points.T[0])
+    limYMin,limYMax,limXMin,limXMax = def_functions.getRectangleBounds(points)
     bound_points_shapely = geometry.MultiPoint([(limXMin, limYMin), (limXMax, limYMax)])
     distYLat = limYMax - limYMin
     distXLng = limXMax - limXMin
@@ -1577,8 +1585,9 @@ else:
     print("\n" + "User abort.")
 if clusterPhotos == True:
     print_store_log("########## STEP 6 of 6: Calculating Overall Photo Location Clusters ##########")
+
     if not 'clusterTreeCuttingDist' in locals():
-        clusterTreeCuttingDist = input("Specify Cluster (Cut) Distance:\n")
+        clusterTreeCuttingDist = int(input("Specify Cluster (Cut) Distance:\n"))
     selectedPhotoList_Guids = []
     if not 'cleanedPhotoList' in locals():
         cleanedPhotoList = list(cleanedPhotoDict.values())    
@@ -1609,6 +1618,17 @@ if clusterPhotos == True:
         clusterPhotosGuidsList.append(currentClusterPhotoGuids)
     noClusterPhotos = list(numpy_selectedPhotoList_Guids[clusters==-1])   
     clusterPhotosGuidsList.sort(key=len,reverse=True)
+    if clusterTags is False:
+        #detect projection if not already
+        limYMin,limYMax,limXMin,limXMax = def_functions.getRectangleBounds(points)
+        bound_points_shapely = geometry.MultiPoint([(limXMin, limYMin), (limXMax, limYMax)])
+        crs_wgs = pyproj.Proj(init='epsg:4326') #data always in lat/lng WGS1984
+        if overrideCRS is None:
+            #Calculate best UTM Zone SRID/EPSG Code
+            input_lon_center = bound_points_shapely.centroid.coords[0][0] #True centroid (coords may be multipoint)
+            input_lat_center = bound_points_shapely.centroid.coords[0][1]
+            epsg_code = def_functions.convert_wgs_to_utm(input_lon_center, input_lat_center)
+            crs_proj = pyproj.Proj(init='epsg:{0}'.format(epsg_code))
     for photo_cluster in clusterPhotosGuidsList:
         photos = [cleanedPhotoDict[x] for x in photo_cluster]
         uniqueUserCount = len(set([photo.userid for photo in photos]))
@@ -1621,7 +1641,7 @@ if clusterPhotos == True:
         if result_centroid is not None and not result_centroid.is_empty:
             listOfPhotoClusters.append((result_centroid,uniqueUserCount))
         #clusterPhotoGuidList = clustersPerTag.get(None, None)
-    noclusterphotos = [cleanedPhotoDict[x] for x in singlePhotoGuidList]
+    #noclusterphotos = [cleanedPhotoDict[x] for x in singlePhotoGuidList]
     for photoGuid_noCluster in noClusterPhotos:
         photo = cleanedPhotoDict[photoGuid_noCluster]
         x, y = pyproj.transform(crs_wgs, crs_proj, photo.lng, photo.lat)  
@@ -1649,7 +1669,6 @@ if clusterPhotos == True:
     later = time.time()
     hours, rem = divmod(later-now, 3600)
     minutes, seconds = divmod(rem, 60)
-    print()
     difference = int(later - now)
     log_texts_list.append("\n" + "Done." + "\n{:0>2} Hours {:0>2} Minutes and {:05.2f} Seconds".format(int(hours),int(minutes),seconds) + " passed.")
     with open(log_file, "w", encoding='utf-8') as logfile_a:

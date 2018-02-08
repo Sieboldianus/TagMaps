@@ -379,4 +379,10 @@ def alpha_shape(points, alpha):
 
 def fit_cluster(clusterer, data):
     clusterer.fit(data)
-    return clusterer    
+    return clusterer
+def getRectangleBounds(points):
+    limYMin = np.min(points.T[1])       
+    limYMax = np.max(points.T[1])    
+    limXMin = np.min(points.T[0])       
+    limXMax = np.max(points.T[0])
+    return limYMin,limYMax,limXMin,limXMax
