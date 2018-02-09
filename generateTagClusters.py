@@ -120,11 +120,13 @@ parser.add_argument('-t', "--clusterTags", type=def_functions.str2bool, nargs='?
 parser.add_argument('-p', "--clusterPhotos", type=def_functions.str2bool, nargs='?', const=True,default= True)
 parser.add_argument('-c', "--localSaturationCheck", type=def_functions.str2bool, nargs='?', const=True, default= False)
 parser.add_argument('-j', "--tokenizeJapanese", type=def_functions.str2bool, nargs='?', const=True, default= False)
+parser.add_argument('-o', "--clusterEmojis", type=def_functions.str2bool, nargs='?', const=True, default= False)
 args = parser.parse_args()    # returns data from the options specified (source)
 DSource = args.source
 clusterTags = args.clusterTags
 clusterPhotos = args.clusterPhotos
 removeLongTail = args.removeLongTail
+clusterEmojis = args.clusterEmojis
 localSaturationCheck = args.localSaturationCheck
 if args.EPSG is None:
     overrideCRS = None
@@ -375,22 +377,13 @@ for file_name in filelist:
                     photo_idDate = photo_dateTaken #use date taken date as sorting ID
                     photo_caption = item[3]
                     photo_likes = ""
-                    photo_tags = set(filter(None, item[11].lower().split(";"))) #filter empty strings from photo_tags list and convert to set (hash) with unique values
                     #Filter tags based on two stoplists
-                    photo_tags_filtered = set()
-                    for tag in photo_tags:
-                        count_tags_global += 1
-                        #exclude numbers and those tags that are in SortOutAlways_set
-                        if tag.isdigit() or tag in SortOutAlways_set:
-                            count_tags_skipped += 1
-                            continue
-                        for inStr in SortOutAlways_inStr_set:
-                            if inStr in tag:
-                                count_tags_skipped += 1
-                                break
-                        else:
-                            photo_tags_filtered.add(tag)
-                    photo_tags = photo_tags_filtered
+                    if clusterTags:
+                        photo_tags = set(filter(None, item[11].lower().split(";"))) #filter empty strings from photo_tags list and convert to set (hash) with unique values
+                        #Filter tags based on two stoplists
+                        photo_tags = def_functions.filterTags(photo_tags,SortOutAlways_set,SortOutAlways_inStr_set,count_tags_global,count_tags_skipped)
+                    else:
+                        photo_tags = set()
                     #if not "water" in photo_tags:
                     #    continue
                     photo_thumbnail = item[4]
@@ -566,22 +559,9 @@ for file_name in filelist:
                         photo_caption = ""
                     photo_likes = None#item[13]
                     if clusterTags:
-                        photo_tags = set(filter(None, item[11][1:-1].lower().split(","))) #[1:-1] removes curly brackets
+                        photo_tags = set(filter(None, item[11][1:-1].lower().split(","))) #[1:-1] removes curly brackets, second [1:-1] removes quotes
                         #Filter tags based on two stoplists
-                        photo_tags_filtered = set()
-                        for tag in photo_tags:
-                            count_tags_global += 1
-                            #exclude numbers and those tags that are in SortOutAlways_set
-                            if tag == '""' or tag.isdigit() or tag in SortOutAlways_set:
-                                count_tags_skipped += 1
-                                continue
-                            for inStr in SortOutAlways_inStr_set:
-                                if inStr in tag:
-                                    count_tags_skipped += 1
-                                    break
-                            else:
-                                photo_tags_filtered.add(tag)
-                        photo_tags = photo_tags_filtered
+                        photo_tags = def_functions.filterTags(photo_tags,SortOutAlways_set,SortOutAlways_inStr_set,count_tags_global,count_tags_skipped)
                     else:
                         photo_tags = set()
                     #photo_tags = ";" + item[11] + ";"
@@ -752,7 +732,7 @@ with open("02_Output/Output_cleaned.txt", 'w', encoding='utf8') as csvfile:
                           )
             cleanedPhotoDict[cleanedPhotoLocation.photo_guid] = cleanedPhotoLocation
 now = time.time()
-if clusterTags == True:
+if clusterTags:
     print_store_log("########## STEP 2 of 6: Tag Ranking ##########")
     overallNumOfUsersPerTag_global = collections.Counter()
     for user_key, taghash in UserDict_TagCounters_global.items():
@@ -1665,14 +1645,14 @@ if clusterPhotos == True:
                 'geometry': geometry.mapping(photoCluster[0]),
                 'properties': {'Join_Count': photoCluster[1]},
                 })
-    print("Writing log file..")
-    later = time.time()
-    hours, rem = divmod(later-now, 3600)
-    minutes, seconds = divmod(rem, 60)
-    difference = int(later - now)
-    log_texts_list.append("\n" + "Done." + "\n{:0>2} Hours {:0>2} Minutes and {:05.2f} Seconds".format(int(hours),int(minutes),seconds) + " passed.")
-    with open(log_file, "w", encoding='utf-8') as logfile_a:
-        for logtext in log_texts_list:
-            logfile_a.write(logtext)        
-    print("\n" + "Done." + "\n{:0>2} Hours {:0>2} Minutes and {:05.2f} Seconds".format(int(hours),int(minutes),seconds) + " passed.")
-    input("Press any key to continue...")
+print("Writing log file..")
+later = time.time()
+hours, rem = divmod(later-now, 3600)
+minutes, seconds = divmod(rem, 60)
+difference = int(later - now)
+log_texts_list.append("\n" + "Done." + "\n{:0>2} Hours {:0>2} Minutes and {:05.2f} Seconds".format(int(hours),int(minutes),seconds) + " passed.")
+with open(log_file, "w", encoding='utf-8') as logfile_a:
+    for logtext in log_texts_list:
+        logfile_a.write(logtext)        
+print("\n" + "Done." + "\n{:0>2} Hours {:0>2} Minutes and {:05.2f} Seconds".format(int(hours),int(minutes),seconds) + " passed.")
+input("Press any key to continue...")

@@ -229,10 +229,12 @@ def generateClusterShape(toptag,clusterPhotoGuidList,cleanedPhotoDict,crs_wgs,cr
                 shapetype = "between 5 and 10 points_convexHull"
                 #result_polygon = result_polygon.buffer(min(distXLng,distYLat)/100,resolution=3)
             else:
-                if len(points) > 100:
+                if len(points) > 500:
                     startalpha = 1000000
+                elif len(points) > 200:
+                    startalpha = 10000                             
                 else:
-                    startalpha = 10000
+                    startalpha = 9000
                 result_polygon = alpha_shape(points,alpha=clusterTreeCuttingDist/startalpha) #concave hull/alpha shape /50000
                 shapetype = "Initial Alpha Shape + Buffer"
                 if type(result_polygon) is geometry.multipolygon.MultiPolygon or isinstance(result_polygon, bool):
@@ -386,3 +388,19 @@ def getRectangleBounds(points):
     limXMin = np.min(points.T[0])       
     limXMax = np.max(points.T[0])
     return limYMin,limYMax,limXMin,limXMax
+def filterTags(taglist,SortOutAlways_set,SortOutAlways_inStr_set,count_tags_global,count_tags_skipped):
+    #Filter tags based on two stoplists
+    photo_tags_filtered = set()
+    for tag in taglist:
+        count_tags_global += 1
+        #exclude numbers and those tags that are in SortOutAlways_set
+        if tag == '""' or tag.isdigit() or tag in SortOutAlways_set:
+            count_tags_skipped += 1
+            continue
+        for inStr in SortOutAlways_inStr_set:
+            if inStr in tag:
+                count_tags_skipped += 1
+                break
+        else:
+            photo_tags_filtered.add(tag)
+    return photo_tags_filtered

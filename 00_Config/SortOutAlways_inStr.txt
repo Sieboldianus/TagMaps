@@ -216,3 +216,4 @@ sigma
 photomatix
 instagram
 picoftheday
+squareformat
