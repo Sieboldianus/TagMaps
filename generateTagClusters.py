@@ -183,7 +183,7 @@ print_store_log("########## STEP 1 of 6: Data Cleanup ##########")
 if (len(filelist) == 0):
     sys.exit("No *.json/csv/txt files found.")
 else:
-    if clusterTags:
+    if clusterTags or clusterEmojis:
         inputtext = input("Files to process: " + str(len(filelist)) + ". \nOptional: Enter a Number for the variety of Tags to process (Default is 1000)\nPress Enter to proceed.. \n")
         if inputtext == "" or not inputtext.isdigit():
             tmax = 1000
@@ -195,6 +195,7 @@ appendToAlreadyExist = False
 count_non_geotagged = 0
 count_outside_shape = 0
 count_tags_global = 0
+count_emojis_global = 0
 count_tags_skipped = 0
 shapeFileExcludelocIDhash = set()
 shapeFileIncludedlocIDhash  = set()
@@ -224,6 +225,8 @@ LocationsPerUserID_dict = defaultdict(set)
 UserLocationTagList_dict = defaultdict(set)
 UserLocationWordList_dict = defaultdict(set)
 UserLocationsFirstPhoto_dict = defaultdict(set)
+if clusterEmojis:
+    overallNumOfEmojis_global = collections.Counter()
 
 #UserDict_TagCounters = defaultdict(set)
 UserDict_TagCounters_global = defaultdict(set)
@@ -381,7 +384,9 @@ for file_name in filelist:
                     if clusterTags:
                         photo_tags = set(filter(None, item[11].lower().split(";"))) #filter empty strings from photo_tags list and convert to set (hash) with unique values
                         #Filter tags based on two stoplists
-                        photo_tags = def_functions.filterTags(photo_tags,SortOutAlways_set,SortOutAlways_inStr_set,count_tags_global,count_tags_skipped)
+                        photo_tags, count_tags, count_skipped = def_functions.filterTags(photo_tags,SortOutAlways_set,SortOutAlways_inStr_set)
+                        count_tags_global += count_tags
+                        count_tags_skipped += count_skipped
                     else:
                         photo_tags = set()
                     #if not "water" in photo_tags:
@@ -553,17 +558,24 @@ for file_name in filelist:
                     photo_shortcode = None#item[18]
                     photo_uploadDate = item[8] #guid
                     photo_idDate = None#photo_uploadDate #use upload date as sorting ID
-                    if clusterTags:
+                    if clusterTags or clusterEmojis:
                         photo_caption = item[9]
                     else:
                         photo_caption = ""
                     photo_likes = None#item[13]
+                    photo_tags = set()
                     if clusterTags:
                         photo_tags = set(filter(None, item[11][1:-1].lower().split(","))) #[1:-1] removes curly brackets, second [1:-1] removes quotes
                         #Filter tags based on two stoplists
-                        photo_tags = def_functions.filterTags(photo_tags,SortOutAlways_set,SortOutAlways_inStr_set,count_tags_global,count_tags_skipped)
-                    else:
-                        photo_tags = set()
+                        photo_tags,count_tags,count_skipped = def_functions.filterTags(photo_tags,SortOutAlways_set,SortOutAlways_inStr_set)
+                        count_tags_global += count_tags
+                        count_tags_skipped += count_skipped
+                    if clusterEmojis:
+                        emojis_filtered = set(def_functions.extract_emojis(photo_caption))
+                        if not len(emojis_filtered) == 0:
+                            count_emojis_global += len(emojis_filtered)
+                            overallNumOfEmojis_global.update(emojis_filtered)
+                            photo_tags = set.union(emojis_filtered)  
                     #photo_tags = ";" + item[11] + ";"
                     photo_thumbnail = None#item[17]
                     photo_comments = None#item[14]
@@ -672,7 +684,12 @@ for file_name in filelist:
             
 log_texts_list.append("Cleaned output to " + "%02d" % (count_loc,)  + " photolocations from " + "%02d" % (count_glob,)+ " (File " + str(partcount) + " of " + str(len(filelist)) + ") - Skipped Media: " + str(skippedCount) + " - Skipped Tags: " + str(count_tags_skipped) +" of " + str(count_tags_global))
 total_distinct_locations = len(distinctLocations_set)
-print_store_log("\nTotal distinct locations: " + str(total_distinct_locations))
+print_store_log("\nTotal users: " + str(len(LocationsPerUserID_dict)))
+print_store_log("Total photos: " + str(count_glob))
+print_store_log("Total distinct locations: " + str(total_distinct_locations))
+print_store_log("Total tags: " + str(count_tags_global))
+print_store_log("Total emojis: " + str(count_emojis_global))
+
 #boundary:
 print_store_log("Bounds are: Min " + str(float(limLngMin)) + " " + str(float(limLatMin)) + " Max " + str(float(limLngMax)) + " " + str(float(limLatMax)))
 #cleanedPhotoList = []
@@ -732,7 +749,7 @@ with open("02_Output/Output_cleaned.txt", 'w', encoding='utf8') as csvfile:
                           )
             cleanedPhotoDict[cleanedPhotoLocation.photo_guid] = cleanedPhotoLocation
 now = time.time()
-if clusterTags:
+if clusterTags or clusterEmojis:
     print_store_log("########## STEP 2 of 6: Tag Ranking ##########")
     overallNumOfUsersPerTag_global = collections.Counter()
     for user_key, taghash in UserDict_TagCounters_global.items():
@@ -752,12 +769,19 @@ if clusterTags:
             if not lenBefore == lenAfter:
                 print("Filtered " + str(lenBefore - lenAfter) + " Tags that were only used by less than 2 users.")
     singleMostUsedtag = topTagsList[0]
-        
-    #optional write toptags to file
-    toptags = ''.join("%s,%i" % v + '\n' for v in topTagsList)
-    with open("02_Output/Output_toptags.txt", 'w', encoding="utf8") as file: #overwrite
-        file.write(toptags)
-
+    if clusterTags:    
+        #optional write toptags to file
+        toptags = ''.join("%s,%i" % v + '\n' for v in topTagsList)
+        with open("02_Output/Output_toptags.txt", 'w', encoding="utf8") as file: #overwrite
+            file.write(toptags)
+    #optional write topemojis to file
+    if clusterEmojis:
+        topEmojisList = overallNumOfEmojis_global.most_common()
+        globalEmojiSet =  {tuple[0] for tuple in topEmojisList}
+        topemojis = ''.join("%s,%i" % v + '\n' for v in topEmojisList)
+        with open("02_Output/Output_topemojis.txt", 'w', encoding="utf8") as file: #overwrite
+            file.write(topemojis)
+            
     print_store_log("########## STEP 3 of 6: Tag Location Clustering ##########")
     #prepare some variables
     tnum = 0
@@ -1491,8 +1515,8 @@ if clusterTags:
                            'Weights': 'float',
                            'WeightsV2': 'float',
                            'WeightsV3': 'float',
-                           'shapetype': 'str'},
-                           #'EmojiName': 'str'},
+                           'shapetype': 'str',
+                           'emoji': 'int'},
         }
      
         #Normalization of Values (1-1000 Range), precalc Step:
@@ -1546,7 +1570,11 @@ if clusterTags:
                 #project data
                 #geom_proj = transform(project, alphaShapeAndMeta[0])
                 #c.write({
-                #    'geometry': geometry.mapping(geom_proj),            
+                #    'geometry': geometry.mapping(geom_proj),  
+                if clusterEmojis and alphaShapeAndMeta[4] in globalEmojiSet:
+                    emoji = 1
+                else:
+                    emoji = 0               
                 c.write({
                     'geometry': geometry.mapping(alphaShapeAndMeta[0]),
                     'properties': {'Join_Count': alphaShapeAndMeta[1], 
@@ -1558,8 +1586,8 @@ if clusterTags:
                                    'Weights': weight1_normalized,
                                    'WeightsV2': weight2_normalized,
                                    'WeightsV3': weight3_normalized,
-                                   'shapetype': alphaShapeAndMeta[9]},
-                                   #'EmojiName': emoName},
+                                   'shapetype': alphaShapeAndMeta[9],
+                                   'emoji': int(emoji)},
                 })
 else:
     print("\n" + "User abort.")

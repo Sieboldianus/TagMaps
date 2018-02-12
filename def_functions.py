@@ -388,19 +388,21 @@ def getRectangleBounds(points):
     limXMin = np.min(points.T[0])       
     limXMax = np.max(points.T[0])
     return limYMin,limYMax,limXMin,limXMax
-def filterTags(taglist,SortOutAlways_set,SortOutAlways_inStr_set,count_tags_global,count_tags_skipped):
+def filterTags(taglist,SortOutAlways_set,SortOutAlways_inStr_set):
+    count_tags = 0
+    count_skipped = 0
     #Filter tags based on two stoplists
     photo_tags_filtered = set()
     for tag in taglist:
-        count_tags_global += 1
+        count_tags += 1
         #exclude numbers and those tags that are in SortOutAlways_set
-        if tag == '""' or tag.isdigit() or tag in SortOutAlways_set:
-            count_tags_skipped += 1
+        if len(tag) == 1 or tag == '""' or tag.isdigit() or tag in SortOutAlways_set:
+            count_skipped += 1
             continue
         for inStr in SortOutAlways_inStr_set:
             if inStr in tag:
-                count_tags_skipped += 1
+                count_skipped += 1
                 break
         else:
             photo_tags_filtered.add(tag)
-    return photo_tags_filtered
+    return photo_tags_filtered,count_tags,count_skipped
