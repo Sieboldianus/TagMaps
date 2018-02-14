@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # coding: utf8
 # generateTagClusters
+from nt import abort
 
 """
 generateTagClusters.py
@@ -121,12 +122,14 @@ parser.add_argument('-p', "--clusterPhotos", type=def_functions.str2bool, nargs=
 parser.add_argument('-c', "--localSaturationCheck", type=def_functions.str2bool, nargs='?', const=True, default= False)
 parser.add_argument('-j', "--tokenizeJapanese", type=def_functions.str2bool, nargs='?', const=True, default= False)
 parser.add_argument('-o', "--clusterEmojis", type=def_functions.str2bool, nargs='?', const=True, default= False)
+parser.add_argument('-m', "--topicModeling", type=def_functions.str2bool, nargs='?', const=True, default= False)
 args = parser.parse_args()    # returns data from the options specified (source)
 DSource = args.source
 clusterTags = args.clusterTags
 clusterPhotos = args.clusterPhotos
 removeLongTail = args.removeLongTail
 clusterEmojis = args.clusterEmojis
+topic_modeling  = args.topicModeling
 localSaturationCheck = args.localSaturationCheck
 if args.EPSG is None:
     overrideCRS = None
@@ -223,6 +226,10 @@ def is_number(s):
         return False        
 LocationsPerUserID_dict = defaultdict(set)
 UserLocationTagList_dict = defaultdict(set)
+if topic_modeling:
+    UserTopicList_dict  = defaultdict(set)
+    UserPhotoIDS_dict  = defaultdict(set)
+    UserPhotoFirstThumb_dict = defaultdict(str)
 UserLocationWordList_dict = defaultdict(set)
 UserLocationsFirstPhoto_dict = defaultdict(set)
 if clusterEmojis:
@@ -381,7 +388,7 @@ for file_name in filelist:
                     photo_caption = item[3]
                     photo_likes = ""
                     #Filter tags based on two stoplists
-                    if clusterTags:
+                    if clusterTags or topic_modeling:
                         photo_tags = set(filter(None, item[11].lower().split(";"))) #filter empty strings from photo_tags list and convert to set (hash) with unique values
                         #Filter tags based on two stoplists
                         photo_tags, count_tags, count_skipped = def_functions.filterTags(photo_tags,SortOutAlways_set,SortOutAlways_inStr_set)
@@ -558,13 +565,13 @@ for file_name in filelist:
                     photo_shortcode = None#item[18]
                     photo_uploadDate = item[8] #guid
                     photo_idDate = None#photo_uploadDate #use upload date as sorting ID
-                    if clusterTags or clusterEmojis:
+                    if clusterTags or clusterEmojis or topic_modeling:
                         photo_caption = item[9]
                     else:
                         photo_caption = ""
                     photo_likes = None#item[13]
                     photo_tags = set()
-                    if clusterTags:
+                    if clusterTags or topic_modeling:
                         photo_tags = set(filter(None, item[11][1:-1].lower().split(","))) #[1:-1] removes curly brackets, second [1:-1] removes quotes
                         #Filter tags based on two stoplists
                         photo_tags,count_tags,count_skipped = def_functions.filterTags(photo_tags,SortOutAlways_set,SortOutAlways_inStr_set)
@@ -726,29 +733,44 @@ with open("02_Output/Output_cleaned.txt", 'w', encoding='utf8') as csvfile:
                           photo[15],#photo_locName = 17
                           photo[16]#photo_locID = 18
                           )
-            ##optional Write Cleaned Data to CSV/TXT
-            datawriter.writerow([cleanedPhotoLocation.source,#Source = 0
-                          cleanedPhotoLocation.lat, #Lat = 1
-                          cleanedPhotoLocation.lng, #Lng = 2
-                          cleanedPhotoLocation.photo_guid,#photo_guid = 3
-                          cleanedPhotoLocation.photo_owner,#photo_owner = 4
-                          cleanedPhotoLocation.userid, #userid = 5
-                          ";".join(cleanedPhotoLocation.photo_caption),#photo_caption = 6
-                          cleanedPhotoLocation.photo_dateTaken,#photo_dateTaken = 7
-                          cleanedPhotoLocation.photo_uploadDate,#photo_uploadDate = 8
-                          cleanedPhotoLocation.photo_views,#photo_views = 9
-                          ";".join(cleanedPhotoLocation.photo_tags),#photo_tags = 10
-                          cleanedPhotoLocation.photo_thumbnail,#photo_thumbnail = 11
-                          cleanedPhotoLocation.photo_mTags,#photo_mTags = 12
-                          cleanedPhotoLocation.photo_likes,#photo_likes = 13
-                          cleanedPhotoLocation.photo_comments,#photo_comments = 14
-                          cleanedPhotoLocation.photo_shortcode,#photo_shortcode = 15
-                          cleanedPhotoLocation.photo_mediatype,#photo_mediatype = 16
-                          cleanedPhotoLocation.photo_locName,#photo_locName = 17
-                          cleanedPhotoLocation.photo_locID]#photo_locID = 18
-                          )
+            ###optional Write Cleaned Data to CSV/TXT
+            #datawriter.writerow([cleanedPhotoLocation.source,#Source = 0
+            #              cleanedPhotoLocation.lat, #Lat = 1
+            #              cleanedPhotoLocation.lng, #Lng = 2
+            #              cleanedPhotoLocation.photo_guid,#photo_guid = 3
+            #              cleanedPhotoLocation.photo_owner,#photo_owner = 4
+            #              cleanedPhotoLocation.userid, #userid = 5
+            #              ";".join(cleanedPhotoLocation.photo_caption),#photo_caption = 6
+            #              cleanedPhotoLocation.photo_dateTaken,#photo_dateTaken = 7
+            #              cleanedPhotoLocation.photo_uploadDate,#photo_uploadDate = 8
+            #              cleanedPhotoLocation.photo_views,#photo_views = 9
+            #              ";".join(cleanedPhotoLocation.photo_tags),#photo_tags = 10
+            #              cleanedPhotoLocation.photo_thumbnail,#photo_thumbnail = 11
+            #              cleanedPhotoLocation.photo_mTags,#photo_mTags = 12
+            #              cleanedPhotoLocation.photo_likes,#photo_likes = 13
+            #              cleanedPhotoLocation.photo_comments,#photo_comments = 14
+            #              cleanedPhotoLocation.photo_shortcode,#photo_shortcode = 15
+            #              cleanedPhotoLocation.photo_mediatype,#photo_mediatype = 16
+            #              cleanedPhotoLocation.photo_locName,#photo_locName = 17
+            #              cleanedPhotoLocation.photo_locID]#photo_locID = 18
+            #              )
+            ##optional Write Cleaned Search Terms to CSV for Topic Modeling
+            #topics = cleanedPhotoLocation.photo_caption.union(cleanedPhotoLocation.photo_tags)
+            if topic_modeling:
+                if not len(cleanedPhotoLocation.photo_tags) == 0:
+                    UserTopicList_dict[user_key] |= cleanedPhotoLocation.photo_tags
+                    UserPhotoIDS_dict[user_key] |= {location} # Bit wise or and assignment in one step. -> assign PhotoGuid to UserDict list if not already contained
+                    #UserPhotoFirstThumb_dict[user_key] = photo[5]
             cleanedPhotoDict[cleanedPhotoLocation.photo_guid] = cleanedPhotoLocation
+if topic_modeling:
+    #export list of cleaned topics on a per user basis for LDA/TSNE etc.
+    with open("02_Output/Output_usertopics.csv", 'w', encoding='utf8') as csvfile:
+        csvfile.write("TOPICS,PhotoIDs,imgs" + '\n')
+        datawriter = csv.writer(csvfile, delimiter=',', lineterminator='\n', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
+        for user_key, topics in UserTopicList_dict.items():
+            datawriter.writerow([" ".join(topics)," ".join(UserPhotoIDS_dict.get(user_key,None)),UserPhotoFirstThumb_dict.get(user_key,None)])
 now = time.time()
+abort = False
 if clusterTags or clusterEmojis:
     print_store_log("########## STEP 2 of 6: Tag Ranking ##########")
     overallNumOfUsersPerTag_global = collections.Counter()
@@ -959,6 +981,8 @@ if clusterTags or clusterEmojis:
         #app.floater.destroy()
         #tkinter.messagebox.showinfo("Closing App", "Closing App")
         #plt.quit()
+        global abort
+        abort = True
         app.update() #see https://stackoverflow.com/questions/35040168/python-tkinter-error-cant-evoke-event-command
         app.destroy()
         app.quit() ##root.quit() causes mainloop to exit, see https://stackoverflow.com/questions/2307464/what-is-the-difference-between-root-destroy-and-root-quit
@@ -1591,7 +1615,7 @@ if clusterTags or clusterEmojis:
                 })
 else:
     print("\n" + "User abort.")
-if clusterPhotos == True:
+if abort == False and clusterPhotos == True:
     print_store_log("########## STEP 6 of 6: Calculating Overall Photo Location Clusters ##########")
 
     if not 'clusterTreeCuttingDist' in locals():
