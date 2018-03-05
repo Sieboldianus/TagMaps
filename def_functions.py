@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# coding: utf8
+# coding: utf-8
 # TimeTransponse_from_json definition of functions file
 import sys
 import tkinter as tk
@@ -290,7 +290,7 @@ def generateClusterShape(toptag,clusterPhotoGuidList,cleanedPhotoDict,crs_wgs,cr
         if result_polygon is not None and not result_polygon.is_empty:
             if localSaturationCheck:
                 tagArea += result_polygon.area                           
-            listOfAlphashapesAndMeta_tmp.append((result_polygon,photoCount,sumViews,uniqueUserCount,str(toptag[0]),toptag[1],weightsv1,weightsv2,weightsv3,shapetype))
+            listOfAlphashapesAndMeta_tmp.append((result_polygon,photoCount,sumViews,uniqueUserCount,toptag[0],toptag[1],weightsv1,weightsv2,weightsv3,shapetype))
     if len(listOfAlphashapesAndMeta_tmp) > 0:
         # finally sort and append all cluster shapes for this tag
         listOfAlphashapesAndMeta_tmp = sorted(listOfAlphashapesAndMeta_tmp,key=lambda x: -x[6])

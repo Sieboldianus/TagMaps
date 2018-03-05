@@ -1,7 +1,6 @@
 #!/usr/bin/env python
-# coding: utf8
+# coding: utf-8
 # generateTagClusters
-from nt import abort
 
 """
 generateTagClusters.py
@@ -48,8 +47,10 @@ from multiprocessing.pool import ThreadPool
 pool = ThreadPool(processes=1)
 import time
 from time import sleep
-
 import copy
+
+#needed for anonymization (Topic Clustering)
+import hashlib
 
 #enable for map display
 #from mpl_toolkits.basemap import Basemap
@@ -69,6 +70,22 @@ from decimal import Decimal
 #alternative Shapefile module pure Python
 #https://github.com/GeospatialPython/pyshp#writing-shapefiles
 #import shapefile
+
+
+##Emojitest
+#n = '❤️👨‍⚕️'
+#n = '😍,146'
+##print(n.encode("utf-8"))
+###n = '👨‍⚕️' #medical emoji with zero-width joiner (http://www.unicode.org/emoji/charts/emoji-zwj-sequences.html)
+#nlist = def_functions.extract_emojis(n)
+#with open("emojifile.txt", "w", encoding='utf-8') as emojifile:
+#    emojifile.write("Original: " + n + '\n')
+#    for xstr in nlist:
+#        emojifile.write('Emoji Extract: U+%04x' % ord(xstr) + '\n')
+#        emojifile.write(xstr + '\n')
+#    for _c in n:
+#        emojifile.write(str(unicode_name(_c)) + '\n')
+#        emojifile.write('Each Codepoint: U+%04x' % ord(_c) +  '\n')
 
 ######################    
 ####config section####
@@ -682,7 +699,7 @@ for file_name in filelist:
             if tokenizeJapanese:
                 wordlist = [word for word in jTokenize(input_sentence) for input_sentence in removeSpecialChars.split(' ')]
             else:                  
-                wordlist = [word for word in removeSpecialChars.split(' ') if len(word) > 2]  #first replace specia characters in caption, then split by space-character
+                wordlist = [word for word in removeSpecialChars.lower().split(' ') if len(word) > 2]  #first replace specia characters in caption, then split by space-character
             UserLocationWordList_dict[photo_locIDUserID] |= set(wordlist) #union words per userid/unique location              
             count_glob += 1
             
@@ -762,16 +779,22 @@ with open("02_Output/Output_cleaned.txt", 'w', encoding='utf8') as csvfile:
             if topicModeling:
                 if not len(cleanedPhotoLocation.photo_tags) == 0:
                     UserTopicList_dict[user_key] |= cleanedPhotoLocation.photo_tags
+                    UserTopicList_dict[user_key] |= cleanedPhotoLocation.photo_caption #also use descriptions for Topic Modeling
                     UserPhotoIDS_dict[user_key] |= {cleanedPhotoLocation.photo_guid} # Bit wise or and assignment in one step. -> assign PhotoGuid to UserDict list if not already contained
                     #UserPhotoFirstThumb_dict[user_key] = photo[5]
             cleanedPhotoDict[cleanedPhotoLocation.photo_guid] = cleanedPhotoLocation
 if topicModeling:
-    #export list of cleaned topics on a per user basis for LDA/TSNE etc.
-    with open("02_Output/Output_usertopics.csv", 'w', encoding='utf8') as csvfile:
-        csvfile.write("TOPICS,PhotoIDs" + '\n')
+    #export list of cleaned topics on a per user basis for LDA/TSNE etc.  
+    with open("02_Output/Output_usertopics_anonymized.csv", 'w', encoding='utf8') as csvfile:
+        csvfile.write("TOPICS,PhotoIDs,UserID" + '\n')
         datawriter = csv.writer(csvfile, delimiter=',', lineterminator='\n', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
         for user_key, topics in UserTopicList_dict.items():
-            datawriter.writerow([" ".join(topics),"{" + ",".join(UserPhotoIDS_dict.get(user_key,None)) + "}"])
+            datawriter.writerow([" ".join(topics),"{" + ",".join([hashlib.sha3_256(photoid.encode("utf8")).hexdigest() for photoid in UserPhotoIDS_dict.get(user_key,None)]) + "}",hashlib.sha3_256(user_key.encode("utf8")).hexdigest()])
+    with open("02_Output/Output_usertopics.csv", 'w', encoding='utf8') as csvfile:
+        csvfile.write("TOPICS,PhotoIDs,UserID" + '\n')
+        datawriter = csv.writer(csvfile, delimiter=',', lineterminator='\n', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
+        for user_key, topics in UserTopicList_dict.items():
+            datawriter.writerow([" ".join(topics),"{" + ",".join(UserPhotoIDS_dict.get(user_key,None)) + "}",str(user_key)])            
 now = time.time()
 abort = False
 if clusterTags or clusterEmojis:
@@ -1568,7 +1591,7 @@ if clusterTags or clusterEmojis:
         ####################################### 
         # Write a new Shapefile
         # WGS1984
-        with fiona.open('02_Output/allTagClusters.shp', mode='w', encoding='utf-8', driver='ESRI Shapefile', schema=schema,crs=from_epsg(epsg_code)) as c:
+        with fiona.open('02_Output/allTagClusters.shp', mode='w', encoding='UTF-8', driver='ESRI Shapefile', schema=schema,crs=from_epsg(epsg_code)) as c:
             # Normalize Weights to 0-1000 Range
             idx = 0  
             for alphaShapeAndMeta in listOfAlphashapesAndMeta:
@@ -1614,7 +1637,7 @@ if clusterTags or clusterEmojis:
                                    'WeightsV2': weight2_normalized,
                                    'WeightsV3': weight3_normalized,
                                    'shapetype': alphaShapeAndMeta[9],
-                                   'emoji': int(emoji)},
+                                   'emoji': emoji},
                 })
 else:
     print("\n" + "User abort.")
