@@ -12,7 +12,7 @@ generateTagClusters.py
 
 __author__      = "Alexander Dunkel"
 __license__   = "GNU GPLv3"
-__version__ = "0.9.1"
+__version__ = "0.9.3"
 
 import csv
 import os
@@ -203,10 +203,10 @@ else:
 print('\n')
 print_store_log("########## STEP 1 of 6: Data Cleanup ##########")
 if (len(filelist) == 0):
-    sys.exit("No *.json/csv/txt files found.")
+    sys.exit(f'No *.json/csv/txt files found.')
 else:
     if clusterTags or clusterEmojis:
-        inputtext = input("Files to process: " + str(len(filelist)) + ". \nOptional: Enter a Number for the variety of Tags to process (Default is 1000)\nPress Enter to proceed.. \n")
+        inputtext = input(f'Files to process: {len(filelist)}. \nOptional: Enter a Number for the variety of Tags to process (Default is 1000)\nPress Enter to proceed.. \n')
         if inputtext == "" or not inputtext.isdigit():
             tmax = 1000
         else:
@@ -706,19 +706,19 @@ for file_name in filelist:
             ##Calculate toplists
             if photo_tags:
                 UserDict_TagCounters_global[photo_userid].update(photo_tags) #add tagcount of this media to overall tagcount or this user, initialize counter for user if not already done 
-            print("Cleaned output to " + "%02d" % (count_loc,)  + " photolocations from " + "%02d" % (count_glob,)+ " (File " + str(partcount) + " of " + str(len(filelist)) + ") - Skipped Media: " + str(skippedCount) + " - Skipped Tags: " + str(count_tags_skipped) +" of " + str(count_tags_global), end='\r')
-            
-log_texts_list.append("Cleaned output to " + "%02d" % (count_loc,)  + " photolocations from " + "%02d" % (count_glob,)+ " (File " + str(partcount) + " of " + str(len(filelist)) + ") - Skipped Media: " + str(skippedCount) + " - Skipped Tags: " + str(count_tags_skipped) +" of " + str(count_tags_global))
+            msg = f'Cleaned output to {count_loc:02d} photolocations from {count_glob:02d} (File {partcount} of {len(filelist)}) - Skipped Media: {skippedCount} - Skipped Tags: {count_tags_skipped} of {count_tags_global}'
+            print(msg, end='\r')
+#Append last message to log file  
+log_texts_list.append(msg)
 total_distinct_locations = len(distinctLocations_set)
-print_store_log("\nTotal users: " + str(len(LocationsPerUserID_dict)))
-print_store_log("Total photos: " + str(count_glob))
-print_store_log("Total distinct locations: " + str(total_distinct_locations))
-print_store_log("Total tags: " + str(count_tags_global))
-print_store_log("Total emojis: " + str(count_emojis_global))
+print_store_log(f'\nTotal users: {len(LocationsPerUserID_dict)}')
+print_store_log(f'Total photos: {count_glob}')
+print_store_log(f'Total distinct locations: {total_distinct_locations}')
+print_store_log(f'Total tags: {count_tags_global}')
+print_store_log(f'Total emojis: {count_emojis_global}')
 
 #boundary:
-print_store_log("Bounds are: Min " + str(float(limLngMin)) + " " + str(float(limLatMin)) + " Max " + str(float(limLngMax)) + " " + str(float(limLatMax)))
-#cleanedPhotoList = []
+print_store_log(f'Bounds are: Min {float(limLngMin)} {float(limLatMin)} Max {float(limLngMax)} {float(limLatMax)}')
 
 #create structure for tuple with naming for easy referencing
 cleanedPhotoLocation_tuple = namedtuple('cleanedPhotoLocation_tuple', 'source lat lng photo_guid photo_owner userid photo_caption photo_dateTaken photo_uploadDate photo_views photo_tags photo_thumbnail photo_mTags photo_likes photo_comments photo_shortcode photo_mediatype photo_locName photo_locID')
@@ -815,7 +815,7 @@ if clusterTags or clusterEmojis:
             lenAfter = len(topTagsList)
             tmax = lenAfter
             if not lenBefore == lenAfter:
-                print("Filtered " + str(lenBefore - lenAfter) + " Tags that were only used by less than 2 users.")
+                print(f'Filtered {lenBefore - lenAfter} Tags that were only used by less than 2 users.')
     singleMostUsedtag = topTagsList[0]
     if clusterTags:    
         #optional write toptags to file
@@ -863,35 +863,7 @@ if clusterTags or clusterEmojis:
     distX = def_functions.haversine(limXMin, limYMin, limXMax, limYMin) 
     clusterTreeCuttingDist = (min(distX,distY)/100)*7 #4% of research area width/height (max) = default value #223.245922725 #= 0.000035 radians dist
     
-    #print("distYLat DDegrees: " + str(limYMax - limYMin) + " distXLng DDegrees: " + str(limXMax - limXMin) + " Bsp:" + str(points[0]))
-    #print("DDegree Buffer dist: " + str(max(distXLng,distYLat)/200) + " Cluster Dist: " + str(clusterTreeCuttingDist) + " Alpha: " + str(clusterTreeCuttingDist*10))
-    #input_lon_center = bound_points_shapely.centroid.coords[0][0] #True centroid (coords may be multipoint)
-    #input_lat_center = bound_points_shapely.centroid.coords[0][1]
-    #epsg_code = def_functions.convert_wgs_to_utm(input_lon_center, input_lat_center)
-    #crs_wgs = pyproj.Proj(init='epsg:4326')
-    #crs_proj = pyproj.Proj(init='epsg:{0}'.format(epsg_code))
-    
-    #x, y = pyproj.transform(crs_wgs, crs_proj, Decimal(points[0][0]), Decimal(points[0][1]))
-    #print("distY Meters: " + str(distY) + " distX Meters: " + str(distX) + " Bsp:" + str(x) + " " + str(y))
-    #print("Meters Buffer dist: " + str(clusterTreeCuttingDist/4) + " Cluster Dist: " + str(clusterTreeCuttingDist) + " Alpha: " + str(clusterTreeCuttingDist*100))
-    #Tkinter Stuff
-    #####################################################################################################################################################
-    #def center(win):
-    #    """
-    #    centers a tkinter window
-    #    :param win: the root or Toplevel window to center
-    #    """
-    #    win.update_idletasks()
-    #    width = win.winfo_width()
-    #    frm_width = win.winfo_rootx() - win.winfo_x()
-    #    win_width = width + 2 * frm_width
-    #    height = win.winfo_height()
-    #    titlebar_height = win.winfo_rooty() - win.winfo_y()
-    #    win_height = height + titlebar_height + frm_width
-    #    x = win.winfo_screenwidth() // 2 - win_width // 2
-    #    y = win.winfo_screenheight() // 2 - win_height // 2
-    #    win.geometry('{}x{}+{}+{}'.format(width, height, x, y))
-    #    win.deiconify()
+    ######### TKinter Preparation ###########
     class App(tk.Tk):
         def __init__(self):
             tk.Tk.__init__(self)
@@ -936,20 +908,12 @@ if clusterTags or clusterEmojis:
             y = self.winfo_y() + deltay
             self.geometry("+%s+%s" % (x, y))
             
+    #Initialize TKinter Interface        
     app = App()
-    #necessary override for error reporting during tkinter mode
-    
+    #necessary override for error reporting during tkinter mode:
     import traceback
     def report_callback_exception(self, exc, val, tb):
-        #exc_type, exc_obj, tb = sys.exc_info()
-        #f = tb.tb_frame
-        #lineno = tb.tb_lineno
-        #filename = f.f_code.co_filename
-        #linecache.checkcache(filename)
-        #line = linecache.getline(filename, lineno, f.f_globals)
-        #showerror("Error",'EXCEPTION IN ({}, LINE {} "{}"): {}'.format(filename, lineno, line.strip(), exc_obj))
         showerror("Error", message=str(val))
-        
         exc_type, exc_value, exc_traceback = sys.exc_info()
         print("*** print_tb:")
         traceback.print_tb(exc_traceback, limit=1, file=sys.stdout)
@@ -971,7 +935,6 @@ if clusterTags or clusterEmojis:
         print(repr(traceback.format_tb(exc_traceback)))
         print("*** tb_lineno:", exc_traceback.tb_lineno)
     tk.Tk.report_callback_exception = report_callback_exception
-    
     
     #the following code part is a bit garbled due to using TKinter interface
     ######################################################################################################################################################
@@ -1043,18 +1006,10 @@ if clusterTags or clusterEmojis:
         global currentDisplayTag
         global limYMin, limYMax, limXMin, limXMax, imgRatio, floaterX, floaterY
         global fig1, fig2, fig3, fig4
-        #global graphFrame
-        #if graphFrame: #if 
-        #    graphFrame.destroy()
-        #graphFrame = tk.Frame(app.floater)
-        #canvas = tk.Canvas(graphFrame, width=canvasWidth, height=canvasHeight, highlightthickness=0,background="gray7")
-        #l = tk.Label(canvas, text="Preview Map", background="gray7",fg="gray80",font="Arial 10 bold")
-        #l.pack()   
         selectedPhotoList_Guids, distinctLocalLocationCount = sel_photos(toptag[0],cleanedPhotoList)
         percentageOfTotalLocations = distinctLocalLocationCount/(total_distinct_locations/100)
-        #tkinter.messagebox.showinfo("Num of clusters: ", "(" + str(tnum) + " of " + str(tmax) + ") Found " + str(len(selectedPhotoList)) + " photos for tag " + "'" + toptag[0] + "' (" + str(round(percentageOfTotalLocations,0)) + "% of total distinct locations in area)")
         if silent:
-            print_store_log("(" + str(tnum) + " of " + str(tmax) + ") Found " + str(len(selectedPhotoList_Guids)) + " photos for tag " + "'" + toptag[0] + "' (" + str(round(percentageOfTotalLocations,0)) + "% of total distinct locations in area)", end=" ")
+            print_store_log(f'({tnum} of {tmax}) Found {len(selectedPhotoList_Guids)} photos for tag \'{toptag[0]}\' ({percentageOfTotalLocations:.0f}% of total distinct locations in area)', end=" ")
     
         
         #clustering
@@ -1150,12 +1105,12 @@ if clusterTags or clusterEmojis:
                 distText = ''
                 if autoselectClusters == False:
                     distText = '@ ' + str(clusterTreeCuttingDist) +'m'    
-                plt.title('Cluster Preview ' + distText, fontsize=12,loc='center')
+                plt.title(f'Cluster Preview {distText}', fontsize=12,loc='center')
                 #plt.title('Cluster Preview')
                 #xmax = ax.get_xlim()[1]
                 #ymax = ax.get_ylim()[1]
                 noisyTxt = '{}/{}'.format(mask_noisy.sum(), len(mask_noisy))
-                plt.text(limXMax, limYMax,str(number_of_clusters) + ' Cluster (Noise: ' + noisyTxt + ')',fontsize=10,horizontalalignment='right',verticalalignment='top',fontweight='bold')
+                plt.text(limXMax, limYMax,f'{number_of_clusters} Cluster (Noise: {noisyTxt})',fontsize=10,horizontalalignment='right',verticalalignment='top',fontweight='bold')
             else:
                 plt.scatter(points.T[0], points.T[1], c=sel_colors, **plot_kwds)
                 fig1 = plt.figure(num=1,figsize=(11, int(11*imgRatio)), dpi=80)
@@ -1164,11 +1119,11 @@ if clusterTags or clusterEmojis:
                 distText = ''
                 if autoselectClusters == False:
                     distText = '@ ' + str(clusterTreeCuttingDist) +'m'  
-                plt.title('Cluster Preview ' + distText, fontsize=12,loc='center')
+                plt.title(f'Cluster Preview {distText}', fontsize=12,loc='center')
                 #xmax = fig1.get_xlim()[1]
                 #ymax = fig1.get_ylim()[1]
                 noisyTxt = '{} / {}'.format(mask_noisy.sum(), len(mask_noisy))
-                plt.text(limXMax, limYMax,str(number_of_clusters) + ' Clusters (Noise: ' + noisyTxt + ')',fontsize=10,horizontalalignment='right',verticalalignment='top',fontweight='bold')
+                plt.text(limXMax, limYMax,f'{number_of_clusters} Clusters (Noise: {noisyTxt})',fontsize=10,horizontalalignment='right',verticalalignment='top',fontweight='bold')
             plt.gca().set_xlim([limXMin, limXMax]) 
             plt.gca().set_ylim([limYMin, limYMax])            
             plt.tick_params(labelsize=10)
@@ -1198,8 +1153,8 @@ if clusterTags or clusterEmojis:
                 y = def_functions.getRadiansFromMeters(clusterTreeCuttingDist)
                 xmin = ax.get_xlim()[0]
                 xmax = ax.get_xlim()[1]
-                line, = ax.plot([xmin, xmax], [y, y], color='k', label='Cluster (Cut) Distance ' + str(clusterTreeCuttingDist) +'m')
-                line.set_label('Cluster (Cut) Distance ' + str(clusterTreeCuttingDist) +'m')             
+                line, = ax.plot([xmin, xmax], [y, y], color='k', label=f'Cluster (Cut) Distance {clusterTreeCuttingDist}m')
+                line.set_label(f'Cluster (Cut) Distance {clusterTreeCuttingDist}m')             
                 ax.legend(fontsize=10)
                 vals = ax.get_yticks()
                 ax.set_yticklabels(['{:3.1f}m'.format(def_functions.getMetersFromRadians(x)) for x in vals])
@@ -1213,11 +1168,11 @@ if clusterTags or clusterEmojis:
                 y = def_functions.getRadiansFromMeters(clusterTreeCuttingDist)
                 xmin = fig3.get_xlim()[0]
                 xmax = fig3.get_xlim()[1]
-                line, = fig3.plot([xmin, xmax], [y, y], color='k', label='Cluster (Cut) Distance ' + str(clusterTreeCuttingDist) +'m')
-                line.set_label('Cluster (Cut) Distance ' + str(clusterTreeCuttingDist) +'m')
+                line, = fig3.plot([xmin, xmax], [y, y], color='k', label=f'Cluster (Cut) Distance {clusterTreeCuttingDist}m')
+                line.set_label(f'Cluster (Cut) Distance {clusterTreeCuttingDist}m')
                 fig3.legend(fontsize=10)
                 vals = fig3.get_yticks()
-                fig3.set_yticklabels(['{:3.1f}m'.format(def_functions.getMetersFromRadians(x)) for x in vals])     
+                fig3.set_yticklabels([f'{def_functions.getMetersFromRadians(x):3.1f}m' for x in vals])     
             plt.tick_params(labelsize=10)
             if createMinimumSpanningTree:
                 if fig4:
@@ -1230,7 +1185,7 @@ if clusterTags or clusterEmojis:
                                   node_size=10,
                                   edge_linewidth=1) #tkinter.messagebox.showinfo("messagr", str(type(ax)))            
                     fig4.canvas.set_window_title('Minimum Spanning Tree')
-                    plt.title('Minimum Spanning Tree @ ' + str(clusterTreeCuttingDist) +'m', fontsize=12,loc='center')
+                    plt.title(f'Minimum Spanning Tree @ {clusterTreeCuttingDist}m', fontsize=12,loc='center')
                     ax.legend(fontsize=10)
                     #ax=plt.gca()        #plt.gca() for current axis, otherwise set appropriately.
                     #im=ax.images        #this is a list of all images that have been plotted
@@ -1245,7 +1200,7 @@ if clusterTags or clusterEmojis:
                                   node_size=10,
                                   edge_linewidth=1) #tkinter.messagebox.showinfo("messagr", str(type(ax))) 
                     plt.suptitle(toptag[0].upper(), fontsize=18, fontweight='bold')
-                    plt.title('Minimum Spanning Tree @ ' + str(clusterTreeCuttingDist) +'m', fontsize=12,loc='center')
+                    plt.title(f'Minimum Spanning Tree @ {clusterTreeCuttingDist}m', fontsize=12,loc='center')
                     fig4.legend(fontsize=10)
                     #ax=plt.gca()        #plt.gca() for current axis, otherwise set appropriately.
                     #im=ax.images        #this is a list of all images that have been plotted
@@ -1288,7 +1243,6 @@ if clusterTags or clusterEmojis:
             cluster_tag(currentDisplayTag)
         else:
             cluster_tag(topTagsList[0])
-        #plt.close('all')
     def scaletest_currentDisplayTag():
         global tkScalebar
         global fig1
@@ -1296,11 +1250,6 @@ if clusterTags or clusterEmojis:
             clustertag = currentDisplayTag
         else:
             clustertag = topTagsList[0]
-        #loop through range:
-            #Min: clusterTreeCuttingDist/10
-            #Max: clusterTreeCuttingDist*10
-            #How many times? Max-Min/100 -> 100 Times
-        #currentClusterDistance = copy.deepcopy(clusterTreeCuttingDist)
         scalecalclist = []
         dmax = int(clusterTreeCuttingDist*10)
         dmin = int(clusterTreeCuttingDist/10)
@@ -1315,25 +1264,21 @@ if clusterTags or clusterEmojis:
             number_of_clusters = len(np.unique(clusters[~mask_noisy])) #mit noisy (=0)
             if number_of_clusters == 1:
                 break
-            string = ''.join([str(i),",",str(number_of_clusters),",",str(mask_noisy.sum()),",",str(len(mask_noisy)),"\n"])
-            scalecalclist.append(string)
-        with open('02_Output/scaletest_' + clustertag[0] + ".txt", "w", encoding='utf-8') as logfile_a:
+            form_string = f'{i},{number_of_clusters},{mask_noisy.sum()},{len(mask_noisy)},\n'
+            scalecalclist.append(form_string)
+        with open(f'02_Output/scaletest_{clustertag[0]}.txt', "w", encoding='utf-8') as logfile_a:
             for scalecalc in scalecalclist:
                 logfile_a.write(scalecalc)
         plt.figure(1).clf()
         plt.suptitle(clustertag[0].upper(), fontsize=18, fontweight='bold') #plt references the last figure accessed
-        #ax = plt.scatter(points.T[0], points.T[1], color=sel_colors, **plot_kwds)
         fig1 = plt.figure(num=1,figsize=(11, int(11*imgRatio)), dpi=80)
         fig1.canvas.set_window_title('Cluster Preview')
         distText = ''
         if autoselectClusters == False:
-            distText = '@ ' + str(clusterTreeCuttingDist) +'m'    
-        plt.title('Cluster Preview ' + distText, fontsize=12,loc='center')
-        #plt.title('Cluster Preview')
-        #xmax = ax.get_xlim()[1]
-        #ymax = ax.get_ylim()[1]
-        noisyTxt = '{}/{}'.format(mask_noisy.sum(), len(mask_noisy))
-        plt.text(limXMax, limYMax,str(number_of_clusters) + ' Cluster (Noise: ' + noisyTxt + ')',fontsize=10,horizontalalignment='right',verticalalignment='top',fontweight='bold')
+            distText = f'@ {clusterTreeCuttingDist}m'    
+        plt.title(f'Cluster Preview {distText}', fontsize=12,loc='center')
+        noisyTxt = f'{mask_noisy.sum()}/{len(mask_noisy)}'
+        plt.text(limXMax, limYMax,f'{number_of_clusters} Cluster (Noise: {noisyTxt})',fontsize=10,horizontalalignment='right',verticalalignment='top',fontweight='bold')
                 
     def delete(listbox):
         global topTagsList
@@ -1341,7 +1286,6 @@ if clusterTags or clusterEmojis:
         lastselectionList = []
         # Delete from Listbox
         selection = listbox.curselection()
-        #tkinter.messagebox.showinfo("listbox.curselection()", str(selection))
         for index in selection[::-1]:
             listbox.delete(index)
             del(topTagsList[index])
@@ -1371,10 +1315,10 @@ if clusterTags or clusterEmojis:
     listbox.config(yscrollcommand=scroll.set)
     for item in topTagsList: #only for first 500 entries: use topTagsList[:500]
         try:
-            listbox.insert(tk.END, "{} ({} user)".format(item[0], item[1]))
+            listbox.insert(tk.END, f'{item[0]} ({item[1]} user)')
         except tk.TclError:
             emoji = unicode_name(item[0]) #def_functions.with_surrogates()
-            listbox.insert(tk.END, "{} ({} user)".format(emoji, item[1]))
+            listbox.insert(tk.END, f'{emoji} ({item[1]} user)')
     canvas.pack(fill='both',padx=0, pady=0)
     listboxFrame.pack(fill='both',padx=0, pady=0)
     buttonsFrame = tk.Frame(app.floater)
@@ -1397,8 +1341,7 @@ if clusterTags or clusterEmojis:
     canvas.pack(fill='both',padx=0, pady=0)
     buttonsFrame.pack(fill='both',padx=0, pady=0)
     
-    #end of tkinter main loop
-    #
+    #END OF TKINTER LOOP, welcome back to command line interface
     app.mainloop()
     plt.close("all")
     
@@ -1412,8 +1355,8 @@ if clusterTags or clusterEmojis:
             input_lon_center = bound_points_shapely.centroid.coords[0][0] #True centroid (coords may be multipoint)
             input_lat_center = bound_points_shapely.centroid.coords[0][1]
             epsg_code = def_functions.convert_wgs_to_utm(input_lon_center, input_lat_center)
-            crs_proj = pyproj.Proj(init='epsg:{0}'.format(epsg_code))
-        project = lambda x, y: pyproj.transform(pyproj.Proj(init='epsg:4326'), pyproj.Proj(init='epsg:{0}'.format(epsg_code)), x, y)
+            crs_proj = pyproj.Proj(init=f'epsg:{epsg_code}')
+        project = lambda x, y: pyproj.transform(pyproj.Proj(init='epsg:4326'), pyproj.Proj(init=f'epsg:{epsg_code}'), x, y)
         #geom_proj = transform(project, alphaShapeAndMeta[0])
         
         if localSaturationCheck:
@@ -1421,7 +1364,7 @@ if clusterTags or clusterEmojis:
             numpy_selectedPhotoList_Guids = np.asarray(selectedPhotoList_Guids)
             mask_noisy = (clusters == -1)
             number_of_clusters = len(np.unique(clusters[~mask_noisy]))
-            print_store_log("--> " + str(number_of_clusters) + " cluster.")
+            print_store_log(f'--> {number_of_clusters} cluster.')
             clusterPhotosGuidsList = []
             for x in range(number_of_clusters):
                 currentClusterPhotoGuids = numpy_selectedPhotoList_Guids[clusters==x]
@@ -1459,7 +1402,7 @@ if clusterTags or clusterEmojis:
             #    print_store_log("--> Too many, skipped for this scale.")
             #    continue
             if not number_of_clusters == 0:
-                print_store_log("--> " + str(number_of_clusters) + " cluster.")
+                print_store_log(f'--> {number_of_clusters} cluster.')
                 tnum += 1
                 photo_num = 0
                 #clusternum_photolist = zip(clusters,selectedPhotoList)
@@ -1508,7 +1451,7 @@ if clusterTags or clusterEmojis:
             clusterPhotoGuidList = clustersPerTag.get(singleMostUsedtag[0], None)
             #print("Toptag: " + str(singleMostUsedtag[0]))
             if clusterPhotoGuidList is None:
-                sys.exit("No Photos found for toptag: " + str(singleMostUsedtag))
+                sys.exit(f'No Photos found for toptag: {singleMostUsedtag}')
             toptagArea = def_functions.generateClusterShape(toptag,clusterPhotoGuidList,cleanedPhotoDict,crs_wgs,crs_proj,clusterTreeCuttingDist,localSaturationCheck)[1]
         for toptag in topTagsList:
             tnum += 1
@@ -1541,9 +1484,9 @@ if clusterTags or clusterEmojis:
                     #result_polygon = pcoordinate.buffer(min(distXLng,distYLat)/100,resolution=3)
                     if result_polygon is not None and not result_polygon.is_empty:
                         listOfAlphashapesAndMeta.append((result_polygon,1,single_photo.photo_views,1,str(toptag[0]),toptag[1],1,1,1,shapetype))   
-        print_store_log(str(len(listOfAlphashapesAndMeta)) + " Alpha Shapes. Done.")
+        print_store_log(f'{len(listOfAlphashapesAndMeta)} Alpha Shapes. Done.')
         if localSaturationCheck and not saturationExcludeCount == 0:
-            print_store_log("Excluded " + str(saturationExcludeCount) + " Tags on local saturation check.")
+            print_store_log(f'Excluded {saturationExcludeCount} Tags on local saturation check.')
         ##Output Boundary Shapes in merged Shapefile##
         print_store_log("########## STEP 5 of 6: Writing Results to Shapefile ##########")
         
@@ -1630,7 +1573,7 @@ if clusterTags or clusterEmojis:
                     'properties': {'Join_Count': alphaShapeAndMeta[1], 
                                    'Views': alphaShapeAndMeta[2],
                                    'COUNT_User': alphaShapeAndMeta[3],
-                                   'ImpTag': alphaShapeAndMeta[4],
+                                   'ImpTag': f'{alphaShapeAndMeta[4]}',
                                    'TagCountG': alphaShapeAndMeta[5],
                                    'HImpTag': HImP,
                                    'Weights': weight1_normalized,
@@ -1640,7 +1583,7 @@ if clusterTags or clusterEmojis:
                                    'emoji': emoji},
                 })
 else:
-    print("\n" + "User abort.")
+    print(f'\nUser abort.')
 if abort == False and clusterPhotos == True:
     print_store_log("########## STEP 6 of 6: Calculating Overall Photo Location Clusters ##########")
 
@@ -1667,7 +1610,7 @@ if abort == False and clusterPhotos == True:
     numpy_selectedPhotoList_Guids = np.asarray(selectedPhotoList_Guids)
     mask_noisy = (clusters == -1)
     number_of_clusters = len(np.unique(clusters[~mask_noisy])) #mit noisy (=0)
-    print_store_log("--> " + str(number_of_clusters) + " Photo cluster.")
+    print_store_log(f'--> {number_of_clusters} Photo cluster.')
     #clusternum_photolist = zip(clusters,selectedPhotoList)
     #clusterPhotosList = [[] for x in range(number_of_clusters)]
     clusterPhotosGuidsList = []
@@ -1686,7 +1629,7 @@ if abort == False and clusterPhotos == True:
             input_lon_center = bound_points_shapely.centroid.coords[0][0] #True centroid (coords may be multipoint)
             input_lat_center = bound_points_shapely.centroid.coords[0][1]
             epsg_code = def_functions.convert_wgs_to_utm(input_lon_center, input_lat_center)
-            crs_proj = pyproj.Proj(init='epsg:{0}'.format(epsg_code))
+            crs_proj = pyproj.Proj(init=f'epsg:{epsg_code}')
     for photo_cluster in clusterPhotosGuidsList:
         photos = [cleanedPhotoDict[x] for x in photo_cluster]
         uniqueUserCount = len(set([photo.userid for photo in photos]))
@@ -1728,9 +1671,11 @@ later = time.time()
 hours, rem = divmod(later-now, 3600)
 minutes, seconds = divmod(rem, 60)
 difference = int(later - now)
-log_texts_list.append("\n" + "Done." + "\n{:0>2} Hours {:0>2} Minutes and {:05.2f} Seconds".format(int(hours),int(minutes),seconds) + " passed.")
+reportMsg = f'\nDone.\n{int(hours):0>2} Hours {int(minutes):0>2} Minutes and {seconds:05.2f} Seconds passed.'
+log_texts_list.append(reportMsg)
 with open(log_file, "w", encoding='utf-8') as logfile_a:
     for logtext in log_texts_list:
-        logfile_a.write(logtext)        
-print("\n" + "Done." + "\n{:0>2} Hours {:0>2} Minutes and {:05.2f} Seconds".format(int(hours),int(minutes),seconds) + " passed.")
-input("Press any key to continue...")
+        logfile_a.write(logtext)
+print(reportMsg)
+input("Press any key to exit...")
+sys.exit()
