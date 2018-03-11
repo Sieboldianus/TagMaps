@@ -138,7 +138,7 @@ parser.add_argument('-t', "--clusterTags", type=def_functions.str2bool, nargs='?
 parser.add_argument('-p', "--clusterPhotos", type=def_functions.str2bool, nargs='?', const=True,default= True)
 parser.add_argument('-c', "--localSaturationCheck", type=def_functions.str2bool, nargs='?', const=True, default= False)
 parser.add_argument('-j', "--tokenizeJapanese", type=def_functions.str2bool, nargs='?', const=True, default= False)
-parser.add_argument('-o', "--clusterEmojis", type=def_functions.str2bool, nargs='?', const=True, default= False)
+parser.add_argument('-o', "--clusterEmojis", type=def_functions.str2bool, nargs='?', const=True, default= True)
 parser.add_argument('-m', "--topicModeling", type=def_functions.str2bool, nargs='?', const=True, default= False)
 parser.add_argument('-w', "--writeCleanedData", type=def_functions.str2bool, nargs='?', const=True, default= True)
 args = parser.parse_args()    # returns data from the options specified (source)
@@ -178,21 +178,16 @@ partcount = 0
 #filenameprev = ""
 if (DSource == "fromFlickr_CSV"):
     filelist = glob('01_Input/*.txt')
-    timestamp_columnNameID = 8 #DateTaken
     GMTTimetransform = 0
     guid_columnNameID = 5 #guid   
     Sourcecode = 2
     quoting_opt = csv.QUOTE_NONE
-elif (DSource == "fromInstagram_PGlbsnEmoji") or (DSource == "fromLBSN"):
+elif (DSource == "fromInstagram_PGlbsnEmoji") or (DSource == "fromLBSN") or (DSource == "fromLBSN_old"):
     filelist = glob('01_Input/*.csv')
-    timestamp_columnNameID = 7 #DateTaken
-    GMTTimetransform = 0    
-    guid_columnNameID = 2 #guid    
-    Sourcecode = 1
-    quoting_opt = csv.QUOTE_ALL
+    guid_columnNameID = 1 #guid    
+    quoting_opt = csv.QUOTE_MINIMAL
 elif (DSource == "fromSensorData_InfWuerz"):
     filelist = glob('01_Input/*.csv')
-    timestamp_columnNameID = 2 #DateTaken
     GMTTimetransform = 0    
     guid_columnNameID = 1 #guid    
     Sourcecode = 11
@@ -242,7 +237,8 @@ def is_number(s):
         float(s)
         return True
     except ValueError:
-        return False        
+        return False    
+photoIDHash = set()    
 LocationsPerUserID_dict = defaultdict(set)
 UserLocationTagList_dict = defaultdict(set)
 if topicModeling:
@@ -273,7 +269,7 @@ for file_name in filelist:
     #    guid_list.clear() #duplicate detection only for last 500k items
     with open(file_name, newline='', encoding='utf8') as f: # On input, if newline is None, universal newlines mode is enabled. Lines in the input can end in '\n', '\r', or '\r\n', and these are translated into '\n' before being returned to the caller.
         partcount += 1
-        if (DSource == "fromInstagram_LocMedia_CSV" or DSource == "fromLBSN" or DSource == "fromInstagram_UserMedia_CSV" or DSource == "fromFlickr_CSV" or DSource == "fromInstagram_PGlbsnEmoji" or DSource == "fromSensorData_InfWuerz"):
+        if (DSource == "fromInstagram_LocMedia_CSV" or DSource == "fromLBSN" or DSource == "fromLBSN_old" or DSource == "fromInstagram_UserMedia_CSV" or DSource == "fromFlickr_CSV" or DSource == "fromInstagram_PGlbsnEmoji" or DSource == "fromSensorData_InfWuerz"):
             photolist = csv.reader(f, delimiter=',', quotechar='"', quoting=quoting_opt) #QUOTE_NONE is important because media saved from php/Flickr does not contain any " check; only ',' are replaced
             next(photolist, None)  # skip headerline
         elif (DSource == "fromInstagram_HashMedia_JSON"):
@@ -281,6 +277,12 @@ for file_name in filelist:
         #PhotosPerDayLists = defaultdict(list)
         #keyCreatedHash = set()     
         for item in photolist:
+            #duplicate check based on GUID
+            if item[guid_columnNameID] in photoIDHash:
+                skippedCount += 1
+                continue
+            else:
+                photoIDHash.add(item[guid_columnNameID])     
             if (DSource == "fromInstagram_LocMedia_CSV"):
                 if len(item) < 15:
                     #skip
@@ -537,7 +539,7 @@ for file_name in filelist:
                     skippedCount += 1
                     continue
                 else:
-                    photo_source = Sourcecode #LocMediaCode
+                    photo_source = item[0] 
                     photo_guid = item[1] #guid
                     photo_userid = item[7] #guid
                     photo_owner = ""#item[1] ##!!!
@@ -577,7 +579,55 @@ for file_name in filelist:
                     skippedCount += 1
                     continue
                 else:
-                    photo_source = Sourcecode #LocMediaCode
+                    photo_source = item[0] #LocMediaCode
+                    photo_guid = item[1] #guid
+                    photo_userid = item[4] #guid
+                    photo_owner = ""#item[1] ##!!!
+                    photo_shortcode = None#item[18]
+                    photo_uploadDate = item[6] #guid
+                    photo_idDate = None#photo_uploadDate #use upload date as sorting ID
+                    if clusterTags or clusterEmojis or topicModeling:
+                        photo_caption = item[14]
+                    else:
+                        photo_caption = ""
+                    photo_likes = None#item[13]
+                    photo_tags = set()
+                    if clusterTags or topicModeling:
+                        photo_tags = set(filter(None, item[11].lower().split(";"))) #[1:-1] removes curly brackets, second [1:-1] removes quotes
+                        #Filter tags based on two stoplists
+                        photo_tags,count_tags,count_skipped = def_functions.filterTags(photo_tags,SortOutAlways_set,SortOutAlways_inStr_set)
+                        count_tags_global += count_tags
+                        count_tags_skipped += count_skipped
+                    if clusterEmojis:
+                        emojis_filtered = set(def_functions.extract_emojis(photo_caption))
+                        if not len(emojis_filtered) == 0:
+                            count_emojis_global += len(emojis_filtered)
+                            overallNumOfEmojis_global.update(emojis_filtered)
+                            photo_tags = set.union(emojis_filtered)  
+                    #photo_tags = ";" + item[11] + ";"
+                    photo_thumbnail = None#item[17]
+                    photo_comments = None#item[14]
+                    photo_mediatype = None#item[19]
+                    photo_locName = item[4] #guid
+                    if item[2] == "" or item[3] == "":
+                        count_non_geotagged += 1
+                        continue #skip non-geotagged medias
+                    else:
+                        photo_latitude = Decimal(item[2]) #guid
+                        photo_longitude = Decimal(item[3]) #guid
+                        setLatLngBounds(photo_latitude,photo_longitude)
+                    photo_locID = str(photo_latitude) + ':' + str(photo_longitude) #create loc_id from lat/lng      
+                    #empty for Instagram:
+                    photo_mTags = ""
+                    photo_dateTaken = ""
+                    photo_views = 0   
+            elif DSource == "fromLBSN_old":
+                if len(item) < 15:
+                    #skip
+                    skippedCount += 1
+                    continue
+                else:
+                    photo_source = item[0] #LocMediaCode
                     photo_guid = item[1] #guid
                     photo_userid = item[7] #guid
                     photo_owner = ""#item[1] ##!!!
@@ -591,7 +641,7 @@ for file_name in filelist:
                     photo_likes = None#item[13]
                     photo_tags = set()
                     if clusterTags or topicModeling:
-                        photo_tags = set(filter(None, item[11][1:-1].lower().split(","))) #[1:-1] removes curly brackets, second [1:-1] removes quotes
+                        photo_tags = set(filter(None, item[11].strip('"').lstrip('{').rstrip('}').lower().split(","))) #[1:-1] removes curly brackets, second [1:-1] removes quotes
                         #Filter tags based on two stoplists
                         photo_tags,count_tags,count_skipped = def_functions.filterTags(photo_tags,SortOutAlways_set,SortOutAlways_inStr_set)
                         count_tags_global += count_tags
@@ -706,13 +756,13 @@ for file_name in filelist:
             ##Calculate toplists
             if photo_tags:
                 UserDict_TagCounters_global[photo_userid].update(photo_tags) #add tagcount of this media to overall tagcount or this user, initialize counter for user if not already done 
-            msg = f'Cleaned output to {count_loc:02d} photolocations from {count_glob:02d} (File {partcount} of {len(filelist)}) - Skipped Media: {skippedCount} - Skipped Tags: {count_tags_skipped} of {count_tags_global}'
+            msg = f'Cleaned output to {count_loc:02d} distinct user photo-locations (UPL) from {count_glob:02d} photos (File {partcount} of {len(filelist)}) - Skipped Media: {skippedCount} - Skipped Tags: {count_tags_skipped} of {count_tags_global}'
             print(msg, end='\r')
 #Append last message to log file  
 log_texts_list.append(msg)
 total_distinct_locations = len(distinctLocations_set)
-print_store_log(f'\nTotal users: {len(LocationsPerUserID_dict)}')
-print_store_log(f'Total photos: {count_glob}')
+print_store_log(f'\nTotal users: {len(LocationsPerUserID_dict)} (UC)')
+print_store_log(f'Total photos: {len(photoIDHash)} (PC)')
 print_store_log(f'Total distinct locations: {total_distinct_locations}')
 print_store_log(f'Total tags: {count_tags_global}')
 print_store_log(f'Total emojis: {count_emojis_global}')
@@ -816,20 +866,21 @@ if clusterTags or clusterEmojis:
             tmax = lenAfter
             if not lenBefore == lenAfter:
                 print(f'Filtered {lenBefore - lenAfter} Tags that were only used by less than 2 users.')
-    singleMostUsedtag = topTagsList[0]
-    if clusterTags:    
-        #optional write toptags to file
-        toptags = ''.join("%s,%i" % v + '\n' for v in topTagsList)
-        with open("02_Output/Output_toptags.txt", 'w', encoding="utf8") as file: #overwrite
-            file.write(toptags)
     #optional write topemojis to file
+    globalEmojiSet = {}
     if clusterEmojis:
         topEmojisList = overallNumOfEmojis_global.most_common()
         globalEmojiSet =  {tuple[0] for tuple in topEmojisList}
         topemojis = ''.join("%s,%i" % v + '\n' for v in topEmojisList)
         with open("02_Output/Output_topemojis.txt", 'w', encoding="utf8") as file: #overwrite
             file.write(topemojis)
-            
+    singleMostUsedtag = topTagsList[0]
+    if clusterTags:    
+        #optional write toptags to file
+        toptags = ''.join("%s,%i" % v + '\n' for v in topTagsList if not v[0] in globalEmojiSet)
+        with open("02_Output/Output_toptags.txt", 'w', encoding="utf8") as file: #overwrite
+            file.write(toptags)
+                        
     print_store_log("########## STEP 3 of 6: Tag Location Clustering ##########")
     #prepare some variables
     tnum = 0
@@ -1009,7 +1060,11 @@ if clusterTags or clusterEmojis:
         selectedPhotoList_Guids, distinctLocalLocationCount = sel_photos(toptag[0],cleanedPhotoList)
         percentageOfTotalLocations = distinctLocalLocationCount/(total_distinct_locations/100)
         if silent:
-            print_store_log(f'({tnum} of {tmax}) Found {len(selectedPhotoList_Guids)} photos for tag \'{toptag[0]}\' ({percentageOfTotalLocations:.0f}% of total distinct locations in area)', end=" ")
+            if toptag[0] in globalEmojiSet:
+                text = unicode_name(toptag[0])
+            else:
+                text = toptag[0]
+            print_store_log(f'({tnum} of {tmax}) Found {len(selectedPhotoList_Guids)} photos for tag \'{text}\' ({percentageOfTotalLocations:.0f}% of total distinct locations in area)', end=" ")
     
         
         #clustering
@@ -1566,14 +1621,16 @@ if clusterTags or clusterEmojis:
                 #    'geometry': geometry.mapping(geom_proj),  
                 if clusterEmojis and alphaShapeAndMeta[4] in globalEmojiSet:
                     emoji = 1
+                    ImpTagText = ""
                 else:
-                    emoji = 0               
+                    emoji = 0   
+                    ImpTagText = f'{alphaShapeAndMeta[4]}'          
                 c.write({
                     'geometry': geometry.mapping(alphaShapeAndMeta[0]),
                     'properties': {'Join_Count': alphaShapeAndMeta[1], 
                                    'Views': alphaShapeAndMeta[2],
                                    'COUNT_User': alphaShapeAndMeta[3],
-                                   'ImpTag': f'{alphaShapeAndMeta[4]}',
+                                   'ImpTag': ImpTagText,
                                    'TagCountG': alphaShapeAndMeta[5],
                                    'HImpTag': HImP,
                                    'Weights': weight1_normalized,
@@ -1582,6 +1639,18 @@ if clusterTags or clusterEmojis:
                                    'shapetype': alphaShapeAndMeta[9],
                                    'emoji': emoji},
                 })
+        if clusterEmojis:
+            with open("02_Output/emojiTable.csv", "w", encoding='utf-8') as emojiTable:
+                emojiTable.write("FID,Emoji\n")
+                idx = 0 
+                for alphaShapeAndMeta in listOfAlphashapesAndMeta:
+                    if alphaShapeAndMeta[4] in globalEmojiSet:
+                        ImpTagText = f'{alphaShapeAndMeta[4]}' 
+                    else:
+                        ImpTagText = ""
+                    emojiTable.write(f'{idx},{ImpTagText}\n')
+                    idx += 1
+                    
 else:
     print(f'\nUser abort.')
 if abort == False and clusterPhotos == True:

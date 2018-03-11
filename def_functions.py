@@ -84,14 +84,14 @@ def getMetersFromRadians(dist):
     #plt.close('all') #clear memory
 
 #This function is not really needed, makes no difference! (really?)
-#def checkEmojiType(strEmo):
-#    if unicodedata.name(strEmo).startswith(("EMOJI MODIFIER","VARIATION SELECTOR","ZERO WIDTH JOINER")):
-#        return False
-#    else:
-#        return True
-#    #see https://stackoverflow.com/questions/43852668/using-collections-counter-to-count-emojis-with-different-colors
-#    # we want to ignore fitzpatrick modifiers and treat all differently colored emojis the same
-#    #https://stackoverflow.com/questions/38100329/some-emojis-e-g-have-two-unicode-u-u2601-and-u-u2601-ufe0f-what-does
+def checkEmojiType(strEmo):
+    if unicodedata.name(strEmo).startswith(("EMOJI MODIFIER","VARIATION SELECTOR","ZERO WIDTH JOINER")):
+        return False
+    else:
+        return True
+    #see https://stackoverflow.com/questions/43852668/using-collections-counter-to-count-emojis-with-different-colors
+    # we want to ignore fitzpatrick modifiers and treat all differently colored emojis the same
+    #https://stackoverflow.com/questions/38100329/some-emojis-e-g-have-two-unicode-u-u2601-and-u-u2601-ufe0f-what-does
 #COOKING
 #OK HAND SIGN
 #EMOJI MODIFIER FITZPATRICK TYPE-1-2
@@ -124,8 +124,8 @@ def getMetersFromRadians(dist):
 #https://github.com/carpedm20/emoji/issues/75
 def extract_emojis(str):
   #str = str.decode('utf-32').encode('utf-32', 'surrogatepass')
-  return list(c for c in str if c in emoji.UNICODE_EMOJI)
-  #return list(c for c in str if c in emoji.UNICODE_EMOJI and checkEmojiType(c) is True)
+  #return list(c for c in str if c in emoji.UNICODE_EMOJI)
+  return list(c for c in str if c in emoji.UNICODE_EMOJI and checkEmojiType(c) is True)
 #this class is needed to override tkinter window with drag&drop option when overrideredirect = true
 #class App:
 #    global tk
