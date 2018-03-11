@@ -131,7 +131,7 @@ writeGISCompLine = True # writes placeholder entry after headerline for avoiding
 #Choose one of four options for Input data type:
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument('-s', "--source", default= "fromFlickr_CSV")     # naming it "source"
+parser.add_argument('-s', "--source", default= "fromLBSN")     # naming it "source"
 parser.add_argument('-r', "--removeLongTail", type=def_functions.str2bool, nargs='?', const=True,default= True)
 parser.add_argument('-e', "--EPSG")
 parser.add_argument('-t', "--clusterTags", type=def_functions.str2bool, nargs='?', const=True,default= True)  
