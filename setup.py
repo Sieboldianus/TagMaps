@@ -15,6 +15,7 @@ includes_mod = ['numpy.core._methods',
                 'seaborn',
                 'seaborn.cm',
                 'scipy.sparse.csgraph',
+                'argparse',
                 'scipy.sparse.csgraph._validation',
                 ]#,'scipy.spatial.ckdtree'
 
@@ -22,6 +23,9 @@ include_folders_files = ["C:/Python36/DLLs/tcl86t.dll",
                          "C:/Python36/DLLs/tk86t.dll",
                         '01_Input/',
                          '00_Config/',
+                         '00_generateClusters_OnlyEmoji.cmd',
+                         '00_generateClusters_OnlyPhotoLocations.cmd',
+                         '00_generateClusters_OnlyTags.cmd',
                         ("D:/03_EvaVGI/05_Code/Py/standalone_tag_cluster_hdbscan/matplotlibrc","matplotlibrc")
                         ]
 packages_mod = ["tkinter", "tkinter.filedialog"]

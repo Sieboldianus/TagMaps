@@ -85,7 +85,7 @@ def getMetersFromRadians(dist):
 
 #This function is not really needed, makes no difference! (really?)
 def checkEmojiType(strEmo):
-    if unicodedata.name(strEmo).startswith(("EMOJI MODIFIER","VARIATION SELECTOR","ZERO WIDTH JOINER")):
+    if unicodedata.name(strEmo).startswith(("EMOJI MODIFIER","VARIATION SELECTOR","ZERO WIDTH")):
         return False
     else:
         return True
@@ -118,8 +118,11 @@ def checkEmojiType(strEmo):
 #    for _c in n:
 #        emojifile.write(str(unicode_name(_c)) + '\n')
 #        emojifile.write('Each Codepoint: U+%04x' % ord(_c) +  '\n')
-
-    
+#def cleanEmoji(c):
+#    tuple = (u'\ufeff',u'\u200b',u'\u200d')
+#    for ex in tuple:
+#        c.replace(ex,"")
+#    return(c)
 #https://github.com/carpedm20/emoji/
 #https://github.com/carpedm20/emoji/issues/75
 def extract_emojis(str):

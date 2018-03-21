@@ -590,7 +590,12 @@ for file_name in filelist:
                         photo_caption = item[14]
                     else:
                         photo_caption = ""
-                    photo_likes = None#item[13]
+                    photo_likes = 0
+                    if not item[9] == "":
+                        try:
+                            photo_likes = int(item[9])
+                        except TypeError:
+                            pass
                     photo_tags = set()
                     if clusterTags or topicModeling:
                         photo_tags = set(filter(None, item[11].lower().split(";"))) #[1:-1] removes curly brackets, second [1:-1] removes quotes
@@ -620,7 +625,12 @@ for file_name in filelist:
                     #empty for Instagram:
                     photo_mTags = ""
                     photo_dateTaken = ""
-                    photo_views = 0   
+                    photo_views = 0
+                    if not item[8] == "":
+                        try:
+                            photo_views = int(item[8])
+                        except TypeError:
+                            pass
             elif DSource == "fromLBSN_old":
                 if len(item) < 15:
                     #skip
@@ -791,7 +801,7 @@ with open("02_Output/Output_cleaned.txt", 'w', encoding='utf8') as csvfile:
                           UserLocationWordList_dict.get(locIDUserID,("",)),#photo_caption = 6
                           photo[6],#photo_dateTaken = 7
                           photo[7],#photo_uploadDate = 8
-                          int(photo[8]),#photo_views = 9
+                          photo[8],#photo_views = 9
                           UserLocationTagList_dict.get(locIDUserID,("",)),#photo_tags = 10
                           photo[5],#photo_thumbnail = 11
                           photo[10],#photo_mTags = 12
@@ -1538,7 +1548,7 @@ if clusterTags or clusterEmojis:
                     result_polygon = pcoordinate.buffer(clusterTreeCuttingDist/4,resolution=3) #single dots are presented as buffer with 0.5% of width-area
                     #result_polygon = pcoordinate.buffer(min(distXLng,distYLat)/100,resolution=3)
                     if result_polygon is not None and not result_polygon.is_empty:
-                        listOfAlphashapesAndMeta.append((result_polygon,1,single_photo.photo_views,1,str(toptag[0]),toptag[1],1,1,1,shapetype))   
+                        listOfAlphashapesAndMeta.append((result_polygon,1,max(single_photo.photo_views,single_photo.photo_likes),1,str(toptag[0]),toptag[1],1,1,1,shapetype))   
         print_store_log(f'{len(listOfAlphashapesAndMeta)} Alpha Shapes. Done.')
         if localSaturationCheck and not saturationExcludeCount == 0:
             print_store_log(f'Excluded {saturationExcludeCount} Tags on local saturation check.')
@@ -1563,7 +1573,7 @@ if clusterTags or clusterEmojis:
                            'Weights': 'float',
                            'WeightsV2': 'float',
                            'WeightsV3': 'float',
-                           'shapetype': 'str',
+                           #'shapetype': 'str',
                            'emoji': 'int'},
         }
      
@@ -1589,7 +1599,11 @@ if clusterTags or clusterEmojis:
         ####################################### 
         # Write a new Shapefile
         # WGS1984
-        with fiona.open('02_Output/allTagClusters.shp', mode='w', encoding='UTF-8', driver='ESRI Shapefile', schema=schema,crs=from_epsg(epsg_code)) as c:
+        if (clusterTags == False and clusterEmojis == True):
+            shapefileName = "allEmojiCluster"
+        else:
+            shapefileName = "allTagCluster"
+        with fiona.open(f'02_Output/{shapefileName}.shp', mode='w', encoding='UTF-8', driver='ESRI Shapefile', schema=schema,crs=from_epsg(epsg_code)) as c:
             # Normalize Weights to 0-1000 Range
             idx = 0  
             for alphaShapeAndMeta in listOfAlphashapesAndMeta:
@@ -1636,7 +1650,7 @@ if clusterTags or clusterEmojis:
                                    'Weights': weight1_normalized,
                                    'WeightsV2': weight2_normalized,
                                    'WeightsV3': weight3_normalized,
-                                   'shapetype': alphaShapeAndMeta[9],
+                                   #'shapetype': alphaShapeAndMeta[9],
                                    'emoji': emoji},
                 })
         if clusterEmojis:
@@ -1726,7 +1740,7 @@ if abort == False and clusterPhotos == True:
     
     # Write a new Shapefile
     # WGS1984
-    with fiona.open('02_Output/allPhotoClusters.shp', mode='w', driver='ESRI Shapefile', schema=schema,crs=from_epsg(epsg_code)) as c:
+    with fiona.open('02_Output/allPhotoCluster.shp', mode='w', driver='ESRI Shapefile', schema=schema,crs=from_epsg(epsg_code)) as c:
         ## If there are multiple geometries, put the "for" loop here
         idx = 0
         for photoCluster in listOfPhotoClusters:
