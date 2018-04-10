@@ -1,0 +1,4 @@
+placeID, name
+254973648, Nationalpark Berchtesgaden
+1462084363867006,nationalpark-berchtesgaden
+627972463994167,nationalpark-berchtesgaden

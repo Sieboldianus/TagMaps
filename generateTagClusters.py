@@ -123,7 +123,32 @@ else:
     with open(SortOutAlways_inStr_file, newline='', encoding='utf8') as f: #read each unsorted file and sort lines based on datetime (as string)
         SortOutAlways_inStr_set = set([line.lower().rstrip('\r\n') for line in f])
     print(f'Loaded {len(SortOutAlways_inStr_set)} inStr stoplist items.')
-
+#manually filter places or correct lat/lng
+SortOutPlaces_file = "00_Config/SortOutPlaces.txt"
+CorrectPlaceLatLng_file = "00_Config/CorrectPlaceLatLng.txt"
+SortOutPlaces_set = set()
+CorrectPlaceLatLng_dict = dict()
+SortOutPlaces = False
+if os.path.isfile(SortOutPlaces_file):
+    with open(SortOutPlaces_file, newline='', encoding='utf8') as f:
+        f.readline()
+        #placeid
+        SortOutPlaces_set = set([line.rstrip('\r\n').split(",")[0] for line in f if len(line) > 0])
+    SortOutPlaces = True
+    print(f'Loaded {len(SortOutPlaces_set)} stoplist places.')
+CorrectPlaces = False
+if os.path.isfile(CorrectPlaceLatLng_file):
+    with open(CorrectPlaceLatLng_file, newline='', encoding='utf8') as f:
+        f.readline()
+        for line in f:
+            if len(line) > 0:
+                linesplit = line.rstrip('\r\n').split(",")
+                if len(linesplit) > 1:
+                    #placeid = #lat,lng
+                    CorrectPlaceLatLng_dict[linesplit[0]] = (linesplit[1],linesplit[2])
+    CorrectPlaces = True
+    print(f'Loaded {len(CorrectPlaceLatLng_dict)} place lat/lng corrections.')
+    
 writeGISCompLine = True # writes placeholder entry after headerline for avoiding GIS import format issues
 
 #Choose one of four options for Input data type:
@@ -638,12 +663,21 @@ for file_name in filelist:
                     photo_comments = None#item[14]
                     photo_mediatype = None#item[19]
                     photo_locName = item[4] #guid
+                    if SortOutPlaces:
+                        if not item[19] == "":
+                            if item[19] in SortOutPlaces_set:
+                                skippedCount += 1
+                                continue
                     if item[2] == "" or item[3] == "":
                         count_non_geotagged += 1
                         continue #skip non-geotagged medias
                     else:
-                        photo_latitude = Decimal(item[2]) #guid
-                        photo_longitude = Decimal(item[3]) #guid
+                        if CorrectPlaces and not item[19] and item[19] in CorrectPlaceLatLng_dict:
+                            photo_latitude = Decimal(CorrectPlaceLatLng_dict[item[19]][0]) #correct lat/lng
+                            photo_longitude = Decimal(CorrectPlaceLatLng_dict[item[19]][1]) #correct lat/lng
+                        else:
+                            photo_latitude = Decimal(item[2]) #guid
+                            photo_longitude = Decimal(item[3]) #guid
                         setLatLngBounds(photo_latitude,photo_longitude)
                     photo_locID = str(photo_latitude) + ':' + str(photo_longitude) #create loc_id from lat/lng    
                     #assign lat/lng coordinates from dict

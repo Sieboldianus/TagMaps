@@ -317,3 +317,5 @@ valencia
 brannan
 instadaily
 ich
+instatravel
+travelphotography
