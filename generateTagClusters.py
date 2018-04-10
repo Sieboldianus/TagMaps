@@ -139,6 +139,8 @@ parser.add_argument('-j', "--tokenizeJapanese", type=def_functions.str2bool, nar
 parser.add_argument('-o', "--clusterEmojis", type=def_functions.str2bool, nargs='?', const=True, default= True)
 parser.add_argument('-m', "--topicModeling", type=def_functions.str2bool, nargs='?', const=True, default= False)
 parser.add_argument('-w', "--writeCleanedData", type=def_functions.str2bool, nargs='?', const=True, default= True)
+parser.add_argument('-i', "--shapefileIntersect", type=def_functions.str2bool, nargs='?', const=True, default= False)
+parser.add_argument('-f', "--shapefilePath", default= "")
 args = parser.parse_args()    # returns data from the options specified (source)
 DSource = args.source
 clusterTags = args.clusterTags
@@ -148,14 +150,17 @@ clusterEmojis = args.clusterEmojis
 topicModeling  = args.topicModeling
 writeCleanedData = args.writeCleanedData
 localSaturationCheck = args.localSaturationCheck
-shapefileIntersect = True
+shapefileIntersect = args.shapefileIntersect
+shapefilePath = args.shapefilePath
 
 ###SHAPEFILESTUFF###
 if shapefileIntersect:
+    if shapefilePath == "":
+        sys.exit(f'No Shapefile-Path specified. Exiting..')
     from shapely.geometry import Polygon
     from shapely.geometry import shape
     from shapely.geometry import Point
-    PShape = fiona.open("D:/03_EvaVGI/01_Daten/2018-02-20_NationalPark_Berchtesgarden_Nicola/nationalpark_berchtesgarden_osm.shp")
+    PShape = fiona.open(shapefilePath)
     
     ######Single Polygon:######
     first = PShape.next()
