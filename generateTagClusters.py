@@ -61,10 +61,8 @@ from fiona.crs import from_epsg
 import shapely.geometry as geometry
 import pyproj #import Proj, transform
 #https://gis.stackexchange.com/questions/127427/transforming-shapely-polygon-and-multipolygon-objects
+
 from shapely.ops import transform
-#from shapely.geometry import Polygon
-#from shapely.geometry import shape
-#from shapely.geometry import Point
 from decimal import Decimal
 
 #alternative Shapefile module pure Python
@@ -150,6 +148,27 @@ clusterEmojis = args.clusterEmojis
 topicModeling  = args.topicModeling
 writeCleanedData = args.writeCleanedData
 localSaturationCheck = args.localSaturationCheck
+shapefileIntersect = True
+
+###SHAPEFILESTUFF###
+if shapefileIntersect:
+    from shapely.geometry import Polygon
+    from shapely.geometry import shape
+    from shapely.geometry import Point
+    PShape = fiona.open("D:/03_EvaVGI/01_Daten/2018-02-20_NationalPark_Berchtesgarden_Nicola/nationalpark_berchtesgarden_osm.shp")
+    
+    ######Single Polygon:######
+    first = PShape.next()
+    print("Loaded Shapefile with " + str(len(first['geometry']['coordinates'][0])) + " Vertices.") # (GeoJSON format)
+    shp_geom = shape(first['geometry']) #shape(first)
+    
+    ######Multipolygon:######
+    #vcount = PShape.next()['geometry']['coordinates'] #needed for count of vertices
+    #geom = MultiPolygon([shape(pol['geometry']) for pol in PShape])
+    #shp_geom = geom
+    #print("Loaded Shapefile with Vertices ", sum([len(poly[0]) for poly in vcount])) # (GeoJSON format)
+###END SHAPEFILESTUFF###
+
 if args.EPSG is None:
     overrideCRS = None
 else:
@@ -621,7 +640,21 @@ for file_name in filelist:
                         photo_latitude = Decimal(item[2]) #guid
                         photo_longitude = Decimal(item[3]) #guid
                         setLatLngBounds(photo_latitude,photo_longitude)
-                    photo_locID = str(photo_latitude) + ':' + str(photo_longitude) #create loc_id from lat/lng      
+                    photo_locID = str(photo_latitude) + ':' + str(photo_longitude) #create loc_id from lat/lng    
+                    #assign lat/lng coordinates from dict
+                    if shapefileIntersect:
+                        #skip all outside shapefile
+                        if photo_locID in shapeFileExcludelocIDhash:
+                            skippedCount += 1
+                            continue
+                        if not photo_locID in shapeFileIncludedlocIDhash:
+                            LngLatPoint = Point(photo_longitude, photo_latitude)
+                            if not LngLatPoint.within(shp_geom):
+                                skippedCount += 1
+                                shapeFileExcludelocIDhash.add(photo_locID)
+                                continue
+                            else:
+                                shapeFileIncludedlocIDhash.add(photo_locID)                    
                     #empty for Instagram:
                     photo_mTags = ""
                     photo_dateTaken = ""
