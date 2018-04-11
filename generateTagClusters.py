@@ -635,34 +635,7 @@ for file_name in filelist:
                     photo_shortcode = None#item[18]
                     photo_uploadDate = item[6] #guid
                     photo_idDate = None#photo_uploadDate #use upload date as sorting ID
-                    if clusterTags or clusterEmojis or topicModeling:
-                        photo_caption = item[14]
-                    else:
-                        photo_caption = ""
-                    photo_likes = 0
-                    if not item[9] == "":
-                        try:
-                            photo_likes = int(item[9])
-                        except TypeError:
-                            pass
-                    photo_tags = set()
-                    if clusterTags or topicModeling:
-                        photo_tags = set(filter(None, item[11].lower().split(";"))) #[1:-1] removes curly brackets, second [1:-1] removes quotes
-                        #Filter tags based on two stoplists
-                        photo_tags,count_tags,count_skipped = def_functions.filterTags(photo_tags,SortOutAlways_set,SortOutAlways_inStr_set)
-                        count_tags_global += count_tags
-                        count_tags_skipped += count_skipped
-                    if clusterEmojis:
-                        emojis_filtered = set(def_functions.extract_emojis(photo_caption))
-                        if not len(emojis_filtered) == 0:
-                            count_emojis_global += len(emojis_filtered)
-                            overallNumOfEmojis_global.update(emojis_filtered)
-                            photo_tags = set.union(emojis_filtered)  
-                    #photo_tags = ";" + item[11] + ";"
-                    photo_thumbnail = None#item[17]
-                    photo_comments = None#item[14]
-                    photo_mediatype = None#item[19]
-                    photo_locName = item[4] #guid
+                    #Process Spatial Query first (if skipping necessary)
                     if SortOutPlaces:
                         if not item[19] == "":
                             if item[19] in SortOutPlaces_set:
@@ -693,7 +666,35 @@ for file_name in filelist:
                                 shapeFileExcludelocIDhash.add(photo_locID)
                                 continue
                             else:
-                                shapeFileIncludedlocIDhash.add(photo_locID)                    
+                                shapeFileIncludedlocIDhash.add(photo_locID)                      
+                    if clusterTags or clusterEmojis or topicModeling:
+                        photo_caption = item[14]
+                    else:
+                        photo_caption = ""
+                    photo_likes = 0
+                    if not item[9] == "":
+                        try:
+                            photo_likes = int(item[9])
+                        except TypeError:
+                            pass
+                    photo_tags = set()
+                    if clusterTags or topicModeling:
+                        photo_tags = set(filter(None, item[11].lower().split(";"))) #[1:-1] removes curly brackets, second [1:-1] removes quotes
+                        #Filter tags based on two stoplists
+                        photo_tags,count_tags,count_skipped = def_functions.filterTags(photo_tags,SortOutAlways_set,SortOutAlways_inStr_set)
+                        count_tags_global += count_tags
+                        count_tags_skipped += count_skipped
+                    if clusterEmojis:
+                        emojis_filtered = set(def_functions.extract_emojis(photo_caption))
+                        if not len(emojis_filtered) == 0:
+                            count_emojis_global += len(emojis_filtered)
+                            overallNumOfEmojis_global.update(emojis_filtered)
+                            photo_tags = set.union(emojis_filtered)  
+                    #photo_tags = ";" + item[11] + ";"
+                    photo_thumbnail = None#item[17]
+                    photo_comments = None#item[14]
+                    photo_mediatype = None#item[19]
+                    photo_locName = item[4] #guid                  
                     #empty for Instagram:
                     photo_mTags = ""
                     photo_dateTaken = ""
@@ -844,7 +845,7 @@ for file_name in filelist:
 log_texts_list.append(msg)
 total_distinct_locations = len(distinctLocations_set)
 print_store_log(f'\nTotal users: {len(LocationsPerUserID_dict)} (UC)')
-print_store_log(f'Total photos: {len(photoIDHash)} (PC)')
+print_store_log(f'Total photos: {count_glob:02d} (PC)')
 print_store_log(f'Total distinct locations: {total_distinct_locations}')
 print_store_log(f'Total tags: {count_tags_global}')
 print_store_log(f'Total emojis: {count_emojis_global}')
