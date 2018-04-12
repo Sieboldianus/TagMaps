@@ -21,12 +21,12 @@ includes_mod = ['numpy.core._methods',
 
 include_folders_files = ["C:/Python36/DLLs/tcl86t.dll", 
                          "C:/Python36/DLLs/tk86t.dll",
-                        '01_Input/',
-                         '00_Config/',
+                         'tagmaps/01_Input/',
+                         'tagmaps/00_Config/',
                          '00_generateClusters_OnlyEmoji.cmd',
                          '00_generateClusters_OnlyPhotoLocations.cmd',
                          '00_generateClusters_OnlyTags.cmd',
-                        ("D:/03_EvaVGI/05_Code/Py/standalone_tag_cluster_hdbscan/matplotlibrc","matplotlibrc")
+                        ("D:/03_EvaVGI/05_Code/Py/standalone_tag_cluster_hdbscan/tagmaps/matplotlibrc","matplotlibrc")
                         ]
 packages_mod = ["tkinter", "tkinter.filedialog"]
 excludes_mod = ["scipy.spatial.cKDTree"]
@@ -41,11 +41,11 @@ base = None
 #    base = "Win32GUI"
 
 executables = [
-    Executable('generateTagClusters.py', base=base)
+    Executable('tagmaps/generateTagClusters.py', base=base)
 ]
 
 setup(  name = "generateTagClusters",
-        version = "0.9.1",
+        version = "0.9.3",
         description = "Tag Clustering for Tag Maps",
         options = {'build_exe': {'includes': includes_mod, 'include_files': include_folders_files,'packages':packages_mod,'excludes':excludes_mod}},
         executables = executables)
