@@ -9,5 +9,5 @@
 #-j tokenizeJapanese, default= "False"
 #-w writeCleanedData, default= "True"
 #-c localSaturationCheck (will exclude any tags that are used over the whole area), default= "False"
-python "D:\03_EvaVGI\05_Code\Py\standalone_tag_cluster_hdbscan\generateTagClusters.py" -s 'fromLBSN' -p False -o False -t True -r False -i True -f 'D:/03_EvaVGI/01_Daten/2018-02-20_NationalPark_Berchtesgarden_Nicola/nationalpark_berchtesgarden_osm.shp'
+python "D:\03_EvaVGI\05_Code\Py\standalone_tag_cluster_hdbscan\tagmaps\generateTagClusters.py" -s 'fromLBSN' -p False -o True -t True -r True -i True -f 'D:/03_EvaVGI/01_Daten/2018-02-20_NationalPark_Berchtesgarden_Nicola/nationalpark_berchtesgarden_osm.shp' --ignorePlaceCorrections True --ignoreStoplists True --statisticsOnly True
 $SHELL
