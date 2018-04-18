@@ -28,7 +28,7 @@ import collections
 import tkinter as tk
 from tkinter.messagebox import showerror
 import tkinter.messagebox
-import def_functions
+from .utils import *
 import datetime
 import warnings
 from unicodedata import name as unicode_name
@@ -75,7 +75,7 @@ from decimal import Decimal
 #n = '😍,146'
 ##print(n.encode("utf-8"))
 ###n = '👨‍⚕️' #medical emoji with zero-width joiner (http://www.unicode.org/emoji/charts/emoji-zwj-sequences.html)
-#nlist = def_functions.extract_emojis(n)
+#nlist = utils.extract_emojis(n)
 #with open("emojifile.txt", "w", encoding='utf-8') as emojifile:
 #    emojifile.write("Original: " + n + '\n')
 #    for xstr in nlist:
@@ -109,20 +109,20 @@ def print_store_log(text,end=None):
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('-s', "--source", default= "fromLBSN")     # naming it "source"
-parser.add_argument('-r', "--removeLongTail", type=def_functions.str2bool, nargs='?', const=True,default= True)
+parser.add_argument('-r', "--removeLongTail", type=utils.str2bool, nargs='?', const=True,default= True)
 parser.add_argument('-e', "--EPSG")
-parser.add_argument('-t', "--clusterTags", type=def_functions.str2bool, nargs='?', const=True,default= True)  
-parser.add_argument('-p', "--clusterPhotos", type=def_functions.str2bool, nargs='?', const=True,default= True)
-parser.add_argument('-c', "--localSaturationCheck", type=def_functions.str2bool, nargs='?', const=True, default= False)
-parser.add_argument('-j', "--tokenizeJapanese", type=def_functions.str2bool, nargs='?', const=True, default= False)
-parser.add_argument('-o', "--clusterEmojis", type=def_functions.str2bool, nargs='?', const=True, default= True)
-parser.add_argument('-m', "--topicModeling", type=def_functions.str2bool, nargs='?', const=True, default= False)
-parser.add_argument('-w', "--writeCleanedData", type=def_functions.str2bool, nargs='?', const=True, default= True)
-parser.add_argument('-i', "--shapefileIntersect", type=def_functions.str2bool, nargs='?', const=True, default= False)
+parser.add_argument('-t', "--clusterTags", type=utils.str2bool, nargs='?', const=True,default= True)  
+parser.add_argument('-p', "--clusterPhotos", type=utils.str2bool, nargs='?', const=True,default= True)
+parser.add_argument('-c', "--localSaturationCheck", type=utils.str2bool, nargs='?', const=True, default= False)
+parser.add_argument('-j', "--tokenizeJapanese", type=utils.str2bool, nargs='?', const=True, default= False)
+parser.add_argument('-o', "--clusterEmojis", type=utils.str2bool, nargs='?', const=True, default= True)
+parser.add_argument('-m', "--topicModeling", type=utils.str2bool, nargs='?', const=True, default= False)
+parser.add_argument('-w', "--writeCleanedData", type=utils.str2bool, nargs='?', const=True, default= True)
+parser.add_argument('-i', "--shapefileIntersect", type=utils.str2bool, nargs='?', const=True, default= False)
 parser.add_argument('-f', "--shapefilePath", default= "")
-parser.add_argument('-is',"--ignoreStoplists", type=def_functions.str2bool, nargs='?', const=True, default= False)
-parser.add_argument('-ip',"--ignorePlaceCorrections", type=def_functions.str2bool, nargs='?', const=True, default= False)
-parser.add_argument('-stat',"--statisticsOnly", type=def_functions.str2bool, nargs='?', const=True, default= False)
+parser.add_argument('-is',"--ignoreStoplists", type=utils.str2bool, nargs='?', const=True, default= False)
+parser.add_argument('-ip',"--ignorePlaceCorrections", type=utils.str2bool, nargs='?', const=True, default= False)
+parser.add_argument('-stat',"--statisticsOnly", type=utils.str2bool, nargs='?', const=True, default= False)
 args = parser.parse_args()    # returns data from the options specified (source)
 DSource = args.source
 clusterTags = args.clusterTags
@@ -473,7 +473,7 @@ for file_name in filelist:
                     if clusterTags or topicModeling:
                         photo_tags = set(filter(None, item[11].lower().split(";"))) #filter empty strings from photo_tags list and convert to set (hash) with unique values
                         #Filter tags based on two stoplists
-                        photo_tags, count_tags, count_skipped = def_functions.filterTags(photo_tags,SortOutAlways_set,SortOutAlways_inStr_set)
+                        photo_tags, count_tags, count_skipped = utils.filterTags(photo_tags,SortOutAlways_set,SortOutAlways_inStr_set)
                         count_tags_global += count_tags
                         count_tags_skipped += count_skipped
                     else:
@@ -610,7 +610,7 @@ for file_name in filelist:
                     photo_caption = item[9]
                     photo_likes = item[13]
                     #photo_tags = ";" + item[11] + ";"
-                    tags_filtered = def_functions.extract_emojis(photo_caption)
+                    tags_filtered = utils.extract_emojis(photo_caption)
                     if not len(tags_filtered) == 0:
                         count_tags_global += len(tags_filtered)
                         photo_tags = set(tags_filtered)
@@ -693,11 +693,15 @@ for file_name in filelist:
                     if clusterTags or topicModeling:
                         photo_tags = set(filter(None, item[11].lower().split(";"))) #[1:-1] removes curly brackets, second [1:-1] removes quotes
                         #Filter tags based on two stoplists
-                        photo_tags,count_tags,count_skipped = def_functions.filterTags(photo_tags,SortOutAlways_set,SortOutAlways_inStr_set)
+                        if ignoreStoplists:
+                            count_tags = len(photo_tags)
+                            count_skipped = 0
+                        else:
+                            photo_tags,count_tags,count_skipped = utils.filterTags(photo_tags,SortOutAlways_set,SortOutAlways_inStr_set)
                         count_tags_global += count_tags
                         count_tags_skipped += count_skipped
                     if clusterEmojis:
-                        emojis_filtered = set(def_functions.extract_emojis(photo_caption))
+                        emojis_filtered = set(utils.extract_emojis(photo_caption))
                         if not len(emojis_filtered) == 0:
                             count_emojis_global += len(emojis_filtered)
                             overallNumOfEmojis_global.update(emojis_filtered)
@@ -738,11 +742,11 @@ for file_name in filelist:
                     if clusterTags or topicModeling:
                         photo_tags = set(filter(None, item[11].strip('"').lstrip('{').rstrip('}').lower().split(","))) #[1:-1] removes curly brackets, second [1:-1] removes quotes
                         #Filter tags based on two stoplists
-                        photo_tags,count_tags,count_skipped = def_functions.filterTags(photo_tags,SortOutAlways_set,SortOutAlways_inStr_set)
+                        photo_tags,count_tags,count_skipped = utils.filterTags(photo_tags,SortOutAlways_set,SortOutAlways_inStr_set)
                         count_tags_global += count_tags
                         count_tags_skipped += count_skipped
                     if clusterEmojis:
-                        emojis_filtered = set(def_functions.extract_emojis(photo_caption))
+                        emojis_filtered = set(utils.extract_emojis(photo_caption))
                         if not len(emojis_filtered) == 0:
                             count_emojis_global += len(emojis_filtered)
                             overallNumOfEmojis_global.update(emojis_filtered)
@@ -1007,16 +1011,16 @@ if (clusterTags or clusterEmojis):
         cleanedPhotoList = list(cleanedPhotoDict.values())
         df = pd.DataFrame(cleanedPhotoList)
         points = df.as_matrix(['lng','lat'])
-        limYMin,limYMax,limXMin,limXMax = def_functions.getRectangleBounds(points)
+        limYMin,limYMax,limXMin,limXMax = utils.getRectangleBounds(points)
         bound_points_shapely = geometry.MultiPoint([(limXMin, limYMin), (limXMax, limYMax)])
         distYLat = limYMax - limYMin
         distXLng = limXMax - limXMin
-        #distYLat = def_functions.haversine(limXMin,limYMax,limXMin,limYMin)
-        #distXLng = def_functions.haversine(limXMax,limYMin,limXMin,limYMin)
+        #distYLat = utils.haversine(limXMin,limYMax,limXMin,limYMin)
+        #distXLng = utils.haversine(limXMax,limYMin,limXMin,limYMin)
         #imgRatio = distXLng/(distYLat*2)
         imgRatio = distXLng/(distYLat*2) 
-        distY = def_functions.haversine(limXMin, limYMin, limXMin, limYMax)
-        distX = def_functions.haversine(limXMin, limYMin, limXMax, limYMin) 
+        distY = utils.haversine(limXMin, limYMin, limXMin, limYMax)
+        distX = utils.haversine(limXMin, limYMin, limXMax, limYMin) 
         clusterTreeCuttingDist = (min(distX,distY)/100)*7 #4% of research area width/height (max) = default value #223.245922725 #= 0.000035 radians dist
         
         ######### TKinter Preparation ###########
@@ -1169,7 +1173,7 @@ if (clusterTags or clusterEmojis):
                     text = unicode_name(toptag[0])
                 else:
                     text = toptag[0]
-                print_store_log(f'({tnum} of {tmax}) Found {len(selectedPhotoList_Guids)} photos for tag \'{text}\' ({percentageOfTotalLocations:.0f}% of total distinct locations in area)', end=" ")
+                print_store_log(f'({tnum} of {tmax}) Found {len(selectedPhotoList_Guids)} photos (UPL) for tag \'{text}\' ({percentageOfTotalLocations:.0f}% of total distinct locations in area)', end=" ")
         
             
             #clustering
@@ -1231,7 +1235,7 @@ if (clusterTags or clusterEmojis):
                 with warnings.catch_warnings():
                     #disable joblist multithread warning
                     warnings.simplefilter('ignore', UserWarning)
-                    async_result = pool.apply_async(def_functions.fit_cluster, (clusterer, tagRadiansData))
+                    async_result = pool.apply_async(utils.fit_cluster, (clusterer, tagRadiansData))
                     clusterer = async_result.get()
                     #clusterer.fit(tagRadiansData)
                     #updateNeeded = False
@@ -1239,7 +1243,7 @@ if (clusterTags or clusterEmojis):
                 if autoselectClusters:
                     sel_labels = clusterer.labels_ #auto selected clusters
                 else:
-                    sel_labels = clusterer.single_linkage_tree_.get_clusters(def_functions.getRadiansFromMeters(clusterTreeCuttingDist), min_cluster_size=2) #0.000035 without haversine: 223 m (or 95 m for 0.000015)
+                    sel_labels = clusterer.single_linkage_tree_.get_clusters(utils.getRadiansFromMeters(clusterTreeCuttingDist), min_cluster_size=2) #0.000035 without haversine: 223 m (or 95 m for 0.000015)
         
                 #exit function in case final processing loop (no figure generating)
                 if silent:
@@ -1310,14 +1314,14 @@ if (clusterTags or clusterEmojis):
                     ax = clusterer.single_linkage_tree_.plot(truncate_mode='lastp',p=max(50,min(number_of_clusters*10,256))) #p is the number of max count of leafs in the tree, this should at least be the number of clusters*10, not lower than 50 [but max 500 to not crash]
                     #tkinter.messagebox.showinfo("messagr", str(type(ax)))
                     #plot cutting distance
-                    y = def_functions.getRadiansFromMeters(clusterTreeCuttingDist)
+                    y = utils.getRadiansFromMeters(clusterTreeCuttingDist)
                     xmin = ax.get_xlim()[0]
                     xmax = ax.get_xlim()[1]
                     line, = ax.plot([xmin, xmax], [y, y], color='k', label=f'Cluster (Cut) Distance {clusterTreeCuttingDist}m')
                     line.set_label(f'Cluster (Cut) Distance {clusterTreeCuttingDist}m')             
                     ax.legend(fontsize=10)
                     vals = ax.get_yticks()
-                    ax.set_yticklabels(['{:3.1f}m'.format(def_functions.getMetersFromRadians(x)) for x in vals])
+                    ax.set_yticklabels(['{:3.1f}m'.format(utils.getMetersFromRadians(x)) for x in vals])
                 else:
                     plt.figure(3).canvas.set_window_title('Single Linkage Tree')
                     fig3 = clusterer.single_linkage_tree_.plot(truncate_mode='lastp',p=max(50,min(number_of_clusters*10,256)))
@@ -1325,14 +1329,14 @@ if (clusterTags or clusterEmojis):
                     plt.title('Single Linkage Tree', fontsize=12,loc='center')
                     #tkinter.messagebox.showinfo("messagr", str(type(fig3)))
                     #plot cutting distance
-                    y = def_functions.getRadiansFromMeters(clusterTreeCuttingDist)
+                    y = utils.getRadiansFromMeters(clusterTreeCuttingDist)
                     xmin = fig3.get_xlim()[0]
                     xmax = fig3.get_xlim()[1]
                     line, = fig3.plot([xmin, xmax], [y, y], color='k', label=f'Cluster (Cut) Distance {clusterTreeCuttingDist}m')
                     line.set_label(f'Cluster (Cut) Distance {clusterTreeCuttingDist}m')
                     fig3.legend(fontsize=10)
                     vals = fig3.get_yticks()
-                    fig3.set_yticklabels([f'{def_functions.getMetersFromRadians(x):3.1f}m' for x in vals])     
+                    fig3.set_yticklabels([f'{utils.getMetersFromRadians(x):3.1f}m' for x in vals])     
                 plt.tick_params(labelsize=10)
                 if createMinimumSpanningTree:
                     if fig4:
@@ -1477,7 +1481,7 @@ if (clusterTags or clusterEmojis):
             try:
                 listbox.insert(tk.END, f'{item[0]} ({item[1]} user)')
             except tk.TclError:
-                emoji = unicode_name(item[0]) #def_functions.with_surrogates()
+                emoji = unicode_name(item[0]) #utils.with_surrogates()
                 listbox.insert(tk.END, f'{emoji} ({item[1]} user)')
         canvas.pack(fill='both',padx=0, pady=0)
         listboxFrame.pack(fill='both',padx=0, pady=0)
@@ -1514,7 +1518,7 @@ if (clusterTags or clusterEmojis):
                 #Calculate best UTM Zone SRID/EPSG Code
                 input_lon_center = bound_points_shapely.centroid.coords[0][0] #True centroid (coords may be multipoint)
                 input_lat_center = bound_points_shapely.centroid.coords[0][1]
-                epsg_code = def_functions.convert_wgs_to_utm(input_lon_center, input_lat_center)
+                epsg_code = utils.convert_wgs_to_utm(input_lon_center, input_lat_center)
                 crs_proj = pyproj.Proj(init=f'epsg:{epsg_code}')
             project = lambda x, y: pyproj.transform(pyproj.Proj(init='epsg:4326'), pyproj.Proj(init=f'epsg:{epsg_code}'), x, y)
             #geom_proj = transform(project, alphaShapeAndMeta[0])
@@ -1612,13 +1616,13 @@ if (clusterTags or clusterEmojis):
                 #print("Toptag: " + str(singleMostUsedtag[0]))
                 if clusterPhotoGuidList is None:
                     sys.exit(f'No Photos found for toptag: {singleMostUsedtag}')
-                toptagArea = def_functions.generateClusterShape(toptag,clusterPhotoGuidList,cleanedPhotoDict,crs_wgs,crs_proj,clusterTreeCuttingDist,localSaturationCheck)[1]
+                toptagArea = utils.generateClusterShape(toptag,clusterPhotoGuidList,cleanedPhotoDict,crs_wgs,crs_proj,clusterTreeCuttingDist,localSaturationCheck)[1]
             for toptag in topTagsList:
                 tnum += 1
                 clusterPhotoGuidList = clustersPerTag.get(toptag[0], None)
                 #Generate tag Cluster Shapes
                 if clusterPhotoGuidList:
-                    listOfAlphashapesAndMeta_tmp,tagArea = def_functions.generateClusterShape(toptag,clusterPhotoGuidList,cleanedPhotoDict,crs_wgs,crs_proj,clusterTreeCuttingDist,localSaturationCheck)
+                    listOfAlphashapesAndMeta_tmp,tagArea = utils.generateClusterShape(toptag,clusterPhotoGuidList,cleanedPhotoDict,crs_wgs,crs_proj,clusterTreeCuttingDist,localSaturationCheck)
                     if localSaturationCheck and not tagArea == 0 and not tnum == 1:
                         localSaturation = tagArea/(toptagArea/100)
                         #print("Local Saturation for Tag " + toptag[0] + ": " + str(round(localSaturation,0)))
@@ -1653,7 +1657,7 @@ if (clusterTags or clusterEmojis):
            ##Calculate best UTM Zone SRID/EPSG Code
            #input_lon_center = bound_points_shapely.centroid.coords[0][0] #True centroid (coords may be multipoint)
            #input_lat_center = bound_points_shapely.centroid.coords[0][1]
-           #epsg_code = def_functions.convert_wgs_to_utm(input_lon_center, input_lat_center)
+           #epsg_code = utils.convert_wgs_to_utm(input_lon_center, input_lat_center)
            #project = lambda x, y: pyproj.transform(pyproj.Proj(init='epsg:4326'), pyproj.Proj(init='epsg:{0}'.format(epsg_code)), x, y)
         
             # Define polygon feature geometry
@@ -1781,9 +1785,9 @@ if abort == False and clusterPhotos == True:
     with warnings.catch_warnings():
         #disable joblist multithread warning
         warnings.simplefilter('ignore', UserWarning)
-        async_result = pool.apply_async(def_functions.fit_cluster, (clusterer, tagRadiansData))
+        async_result = pool.apply_async(utils.fit_cluster, (clusterer, tagRadiansData))
         clusterer = async_result.get()
-    clusters = clusterer.single_linkage_tree_.get_clusters(def_functions.getRadiansFromMeters(clusterTreeCuttingDist/8), min_cluster_size=2)
+    clusters = clusterer.single_linkage_tree_.get_clusters(utils.getRadiansFromMeters(clusterTreeCuttingDist/8), min_cluster_size=2)
     listOfPhotoClusters = []
     numpy_selectedPhotoList_Guids = np.asarray(selectedPhotoList_Guids)
     mask_noisy = (clusters == -1)
@@ -1799,14 +1803,14 @@ if abort == False and clusterPhotos == True:
     clusterPhotosGuidsList.sort(key=len,reverse=True)
     if clusterTags is False:
         #detect projection if not already
-        limYMin,limYMax,limXMin,limXMax = def_functions.getRectangleBounds(points)
+        limYMin,limYMax,limXMin,limXMax = utils.getRectangleBounds(points)
         bound_points_shapely = geometry.MultiPoint([(limXMin, limYMin), (limXMax, limYMax)])
         crs_wgs = pyproj.Proj(init='epsg:4326') #data always in lat/lng WGS1984
         if overrideCRS is None:
             #Calculate best UTM Zone SRID/EPSG Code
             input_lon_center = bound_points_shapely.centroid.coords[0][0] #True centroid (coords may be multipoint)
             input_lat_center = bound_points_shapely.centroid.coords[0][1]
-            epsg_code = def_functions.convert_wgs_to_utm(input_lon_center, input_lat_center)
+            epsg_code = utils.convert_wgs_to_utm(input_lon_center, input_lat_center)
             crs_proj = pyproj.Proj(init=f'epsg:{epsg_code}')
     for photo_cluster in clusterPhotosGuidsList:
         photos = [cleanedPhotoDict[x] for x in photo_cluster]
