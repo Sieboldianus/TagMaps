@@ -11,4 +11,8 @@ graph.png
 .vs/standalone_tag_cluster_hdbscan/v15/.suo
 
 .vs/
+
 emojifile.txt
+
+tagmaps.egg-info
+tests/
