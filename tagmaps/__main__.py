@@ -29,6 +29,7 @@ import tkinter as tk
 from tkinter.messagebox import showerror
 import tkinter.messagebox
 from .utils import *
+#import * from utils as utils
 import datetime
 import warnings
 from unicodedata import name as unicode_name
@@ -85,7 +86,7 @@ from decimal import Decimal
 #        emojifile.write(str(unicode_name(_c)) + '\n')
 #        emojifile.write('Each Codepoint: U+%04x' % ord(_c) +  '\n')
 
-######################    
+######################
 ####config section####
 ######################
 log_file = "02_Output/log.txt"
@@ -111,7 +112,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-s', "--source", default= "fromLBSN")     # naming it "source"
 parser.add_argument('-r', "--removeLongTail", type=utils.str2bool, nargs='?', const=True,default= True)
 parser.add_argument('-e', "--EPSG")
-parser.add_argument('-t', "--clusterTags", type=utils.str2bool, nargs='?', const=True,default= True)  
+parser.add_argument('-t', "--clusterTags", type=utils.str2bool, nargs='?', const=True,default= True)
 parser.add_argument('-p', "--clusterPhotos", type=utils.str2bool, nargs='?', const=True,default= True)
 parser.add_argument('-c', "--localSaturationCheck", type=utils.str2bool, nargs='?', const=True, default= False)
 parser.add_argument('-j', "--tokenizeJapanese", type=utils.str2bool, nargs='?', const=True, default= False)
@@ -123,6 +124,8 @@ parser.add_argument('-f', "--shapefilePath", default= "")
 parser.add_argument('-is',"--ignoreStoplists", type=utils.str2bool, nargs='?', const=True, default= False)
 parser.add_argument('-ip',"--ignorePlaceCorrections", type=utils.str2bool, nargs='?', const=True, default= False)
 parser.add_argument('-stat',"--statisticsOnly", type=utils.str2bool, nargs='?', const=True, default= False)
+parser.add_argument('-lowULimit',"--lowerUserLimit", type=utils.str2bool, nargs='?', const=True, default= 2)
+
 args = parser.parse_args()    # returns data from the options specified (source)
 DSource = args.source
 clusterTags = args.clusterTags
@@ -138,6 +141,7 @@ ignoreStoplists = args.ignoreStoplists
 ignorePlaceCorrections = args.ignorePlaceCorrections
 statisticsOnly = args.statisticsOnly
 writeGISCompLine = True # writes placeholder entry after headerline for avoiding GIS import format issues
+lowerUserLimit = int(args.lowerUserLimit)
 
 ##Load Filterlists
 SortOutAlways_file = "00_Config/SortOutAlways.txt"
@@ -196,12 +200,12 @@ if shapefileIntersect:
     from shapely.geometry import shape
     from shapely.geometry import Point
     PShape = fiona.open(shapefilePath)
-    
+
     ######Single Polygon:######
     first = PShape.next()
     print("Loaded Shapefile with " + str(len(first['geometry']['coordinates'][0])) + " Vertices.") # (GeoJSON format)
     shp_geom = shape(first['geometry']) #shape(first)
-    
+
     ######Multipolygon:######
     #vcount = PShape.next()['geometry']['coordinates'] #needed for count of vertices
     #geom = MultiPolygon([shape(pol['geometry']) for pol in PShape])
@@ -238,17 +242,17 @@ partcount = 0
 if (DSource == "fromFlickr_CSV"):
     filelist = glob('01_Input/*.txt')
     GMTTimetransform = 0
-    guid_columnNameID = 5 #guid   
+    guid_columnNameID = 5 #guid
     Sourcecode = 2
     quoting_opt = csv.QUOTE_NONE
 elif (DSource == "fromInstagram_PGlbsnEmoji") or (DSource == "fromLBSN") or (DSource == "fromLBSN_old"):
     filelist = glob('01_Input/*.csv')
-    guid_columnNameID = 1 #guid    
+    guid_columnNameID = 1 #guid
     quoting_opt = csv.QUOTE_MINIMAL
 elif (DSource == "fromSensorData_InfWuerz"):
     filelist = glob('01_Input/*.csv')
-    GMTTimetransform = 0    
-    guid_columnNameID = 1 #guid    
+    GMTTimetransform = 0
+    guid_columnNameID = 1 #guid
     Sourcecode = 11
     quoting_opt = csv.QUOTE_NONE
 else:
@@ -286,9 +290,9 @@ def setLatLngBounds(Lat,Lng):
     if limLatMin is None or (Lat < limLatMin and not Lat == 0):
         limLatMin = Lat
     if limLatMax is None or (Lat > limLatMax and not Lat == 0):
-        limLatMax = Lat      
+        limLatMax = Lat
     if limLngMin is None or (Lng < limLngMin and not Lng == 0):
-        limLngMin = Lng       
+        limLngMin = Lng
     if limLngMax is None or (Lng > limLngMax and not Lng == 0):
         limLngMax = Lng
 def is_number(s):
@@ -296,8 +300,8 @@ def is_number(s):
         float(s)
         return True
     except ValueError:
-        return False    
-photoIDHash = set()    
+        return False
+photoIDHash = set()
 LocationsPerUserID_dict = defaultdict(set)
 UserLocationTagList_dict = defaultdict(set)
 if topicModeling:
@@ -336,14 +340,14 @@ for file_name in filelist:
         elif (DSource == "fromInstagram_HashMedia_JSON"):
             photolist = photolist + json.loads(f.read())
         #PhotosPerDayLists = defaultdict(list)
-        #keyCreatedHash = set()     
+        #keyCreatedHash = set()
         for item in photolist:
             #duplicate check based on GUID
             if item[guid_columnNameID] in photoIDHash:
                 skippedCount += 1
                 continue
             else:
-                photoIDHash.add(item[guid_columnNameID])     
+                photoIDHash.add(item[guid_columnNameID])
             if (DSource == "fromInstagram_LocMedia_CSV"):
                 if len(item) < 15:
                     #skip
@@ -382,15 +386,15 @@ for file_name in filelist:
                                     shapeFileExcludelocIDhash.add(photo_locID)
                                     continue
                                 else:
-                                    shapeFileIncludedlocIDhash.add(photo_locID)                                 
+                                    shapeFileIncludedlocIDhash.add(photo_locID)
                     else:
                         if excludeWhereMissingGeocode:
-                            skippedCount += 1          
+                            skippedCount += 1
                             continue #skip non-geotagged medias
                         else:
                             photo_latitude = ""
                             photo_longitude = ""
-                    #assign usernames from dict    
+                    #assign usernames from dict
                     if photo_userid in user_dict:
                         photo_owner = user_dict[photo_userid]
                     elif photo_userid in netlytics_usernameid_dict:
@@ -444,7 +448,7 @@ for file_name in filelist:
                                     shapeFileIncludedlocIDhash.add(photo_locID)
                     else:
                         if excludeWhereMissingGeocode:
-                            skippedCount += 1         
+                            skippedCount += 1
                             continue #skip non-geotagged medias
                         else:
                             photo_latitude = ""
@@ -452,7 +456,7 @@ for file_name in filelist:
                     #empty for Instagram:
                     photo_mTags = ""
                     photo_dateTaken = ""
-                    photo_views = ""   
+                    photo_views = ""
             elif DSource == "fromFlickr_CSV":
                 if len(item) < 12:
                     #skip
@@ -465,7 +469,7 @@ for file_name in filelist:
                     photo_owner = item[6] ##!!!
                     photo_shortcode = ""
                     photo_uploadDate = datetime.datetime.strptime(item[9],'%m/%d/%Y %H:%M:%S').strftime('%Y-%m-%d %H:%M:%S')  # format datetime as string
-                    photo_dateTaken = datetime.datetime.strptime(item[8]  ,'%m/%d/%Y %H:%M:%S').strftime('%Y-%m-%d %H:%M:%S')                              
+                    photo_dateTaken = datetime.datetime.strptime(item[8]  ,'%m/%d/%Y %H:%M:%S').strftime('%Y-%m-%d %H:%M:%S')
                     photo_idDate = photo_dateTaken #use date taken date as sorting ID
                     photo_caption = item[3]
                     photo_likes = ""
@@ -489,62 +493,62 @@ for file_name in filelist:
                     else:
                         skippedCount += 1
                         continue
-                    if is_number(item[2]):    
+                    if is_number(item[2]):
                         photo_longitude = Decimal(item[2])
                     else:
                         skippedCount += 1
                         continue
                     setLatLngBounds(photo_latitude,photo_longitude)
-                    photo_locID = str(photo_latitude) + ':' + str(photo_longitude) #create loc_id from lat/lng              
+                    photo_locID = str(photo_latitude) + ':' + str(photo_longitude) #create loc_id from lat/lng
                     photo_mTags = "" #not used currently but available
-                    photo_views = item[10]                                                             
+                    photo_views = item[10]
             elif (DSource == "fromInstagram_HashMedia_JSON"):
                 photo_source = Sourcecode #HashMediaCode
-                if item.get('owner'): 
+                if item.get('owner'):
                     photo_userid = item["owner"]["id"]
                 else:
                     # skip problematic entries
                     skippedCount += 1
                     continue
-                if item.get('edge_liked_by'): 
+                if item.get('edge_liked_by'):
                     photo_likes = item["edge_liked_by"]["count"]
                 else:
                     photo_likes = ""
-                if item.get('edge_media_to_caption') and not len(item.get("edge_media_to_caption", {}).get("edges")) == 0: 
+                if item.get('edge_media_to_caption') and not len(item.get("edge_media_to_caption", {}).get("edges")) == 0:
                     photo_caption = item["edge_media_to_caption"]["edges"][0]["node"]["text"].replace('\n', ' ').replace('\r', '')
                 else:
-                    photo_caption = "" 
-                if item.get('edge_media_to_comment'): 
+                    photo_caption = ""
+                if item.get('edge_media_to_comment'):
                     photo_comments = item["edge_media_to_comment"]["count"]
                 else:
                     photo_comments = ""
-                if item.get('id'): 
+                if item.get('id'):
                     photo_guid = item["id"]
                 else:
                     # skip problematic entries
                     skippedCount += 1
                     continue
-                if item.get('is_video'): 
+                if item.get('is_video'):
                     photo_mediatype = "video"
                 else:
-                    photo_mediatype = "image"  
-                if item.get('location'): 
+                    photo_mediatype = "image"
+                if item.get('location'):
                     photo_locID = item["location"]["id"]
                     photo_locName = item["location"]["name"]
                 else:
                     # skip non geotagged
                     count_non_geotagged += 1
-                    continue             
-                if item.get('shortcode'): 
-                    photo_shortcode = item["shortcode"]       
+                    continue
+                if item.get('shortcode'):
+                    photo_shortcode = item["shortcode"]
                 else:
-                    photo_shortcode = ""    
-                if item.get('tags'): 
+                    photo_shortcode = ""
+                if item.get('tags'):
                     photo_tags =';'.join(item["tags"]).replace('\n', ' ').replace('\r', '')
                     photo_tags = ";%s;" % (photo_tags.replace(",", ";"))
                 else:
-                    photo_tags = ""  
-                if item.get('taken_at_timestamp'): 
+                    photo_tags = ""
+                if item.get('taken_at_timestamp'):
                     pdate = datetime.datetime.fromtimestamp(int(item["taken_at_timestamp"])) + timedelta(hours = GMTTimetransform) #GMT conversion
                     photo_uploadDate = pdate.strftime('%Y-%m-%d %H:%M:%S') # format datetime as string
                     photo_idDate = photo_uploadDate
@@ -552,11 +556,11 @@ for file_name in filelist:
                     # skip problematic entries
                     skippedCount += 1
                     continue
-                if item.get('thumbnail_src'): 
+                if item.get('thumbnail_src'):
                     photo_thumbnail = item["thumbnail_src"]
                 else:
                     photo_thumbnail = ""
-                
+
                 #assign lat/lng coordinates from dict
                 if (photo_locID in loc_dict):
                     photo_latitude = loc_dict[photo_locID][0]
@@ -573,17 +577,17 @@ for file_name in filelist:
                                 shapeFileExcludelocIDhash.add(photo_locID)
                                 continue
                             else:
-                                shapeFileIncludedlocIDhash.add(photo_locID)                                
+                                shapeFileIncludedlocIDhash.add(photo_locID)
                 else:
                     if excludeWhereMissingGeocode:
-                        #count_non_geotagged += 1   
-                        skippedCount += 1        
+                        #count_non_geotagged += 1
+                        skippedCount += 1
                         continue #skip non-geotagged medias
                     else:
                         photo_latitude = ""
                         photo_longitude = ""
-                    
-                #assign usernames from dict    
+
+                #assign usernames from dict
                 if photo_userid in user_dict:
                     photo_owner = user_dict[photo_userid]
                 elif photo_userid in netlytics_usernameid_dict:
@@ -600,7 +604,7 @@ for file_name in filelist:
                     skippedCount += 1
                     continue
                 else:
-                    photo_source = item[0] 
+                    photo_source = item[0]
                     photo_guid = item[1] #guid
                     photo_userid = item[7] #guid
                     photo_owner = ""#item[1] ##!!!
@@ -620,7 +624,7 @@ for file_name in filelist:
                     photo_thumbnail = item[17]
                     photo_comments = item[14]
                     photo_mediatype = item[19]
-                       
+
                     photo_locName = item[4] #guid
                     if item[2] == "" or item[3] == "":
                         count_non_geotagged += 1
@@ -629,7 +633,7 @@ for file_name in filelist:
                         photo_latitude = Decimal(item[2]) #guid
                         photo_longitude = Decimal(item[3]) #guid
                         setLatLngBounds(photo_latitude,photo_longitude)
-                    photo_locID = str(photo_latitude) + ':' + str(photo_longitude) #create loc_id from lat/lng      
+                    photo_locID = str(photo_latitude) + ':' + str(photo_longitude) #create loc_id from lat/lng
                     #empty for Instagram:
                     photo_mTags = ""
                     photo_dateTaken = ""
@@ -664,7 +668,7 @@ for file_name in filelist:
                             photo_latitude = Decimal(item[2]) #guid
                             photo_longitude = Decimal(item[3]) #guid
                         setLatLngBounds(photo_latitude,photo_longitude)
-                    photo_locID = str(photo_latitude) + ':' + str(photo_longitude) #create loc_id from lat/lng    
+                    photo_locID = str(photo_latitude) + ':' + str(photo_longitude) #create loc_id from lat/lng
                     #assign lat/lng coordinates from dict
                     if shapefileIntersect:
                         #skip all outside shapefile
@@ -678,7 +682,7 @@ for file_name in filelist:
                                 shapeFileExcludelocIDhash.add(photo_locID)
                                 continue
                             else:
-                                shapeFileIncludedlocIDhash.add(photo_locID)                      
+                                shapeFileIncludedlocIDhash.add(photo_locID)
                     if clusterTags or clusterEmojis or topicModeling:
                         photo_caption = item[14]
                     else:
@@ -705,12 +709,12 @@ for file_name in filelist:
                         if not len(emojis_filtered) == 0:
                             count_emojis_global += len(emojis_filtered)
                             overallNumOfEmojis_global.update(emojis_filtered)
-                            photo_tags = set.union(emojis_filtered)  
+                            photo_tags = set.union(emojis_filtered)
                     #photo_tags = ";" + item[11] + ";"
                     photo_thumbnail = None#item[17]
                     photo_comments = None#item[14]
                     photo_mediatype = None#item[19]
-                    photo_locName = item[4] #guid                  
+                    photo_locName = item[4] #guid
                     #empty for Instagram:
                     photo_mTags = ""
                     photo_dateTaken = ""
@@ -750,7 +754,7 @@ for file_name in filelist:
                         if not len(emojis_filtered) == 0:
                             count_emojis_global += len(emojis_filtered)
                             overallNumOfEmojis_global.update(emojis_filtered)
-                            photo_tags = set.union(emojis_filtered)  
+                            photo_tags = set.union(emojis_filtered)
                     #photo_tags = ";" + item[11] + ";"
                     photo_thumbnail = None#item[17]
                     photo_comments = None#item[14]
@@ -763,17 +767,17 @@ for file_name in filelist:
                         photo_latitude = Decimal(item[2]) #guid
                         photo_longitude = Decimal(item[3]) #guid
                         setLatLngBounds(photo_latitude,photo_longitude)
-                    photo_locID = str(photo_latitude) + ':' + str(photo_longitude) #create loc_id from lat/lng      
+                    photo_locID = str(photo_latitude) + ':' + str(photo_longitude) #create loc_id from lat/lng
                     #empty for Instagram:
                     photo_mTags = ""
                     photo_dateTaken = ""
-                    photo_views = 0                    
+                    photo_views = 0
             elif DSource == "fromSensorData_InfWuerz":
                 if len(item) < 5:
                     #skip
                     skippedCount += 1
                     continue
-                else:                
+                else:
                     photo_source = Sourcecode #LocMediaCode
                     photo_guid = item[1] #guid
                     photo_userid = item[4] #meta_device_id
@@ -809,16 +813,16 @@ for file_name in filelist:
                         photo_latitude = Decimal(item[7]) #guid
                         photo_longitude = Decimal(item[6]) #guid
                         setLatLngBounds(photo_latitude,photo_longitude)
-                    photo_locID = str(photo_latitude) + ':' + str(photo_longitude) #create loc_id from lat/lng      
+                    photo_locID = str(photo_latitude) + ':' + str(photo_longitude) #create loc_id from lat/lng
                     #empty for SensorWuerz:
-                    photo_likes = ""                
+                    photo_likes = ""
                     photo_thumbnail = ""
                     photo_comments = ""
                     photo_mediatype = ""
-                    photo_locName = ""                
+                    photo_locName = ""
                     photo_mTags = ""
                     photo_dateTaken = ""
-                    photo_views = 0            
+                    photo_views = 0
             #this code will union all tags of a single user for each location
             #further information is derived from the first image for each user-location
             photo_locIDUserID =  photo_locID + '::' + str(photo_userid) #create userid_loc_id
@@ -829,7 +833,7 @@ for file_name in filelist:
             if not photo_userid in LocationsPerUserID_dict or not photo_locID in LocationsPerUserID_dict[photo_userid]:
                 LocationsPerUserID_dict[photo_userid] |= {photo_locID} # Bit wise or and assignment in one step. -> assign locID to UserDict list if not already contained
                 count_loc += 1
-                UserLocationsFirstPhoto_dict[photo_locIDUserID] = (photo_source,                                                                   
+                UserLocationsFirstPhoto_dict[photo_locIDUserID] = (photo_source,
                                                                    photo_guid,
                                                                    photo_owner,
                                                                    photo_userid,
@@ -850,17 +854,17 @@ for file_name in filelist:
             removeSpecialChars = photo_caption.translate ({ord(c): " " for c in "?.!/;:,[]()'-&#"})
             if tokenizeJapanese:
                 wordlist = [word for word in jTokenize(input_sentence) for input_sentence in removeSpecialChars.split(' ')]
-            else:                  
+            else:
                 wordlist = [word for word in removeSpecialChars.lower().split(' ') if len(word) > 2]  #first replace specia characters in caption, then split by space-character
-            UserLocationWordList_dict[photo_locIDUserID] |= set(wordlist) #union words per userid/unique location              
+            UserLocationWordList_dict[photo_locIDUserID] |= set(wordlist) #union words per userid/unique location
             count_glob += 1
-            
+
             ##Calculate toplists
             if photo_tags:
-                UserDict_TagCounters_global[photo_userid].update(photo_tags) #add tagcount of this media to overall tagcount or this user, initialize counter for user if not already done 
+                UserDict_TagCounters_global[photo_userid].update(photo_tags) #add tagcount of this media to overall tagcount or this user, initialize counter for user if not already done
             msg = f'Cleaned output to {len(distinctLocations_set):02d} distinct locations from {count_glob:02d} photos (File {partcount} of {len(filelist)}) - Skipped Media: {skippedCount} - Skipped Tags: {count_tags_skipped} of {count_tags_global}'
             print(msg, end='\r')
-#Append last message to log file  
+#Append last message to log file
 log_texts_list.append(msg)
 total_distinct_locations = len(distinctLocations_set)
 print_store_log(f'\nTotal users: {len(LocationsPerUserID_dict)} (UC)')
@@ -936,7 +940,7 @@ with open("02_Output/Output_cleaned.txt", 'w', encoding='utf8') as csvfile:
                     #UserPhotoFirstThumb_dict[user_key] = photo[5]
             cleanedPhotoDict[cleanedPhotoLocation.photo_guid] = cleanedPhotoLocation
 if topicModeling:
-    #export list of cleaned topics on a per user basis for LDA/TSNE etc.  
+    #export list of cleaned topics on a per user basis for LDA/TSNE etc.
     with open("02_Output/Output_usertopics_anonymized.csv", 'w', encoding='utf8') as csvfile:
         csvfile.write("TOPICS,PhotoIDs,UserID" + '\n')
         datawriter = csv.writer(csvfile, delimiter=',', lineterminator='\n', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
@@ -946,7 +950,7 @@ if topicModeling:
         csvfile.write("TOPICS,PhotoIDs,UserID" + '\n')
         datawriter = csv.writer(csvfile, delimiter=',', lineterminator='\n', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
         for user_key, topics in UserTopicList_dict.items():
-            datawriter.writerow([" ".join(topics),"{" + ",".join(UserPhotoIDS_dict.get(user_key,None)) + "}",str(user_key)])            
+            datawriter.writerow([" ".join(topics),"{" + ",".join(UserPhotoIDS_dict.get(user_key,None)) + "}",str(user_key)])
 
 abort = False
 if (clusterTags or clusterEmojis):
@@ -955,12 +959,12 @@ if (clusterTags or clusterEmojis):
     for user_key, taghash in UserDict_TagCounters_global.items():
         #taghash contains unique values (= strings) for each user, thus summing up these taghashes counts each user only once per tag
         overallNumOfUsersPerTag_global.update(taghash)
-    
-    
+
+
     topTagsList = overallNumOfUsersPerTag_global.most_common(tmax)
     #remove all tags that are used by less than two photographers
     if removeLongTail is True:
-        indexMin = next((i for i, (t1, t2) in enumerate(topTagsList) if t2 < 2), None)
+        indexMin = next((i for i, (t1, t2) in enumerate(topTagsList) if t2 < lowerUserLimit), None)
         if indexMin:
             lenBefore = len(topTagsList)
             del topTagsList[indexMin:]
@@ -978,16 +982,16 @@ if (clusterTags or clusterEmojis):
             with open("02_Output/Output_topemojis.txt", 'w', encoding="utf8") as file: #overwrite
                 file.write("emoji,usercount\n")
                 file.write(topemojis)
-    
-    if clusterTags:    
+
+    if clusterTags:
         #optional write toptags to file
         toptags = ''.join("%s,%i" % v + '\n' for v in topTagsList if not v[0] in globalEmojiSet)
         if (not len(topTagsList) == 0):
             with open("02_Output/Output_toptags.txt", 'w', encoding="utf8") as file: #overwrite
                 file.write("tag,usercount\n")
                 file.write(toptags)
-            
-    if statisticsOnly == False:  
+
+    if statisticsOnly == False:
         singleMostUsedtag = topTagsList[0]
         now = time.time()
         print_store_log("########## STEP 3 of 6: Tag Location Clustering ##########")
@@ -996,15 +1000,15 @@ if (clusterTags or clusterEmojis):
         first = True
         label_size = 10
         #plt.rcParams['xtick.labelsize'] = label_size
-        #plt.rcParams['ytick.labelsize'] = label_size 
+        #plt.rcParams['ytick.labelsize'] = label_size
         plot_kwds = {'alpha' : 0.5, 's' : 10, 'linewidths':0}
         sys.stdout.flush()
         proceedClusting = False
-        
+
         distY = 0
         distX = 0
         imgRatio = 0
-        
+
         #Optional: set global plotting bounds
         #plt.gca().set_xlim([limXMin, limXMax])
         #plt.gca().set_ylim([limYMin, limYMax])
@@ -1018,11 +1022,11 @@ if (clusterTags or clusterEmojis):
         #distYLat = utils.haversine(limXMin,limYMax,limXMin,limYMin)
         #distXLng = utils.haversine(limXMax,limYMin,limXMin,limYMin)
         #imgRatio = distXLng/(distYLat*2)
-        imgRatio = distXLng/(distYLat*2) 
+        imgRatio = distXLng/(distYLat*2)
         distY = utils.haversine(limXMin, limYMin, limXMin, limYMax)
-        distX = utils.haversine(limXMin, limYMin, limXMax, limYMin) 
+        distX = utils.haversine(limXMin, limYMin, limXMax, limYMin)
         clusterTreeCuttingDist = (min(distX,distY)/100)*7 #4% of research area width/height (max) = default value #223.245922725 #= 0.000035 radians dist
-        
+
         ######### TKinter Preparation ###########
         class App(tk.Tk):
             def __init__(self):
@@ -1031,7 +1035,7 @@ if (clusterTags or clusterEmojis):
                 self.geometry('%dx%d+%d+%d' % (0, 0, 0, 0))
                 #create separate floating window
                 self.floater = FloatingWindow(self)
-        
+
         class FloatingWindow(tk.Toplevel):
             #global app
             def __init__(self, *args, **kwargs):
@@ -1056,19 +1060,19 @@ if (clusterTags or clusterEmojis):
             def StartMove(self, event):
                 self.x = event.x
                 self.y = event.y
-        
+
             def StopMove(self, event):
                 self.x = None
                 self.y = None
-        
+
             def OnMotion(self, event):
                 deltax = event.x - self.x
                 deltay = event.y - self.y
                 x = self.winfo_x() + deltax
                 y = self.winfo_y() + deltay
                 self.geometry("+%s+%s" % (x, y))
-                
-        #Initialize TKinter Interface        
+
+        #Initialize TKinter Interface
         app = App()
         #necessary override for error reporting during tkinter mode:
         import traceback
@@ -1095,12 +1099,12 @@ if (clusterTags or clusterEmojis):
             print(repr(traceback.format_tb(exc_traceback)))
             print("*** tb_lineno:", exc_traceback.tb_lineno)
         tk.Tk.report_callback_exception = report_callback_exception
-        
+
         #the following code part is a bit garbled due to using TKinter interface
         ######################################################################################################################################################
         ######################################################################################################################################################
         ######################################################################################################################################################
-        
+
         #definition of global vars for interface and graph design
         canvasWidth = 1320
         canvasHeight = 440
@@ -1123,7 +1127,7 @@ if (clusterTags or clusterEmojis):
         fig2 = None
         fig3 = None
         fig4 = None
-        
+
         def quitTkinter():
             #exits Tkinter gui and continues with code execution after mainloop()
             #global app
@@ -1146,7 +1150,7 @@ if (clusterTags or clusterEmojis):
             app.update() #see https://stackoverflow.com/questions/35040168/python-tkinter-error-cant-evoke-event-command
             app.destroy()
             app.quit()
-        
+
         def sel_photos(tag,cleanedPhotoList):
             #select photos from list based on a specific tag
             distinctLocalLocationCount = set()
@@ -1156,12 +1160,12 @@ if (clusterTags or clusterEmojis):
                     selectedPhotoList_Guids.append(cleanedPhotoLocation.photo_guid)
                     distinctLocalLocationCount.add(cleanedPhotoLocation.photo_locID)
             return selectedPhotoList_Guids, len(distinctLocalLocationCount)
-            
+
         def cluster_tag(toptag=None,preview=None,silent=None):
             if preview is None:
                 preview = False
             if silent is None:
-                silent = False        
+                silent = False
             global first
             global currentDisplayTag
             global limYMin, limYMax, limXMin, limXMax, imgRatio, floaterX, floaterY
@@ -1174,8 +1178,8 @@ if (clusterTags or clusterEmojis):
                 else:
                     text = toptag[0]
                 print_store_log(f'({tnum} of {tmax}) Found {len(selectedPhotoList_Guids)} photos (UPL) for tag \'{text}\' ({percentageOfTotalLocations:.0f}% of total distinct locations in area)', end=" ")
-        
-            
+
+
             #clustering
             if len(selectedPhotoList_Guids) < 2:
                 return [], selectedPhotoList_Guids
@@ -1183,7 +1187,7 @@ if (clusterTags or clusterEmojis):
             #only used for tag clustering, otherwise (photo location clusters), global vars are used (df, points)
             df = pd.DataFrame(selectedPhotoList)
             points = df.as_matrix(['lng','lat']) #converts pandas data to numpy array (limit by list of column-names)
-            
+
             #only return preview fig without clustering
             if preview == True:
                 #only map data
@@ -1199,9 +1203,9 @@ if (clusterTags or clusterEmojis):
                         fig1 = plt.figure(num=1,figsize=(11, int(11*imgRatio)), dpi=80)
                         fig1.canvas.set_window_title('Preview Map')
                         #displayImgPath = pathname + '/Output/ClusterImg/00_displayImg.png'
-                        #fig1.figure.savefig(displayImgPath)        
+                        #fig1.figure.savefig(displayImgPath)
                     else:
-        
+
                         plt.suptitle(toptag[0].upper(), fontsize=18, fontweight='bold')
                         plt.scatter(points.T[0], points.T[1], color='red', **plot_kwds)
                         fig1 = plt.figure(num=1,figsize=(11, int(11*imgRatio)), dpi=80)
@@ -1209,22 +1213,22 @@ if (clusterTags or clusterEmojis):
                         #earth.bluemarble(alpha=0.42)
                         #earth.drawcoastlines(color='#555566', linewidth=1)
                         fig1.canvas.set_window_title('Preview Map')
-                    plt.gca().set_xlim([limXMin, limXMax]) 
-                    plt.gca().set_ylim([limYMin, limYMax]) 
+                    plt.gca().set_xlim([limXMin, limXMax])
+                    plt.gca().set_ylim([limYMin, limYMax])
                     plt.tick_params(labelsize=10)
                     currentDisplayTag = toptag
             else:
                 #cluster data
                 tagRadiansData = np.radians(points) #conversion to radians for HDBSCAN (does not support decimal degrees)
                 #for each tag in overallNumOfUsersPerTag_global.most_common(1000) (descending), calculate HDBSCAN Clusters
-        
+
                 minClusterSize = max(2,int(((len(selectedPhotoList_Guids))/100)*5)) #4% optimum
                 clusterer = hdbscan.HDBSCAN(min_cluster_size=minClusterSize,gen_min_span_tree=createMinimumSpanningTree,allow_single_cluster=True,min_samples=1)
                 #clusterer = hdbscan.HDBSCAN(min_cluster_size=minClusterSize,gen_min_span_tree=True,min_samples=1)
                 #clusterer = hdbscan.HDBSCAN(min_cluster_size=10,metric='haversine',gen_min_span_tree=False,allow_single_cluster=True)
                 #clusterer = hdbscan.robust_single_linkage_.RobustSingleLinkage(cut=0.000035)
                 #srsl_plt = hdbscan.robust_single_linkage_.plot()
-                
+
                 #Start clusterer on different thread to prevent GUI from freezing
                 #See: http://stupidpythonideas.blogspot.de/2013/10/why-your-gui-app-freezes.html
                 #https://stackoverflow.com/questions/6893968/how-to-get-the-return-value-from-a-thread-in-python
@@ -1239,12 +1243,12 @@ if (clusterTags or clusterEmojis):
                     clusterer = async_result.get()
                     #clusterer.fit(tagRadiansData)
                     #updateNeeded = False
-        
+
                 if autoselectClusters:
                     sel_labels = clusterer.labels_ #auto selected clusters
                 else:
                     sel_labels = clusterer.single_linkage_tree_.get_clusters(utils.getRadiansFromMeters(clusterTreeCuttingDist), min_cluster_size=2) #0.000035 without haversine: 223 m (or 95 m for 0.000015)
-        
+
                 #exit function in case final processing loop (no figure generating)
                 if silent:
                     return sel_labels, selectedPhotoList_Guids
@@ -1259,7 +1263,7 @@ if (clusterTags or clusterEmojis):
                               for x in sel_labels] #clusterer.labels_ (best selection) or sel_labels (cut distance)
                 #tkinter.messagebox.showinfo("Num of clusters: ", str(len(sel_colors)) + " " + str(sel_colors[1]))
                 #output/update matplotlib figures
-                
+
                 if fig1:
                     plt.figure(1).clf()
                     plt.suptitle(toptag[0].upper(), fontsize=18, fontweight='bold') #plt references the last figure accessed
@@ -1268,7 +1272,7 @@ if (clusterTags or clusterEmojis):
                     fig1.canvas.set_window_title('Cluster Preview')
                     distText = ''
                     if autoselectClusters == False:
-                        distText = '@ ' + str(clusterTreeCuttingDist) +'m'    
+                        distText = '@ ' + str(clusterTreeCuttingDist) +'m'
                     plt.title(f'Cluster Preview {distText}', fontsize=12,loc='center')
                     #plt.title('Cluster Preview')
                     #xmax = ax.get_xlim()[1]
@@ -1282,14 +1286,14 @@ if (clusterTags or clusterEmojis):
                     plt.suptitle(toptag[0].upper(), fontsize=18, fontweight='bold')
                     distText = ''
                     if autoselectClusters == False:
-                        distText = '@ ' + str(clusterTreeCuttingDist) +'m'  
+                        distText = '@ ' + str(clusterTreeCuttingDist) +'m'
                     plt.title(f'Cluster Preview {distText}', fontsize=12,loc='center')
                     #xmax = fig1.get_xlim()[1]
                     #ymax = fig1.get_ylim()[1]
                     noisyTxt = '{} / {}'.format(mask_noisy.sum(), len(mask_noisy))
                     plt.text(limXMax, limYMax,f'{number_of_clusters} Clusters (Noise: {noisyTxt})',fontsize=10,horizontalalignment='right',verticalalignment='top',fontweight='bold')
-                plt.gca().set_xlim([limXMin, limXMax]) 
-                plt.gca().set_ylim([limYMin, limYMax])            
+                plt.gca().set_xlim([limXMin, limXMax])
+                plt.gca().set_ylim([limYMin, limYMax])
                 plt.tick_params(labelsize=10)
                 #if len(tagRadiansData) < 10000:
                 if fig2:
@@ -1318,7 +1322,7 @@ if (clusterTags or clusterEmojis):
                     xmin = ax.get_xlim()[0]
                     xmax = ax.get_xlim()[1]
                     line, = ax.plot([xmin, xmax], [y, y], color='k', label=f'Cluster (Cut) Distance {clusterTreeCuttingDist}m')
-                    line.set_label(f'Cluster (Cut) Distance {clusterTreeCuttingDist}m')             
+                    line.set_label(f'Cluster (Cut) Distance {clusterTreeCuttingDist}m')
                     ax.legend(fontsize=10)
                     vals = ax.get_yticks()
                     ax.set_yticklabels(['{:3.1f}m'.format(utils.getMetersFromRadians(x)) for x in vals])
@@ -1336,7 +1340,7 @@ if (clusterTags or clusterEmojis):
                     line.set_label(f'Cluster (Cut) Distance {clusterTreeCuttingDist}m')
                     fig3.legend(fontsize=10)
                     vals = fig3.get_yticks()
-                    fig3.set_yticklabels([f'{utils.getMetersFromRadians(x):3.1f}m' for x in vals])     
+                    fig3.set_yticklabels([f'{utils.getMetersFromRadians(x):3.1f}m' for x in vals])
                 plt.tick_params(labelsize=10)
                 if createMinimumSpanningTree:
                     if fig4:
@@ -1347,7 +1351,7 @@ if (clusterTags or clusterEmojis):
                         ax = clusterer.minimum_spanning_tree_.plot(edge_cmap='viridis',
                                       edge_alpha=0.6,
                                       node_size=10,
-                                      edge_linewidth=1) #tkinter.messagebox.showinfo("messagr", str(type(ax)))            
+                                      edge_linewidth=1) #tkinter.messagebox.showinfo("messagr", str(type(ax)))
                         fig4.canvas.set_window_title('Minimum Spanning Tree')
                         plt.title(f'Minimum Spanning Tree @ {clusterTreeCuttingDist}m', fontsize=12,loc='center')
                         ax.legend(fontsize=10)
@@ -1356,13 +1360,13 @@ if (clusterTags or clusterEmojis):
                         #cb=im[0].colorbar  ##in this case I assume to be interested to the last one plotted, otherwise use the appropriate index
                         #cb.ax.tick_params(labelsize=10)
                         #vals = cb.ax.get_yticks()
-                        #cb.ax.set_yticklabels(['{:3.1f}m'.format(getMetersFromRadians(x)) for x in vals]) 
+                        #cb.ax.set_yticklabels(['{:3.1f}m'.format(getMetersFromRadians(x)) for x in vals])
                     else:
                         plt.figure(4).canvas.set_window_title('Minimum Spanning Tree')
                         fig4 = clusterer.minimum_spanning_tree_.plot(edge_cmap='viridis',
                                       edge_alpha=0.6,
                                       node_size=10,
-                                      edge_linewidth=1) #tkinter.messagebox.showinfo("messagr", str(type(ax))) 
+                                      edge_linewidth=1) #tkinter.messagebox.showinfo("messagr", str(type(ax)))
                         plt.suptitle(toptag[0].upper(), fontsize=18, fontweight='bold')
                         plt.title(f'Minimum Spanning Tree @ {clusterTreeCuttingDist}m', fontsize=12,loc='center')
                         fig4.legend(fontsize=10)
@@ -1371,19 +1375,19 @@ if (clusterTags or clusterEmojis):
                         #cb=im[0].colorbar  ##in this case I assume to be interested to the last one plotted, otherwise use the appropriate index
                         #cb.ax.tick_params(labelsize=10)
                         #vals = cb.ax.get_yticks()
-                        #cb.ax.set_yticklabels(['{:3.1f}m'.format(getMetersFromRadians(x)) for x in vals]) 
+                        #cb.ax.set_yticklabels(['{:3.1f}m'.format(getMetersFromRadians(x)) for x in vals])
                 plt.tick_params(labelsize=10)
                 #adjust scalebar limits
                 global tkScalebar
                 tkScalebar.configure(from_=(clusterTreeCuttingDist/100), to=(clusterTreeCuttingDist*2))
-                
+
         def change_clusterDist(val):
             #tkinter.messagebox.showinfo("messagr", val)
             global clusterTreeCuttingDist
             #global canvas
             #global tkScalebar
             clusterTreeCuttingDist = float(val)#tkScalebar.get()
-            
+
         def onselect(evt):
             # Note here that Tkinter passes an event object to onselect()
             global lastselectionList
@@ -1439,11 +1443,11 @@ if (clusterTags or clusterEmojis):
             fig1.canvas.set_window_title('Cluster Preview')
             distText = ''
             if autoselectClusters == False:
-                distText = f'@ {clusterTreeCuttingDist}m'    
+                distText = f'@ {clusterTreeCuttingDist}m'
             plt.title(f'Cluster Preview {distText}', fontsize=12,loc='center')
             noisyTxt = f'{mask_noisy.sum()}/{len(mask_noisy)}'
             plt.text(limXMax, limYMax,f'{number_of_clusters} Cluster (Noise: {noisyTxt})',fontsize=10,horizontalalignment='right',verticalalignment='top',fontweight='bold')
-                    
+
         def delete(listbox):
             global topTagsList
             global lastselectionList
@@ -1456,9 +1460,9 @@ if (clusterTags or clusterEmojis):
         ######################################################################################################################################################
         ######################################################################################################################################################
         ######################################################################################################################################################
-        
+
         #A frame is created for each window/part of the gui; after it is used, it is destroyed with frame.destroy()
-        
+
         listboxFrame = tk.Frame(app.floater)
         canvas = tk.Canvas(listboxFrame, width=150, height=200, highlightthickness=0,background="gray7")
         l = tk.Label(canvas, text="Optional: Exclude tags.", background="gray7",fg="gray80",font="Arial 10 bold")
@@ -1504,11 +1508,11 @@ if (clusterTags or clusterEmojis):
         b.pack(padx=10, pady=10,side="left")
         canvas.pack(fill='both',padx=0, pady=0)
         buttonsFrame.pack(fill='both',padx=0, pady=0)
-        
+
         #END OF TKINTER LOOP, welcome back to command line interface
         app.mainloop()
         plt.close("all")
-        
+
         noClusterPhotos_perTag_DictOfLists = defaultdict(list)
         clustersPerTag = defaultdict(list)
         if proceedClusting:
@@ -1522,7 +1526,7 @@ if (clusterTags or clusterEmojis):
                 crs_proj = pyproj.Proj(init=f'epsg:{epsg_code}')
             project = lambda x, y: pyproj.transform(pyproj.Proj(init='epsg:4326'), pyproj.Proj(init=f'epsg:{epsg_code}'), x, y)
             #geom_proj = transform(project, alphaShapeAndMeta[0])
-            
+
             if localSaturationCheck:
                 clusters, selectedPhotoList_Guids = cluster_tag(singleMostUsedtag, None, True)
                 numpy_selectedPhotoList_Guids = np.asarray(selectedPhotoList_Guids)
@@ -1537,7 +1541,7 @@ if (clusterTags or clusterEmojis):
                 # Sort descending based on size of cluster: https://stackoverflow.com/questions/30346356/how-to-sort-list-of-lists-according-to-length-of-sublists
                 clusterPhotosGuidsList.sort(key=len, reverse=True)
                 if not len(clusterPhotosGuidsList) == 0:
-                    clustersPerTag[singleMostUsedtag[0]] = clusterPhotosGuidsList              
+                    clustersPerTag[singleMostUsedtag[0]] = clusterPhotosGuidsList
             tnum = 1
             for toptag in topTagsList:
                 if localSaturationCheck and tnum == 1 and toptag[0] in clustersPerTag:
@@ -1555,12 +1559,12 @@ if (clusterTags or clusterEmojis):
                 #print(clusters)
                 #clusters contains the cluster values (-1 = no cluster, 0 maybe, >0 = cluster
                 # in the same order, selectedPhotoList contains all original photo data, thus clusters[10] and selectedPhotoList[10] refer to the same photo
-                
+
                 numpy_selectedPhotoList_Guids = np.asarray(selectedPhotoList_Guids)
                 mask_noisy = (clusters == -1)
                 if len(selectedPhotoList_Guids) == 1:
-                    number_of_clusters = 0 
-                else:  
+                    number_of_clusters = 0
+                else:
                     number_of_clusters = len(np.unique(clusters[~mask_noisy])) #mit noisy (=0)
                 #if number_of_clusters > 200:
                 #    print_store_log("--> Too many, skipped for this scale.")
@@ -1579,7 +1583,7 @@ if (clusterTags or clusterEmojis):
                     # Sort descending based on size of cluster: https://stackoverflow.com/questions/30346356/how-to-sort-list-of-lists-according-to-length-of-sublists
                     clusterPhotosGuidsList.sort(key=len, reverse=True)
                     if not len(clusterPhotosGuidsList) == 0:
-                        clustersPerTag[toptag[0]] = clusterPhotosGuidsList            
+                        clustersPerTag[toptag[0]] = clusterPhotosGuidsList
                 else:
                     print_store_log("--> No cluster.")
                     noClusterPhotos_perTag_DictOfLists[toptag[0]] = list(numpy_selectedPhotoList_Guids)
@@ -1591,14 +1595,14 @@ if (clusterTags or clusterEmojis):
                 #    else:
                 #        noClusterPhotos_perTag_DictOfLists[toptag[0]].append(selectedPhotoList[photo_num])
                 #    photo_num+=1
-        
+
                 #print("resultList: ")
                 #for s in clusterPhotosList[:2]:
                 #    print(*s)
-                #print(str(toptag) + " - Number of clusters: " + str(len(clusterPhotosList)) + " Photo num: " + str(photo_num))      
-        
+                #print(str(toptag) + " - Number of clusters: " + str(len(clusterPhotosList)) + " Photo num: " + str(photo_num))
+
                 #plt.autoscale(enable=True)
-                
+
                 #if tnum == 50:
                 #    break
                     #plt.savefig('foo.png')
@@ -1631,10 +1635,10 @@ if (clusterTags or clusterEmojis):
                             #print("Skipped: " + toptag[0] + " due to saturation (" + str(round(localSaturation,0)) + "%).")
                             saturationExcludeCount += 1
                             continue #next toptag
-                        
+
                     if len(listOfAlphashapesAndMeta_tmp) > 0:
-                        listOfAlphashapesAndMeta.extend(listOfAlphashapesAndMeta_tmp)                       
-        
+                        listOfAlphashapesAndMeta.extend(listOfAlphashapesAndMeta_tmp)
+
                 singlePhotoGuidList = noClusterPhotos_perTag_DictOfLists.get(toptag[0], None)
                 if singlePhotoGuidList:
                     shapetype = "Single cluster"
@@ -1647,23 +1651,23 @@ if (clusterTags or clusterEmojis):
                         result_polygon = pcoordinate.buffer(clusterTreeCuttingDist/4,resolution=3) #single dots are presented as buffer with 0.5% of width-area
                         #result_polygon = pcoordinate.buffer(min(distXLng,distYLat)/100,resolution=3)
                         if result_polygon is not None and not result_polygon.is_empty:
-                            listOfAlphashapesAndMeta.append((result_polygon,1,max(single_photo.photo_views,single_photo.photo_likes),1,str(toptag[0]),toptag[1],1,1,1,shapetype))   
+                            listOfAlphashapesAndMeta.append((result_polygon,1,max(single_photo.photo_views,single_photo.photo_likes),1,str(toptag[0]),toptag[1],1,1,1,shapetype))
             print_store_log(f'{len(listOfAlphashapesAndMeta)} Alpha Shapes. Done.')
             if localSaturationCheck and not saturationExcludeCount == 0:
                 print_store_log(f'Excluded {saturationExcludeCount} Tags on local saturation check.')
             ##Output Boundary Shapes in merged Shapefile##
             print_store_log("########## STEP 5 of 6: Writing Results to Shapefile ##########")
-            
+
            ##Calculate best UTM Zone SRID/EPSG Code
            #input_lon_center = bound_points_shapely.centroid.coords[0][0] #True centroid (coords may be multipoint)
            #input_lat_center = bound_points_shapely.centroid.coords[0][1]
            #epsg_code = utils.convert_wgs_to_utm(input_lon_center, input_lat_center)
            #project = lambda x, y: pyproj.transform(pyproj.Proj(init='epsg:4326'), pyproj.Proj(init='epsg:{0}'.format(epsg_code)), x, y)
-        
+
             # Define polygon feature geometry
             schema = {
                 'geometry': 'Polygon',
-                'properties': {'Join_Count': 'int', 
+                'properties': {'Join_Count': 'int',
                                'Views': 'int',
                                'COUNT_User': 'int',
                                'ImpTag': 'str',
@@ -1675,7 +1679,7 @@ if (clusterTags or clusterEmojis):
                                #'shapetype': 'str',
                                'emoji': 'int'},
             }
-         
+
             #Normalization of Values (1-1000 Range), precalc Step:
             #######################################
             weightsv1_range = [x[6] for x in listOfAlphashapesAndMeta] #get the n'th column out for calculating the max/min
@@ -1686,16 +1690,16 @@ if (clusterTags or clusterEmojis):
             weightsv2_min = min(weightsv2_range)
             weightsv2_max = max(weightsv2_range)
             weightsv3_min = min(weightsv3_range)
-            weightsv3_max = max(weightsv3_range)   
+            weightsv3_max = max(weightsv3_range)
             #precalc
             #https://stats.stackexchange.com/questions/70801/how-to-normalize-data-to-0-1-range
             weightsv1_mod_a = (1000-1)/(weightsv1_max-weightsv1_min)
-            weightsv1_mod_b = 1000 - weightsv1_mod_a * weightsv1_max   
+            weightsv1_mod_b = 1000 - weightsv1_mod_a * weightsv1_max
             weightsv2_mod_a = (1000-1)/(weightsv2_max-weightsv2_min)
             weightsv2_mod_b = 1000 - weightsv2_mod_a * weightsv2_max
             weightsv3_mod_a = (1000-1)/(weightsv3_max-weightsv3_min)
             weightsv3_mod_b = 1000 - weightsv3_mod_a * weightsv3_max
-            ####################################### 
+            #######################################
             # Write a new Shapefile
             # WGS1984
             if (clusterTags == False and clusterEmojis == True):
@@ -1704,12 +1708,12 @@ if (clusterTags or clusterEmojis):
                 shapefileName = "allTagCluster"
             with fiona.open(f'02_Output/{shapefileName}.shp', mode='w', encoding='UTF-8', driver='ESRI Shapefile', schema=schema,crs=from_epsg(epsg_code)) as c:
                 # Normalize Weights to 0-1000 Range
-                idx = 0  
+                idx = 0
                 for alphaShapeAndMeta in listOfAlphashapesAndMeta:
                     if idx == 0:
                         HImP = 1
                     else:
-                        if listOfAlphashapesAndMeta[idx][4] != listOfAlphashapesAndMeta[idx-1][4]:      
+                        if listOfAlphashapesAndMeta[idx][4] != listOfAlphashapesAndMeta[idx-1][4]:
                             HImP = 1
                         else:
                             HImP = 0
@@ -1726,21 +1730,21 @@ if (clusterTags or clusterEmojis):
                     if not alphaShapeAndMeta[8] == 1:
                         weight3_normalized = weightsv3_mod_a * alphaShapeAndMeta[8] + weightsv3_mod_b
                     else:
-                        weight3_normalized = 1                
+                        weight3_normalized = 1
                     idx += 1
                     #project data
                     #geom_proj = transform(project, alphaShapeAndMeta[0])
                     #c.write({
-                    #    'geometry': geometry.mapping(geom_proj),  
+                    #    'geometry': geometry.mapping(geom_proj),
                     if clusterEmojis and alphaShapeAndMeta[4] in globalEmojiSet:
                         emoji = 1
                         ImpTagText = ""
                     else:
-                        emoji = 0   
-                        ImpTagText = f'{alphaShapeAndMeta[4]}'          
+                        emoji = 0
+                        ImpTagText = f'{alphaShapeAndMeta[4]}'
                     c.write({
                         'geometry': geometry.mapping(alphaShapeAndMeta[0]),
-                        'properties': {'Join_Count': alphaShapeAndMeta[1], 
+                        'properties': {'Join_Count': alphaShapeAndMeta[1],
                                        'Views': alphaShapeAndMeta[2],
                                        'COUNT_User': alphaShapeAndMeta[3],
                                        'ImpTag': ImpTagText,
@@ -1755,15 +1759,15 @@ if (clusterTags or clusterEmojis):
             if clusterEmojis:
                 with open("02_Output/emojiTable.csv", "w", encoding='utf-8') as emojiTable:
                     emojiTable.write("FID,Emoji\n")
-                    idx = 0 
+                    idx = 0
                     for alphaShapeAndMeta in listOfAlphashapesAndMeta:
                         if alphaShapeAndMeta[4] in globalEmojiSet:
-                            ImpTagText = f'{alphaShapeAndMeta[4]}' 
+                            ImpTagText = f'{alphaShapeAndMeta[4]}'
                         else:
                             ImpTagText = ""
                         emojiTable.write(f'{idx},{ImpTagText}\n')
                         idx += 1
-                        
+
 else:
     print(f'\nUser abort.')
 if abort == False and clusterPhotos == True:
@@ -1773,7 +1777,7 @@ if abort == False and clusterPhotos == True:
         clusterTreeCuttingDist = int(input("Specify Cluster (Cut) Distance:\n"))
     selectedPhotoList_Guids = []
     if not 'cleanedPhotoList' in locals():
-        cleanedPhotoList = list(cleanedPhotoDict.values())    
+        cleanedPhotoList = list(cleanedPhotoDict.values())
     for cleanedPhotoLocation in cleanedPhotoList:
         selectedPhotoList_Guids.append(cleanedPhotoLocation.photo_guid)
     selectedPhotoList = cleanedPhotoList
@@ -1799,7 +1803,7 @@ if abort == False and clusterPhotos == True:
     for x in range(number_of_clusters):
         currentClusterPhotoGuids = numpy_selectedPhotoList_Guids[clusters==x]
         clusterPhotosGuidsList.append(currentClusterPhotoGuids)
-    noClusterPhotos = list(numpy_selectedPhotoList_Guids[clusters==-1])   
+    noClusterPhotos = list(numpy_selectedPhotoList_Guids[clusters==-1])
     clusterPhotosGuidsList.sort(key=len,reverse=True)
     if clusterTags is False:
         #detect projection if not already
@@ -1817,7 +1821,7 @@ if abort == False and clusterPhotos == True:
         uniqueUserCount = len(set([photo.userid for photo in photos]))
         #get points and project coordinates to suitable UTM
         points = [geometry.Point(pyproj.transform(crs_wgs, crs_proj, photo.lng, photo.lat))
-                  for photo in photos]   
+                  for photo in photos]
         point_collection = geometry.MultiPoint(list(points))
         result_polygon = point_collection.convex_hull #convex hull
         result_centroid = result_polygon.centroid
@@ -1827,7 +1831,7 @@ if abort == False and clusterPhotos == True:
     #noclusterphotos = [cleanedPhotoDict[x] for x in singlePhotoGuidList]
     for photoGuid_noCluster in noClusterPhotos:
         photo = cleanedPhotoDict[photoGuid_noCluster]
-        x, y = pyproj.transform(crs_wgs, crs_proj, photo.lng, photo.lat)  
+        x, y = pyproj.transform(crs_wgs, crs_proj, photo.lng, photo.lat)
         pcenter = geometry.Point(x, y)
         if pcenter is not None and not pcenter.is_empty:
             listOfPhotoClusters.append((pcenter,1))
@@ -1836,7 +1840,7 @@ if abort == False and clusterPhotos == True:
         'geometry': 'Point',
         'properties': {'Join_Count': 'int'},
     }
-    
+
     # Write a new Shapefile
     # WGS1984
     with fiona.open('02_Output/allPhotoCluster.shp', mode='w', driver='ESRI Shapefile', schema=schema,crs=from_epsg(epsg_code)) as c:

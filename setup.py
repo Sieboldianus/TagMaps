@@ -9,7 +9,7 @@ os.environ['TK_LIBRARY'] = os.path.join(PYTHON_INSTALL_DIR, 'tcl', 'tk8.6')
 
 # Dependencies are automatically detected, but it might need fine tuning.
 #build_exe_options = {"packages": ["os"], "excludes": []}
-includes_mod = ['numpy.core._methods', 
+includes_mod = ['numpy.core._methods',
                 'numpy.lib.format',
                 'matplotlib.backends.backend_tkagg',
                 'seaborn',
@@ -19,7 +19,7 @@ includes_mod = ['numpy.core._methods',
                 'scipy.sparse.csgraph._validation',
                 ]#,'scipy.spatial.ckdtree'
 
-include_folders_files = ["C:/Python36/DLLs/tcl86t.dll", 
+include_folders_files = ["C:/Python36/DLLs/tcl86t.dll",
                          "C:/Python36/DLLs/tk86t.dll",
                          'tagmaps/01_Input/',
                          'tagmaps/00_Config/',
@@ -41,7 +41,7 @@ base = None
 #    base = "Win32GUI"
 
 executables = [
-    Executable('tagmaps/generateTagClusters.py', base=base)
+    Executable('tagmaps/__main__.py', base=base)
 ]
 
 setup(  name = "generateTagClusters",
