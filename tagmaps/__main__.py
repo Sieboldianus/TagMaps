@@ -977,6 +977,7 @@ def main():
             overallNumOfUsersPerTag_global.update(taghash)
 
         global topTagsList
+        print_store_log(f"Total unique tags: {len(overallNumOfUsersPerTag_global)}")
         topTagsList = overallNumOfUsersPerTag_global.most_common(tmax)
         #remove all tags that are used by less than x {limitBottomUserCount} photographers
         if removeLongTail is True:
@@ -1496,7 +1497,8 @@ def main():
                 try:
                     listbox.insert(tk.END, f'{item[0]} ({item[1]} user)')
                 except tk.TclError:
-                    emoji = unicode_name(item[0]) #Utils.with_surrogates()
+                    #print(item[0].encode("utf-8"))
+                    emoji = "".join(unicode_name(c) for c in item[0]) #Utils.with_surrogates()
                     listbox.insert(tk.END, f'{emoji} ({item[1]} user)')
             canvas.pack(fill='both',padx=0, pady=0)
             listboxFrame.pack(fill='both',padx=0, pady=0)
