@@ -8,11 +8,7 @@ __pycache__
 delauney_versus_alphaShapes.png
 foo.png
 graph.png
-.vs/standalone_tag_cluster_hdbscan/v15/.suo
-
+scripts/
 .vs/
-
 emojifile.txt
-
 tagmaps.egg-info
-tests/

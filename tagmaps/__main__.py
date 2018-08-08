@@ -148,7 +148,7 @@ def main():
     parser.add_argument('-is',"--ignoreStoplists", type=Utils.str2bool, nargs='?', const=True, default= False)
     parser.add_argument('-ip',"--ignorePlaceCorrections", type=Utils.str2bool, nargs='?', const=True, default= False)
     parser.add_argument('-stat',"--statisticsOnly", type=Utils.str2bool, nargs='?', const=True, default= False)
-    parser.add_argument('-lmuc',"--limitBottomUserCount", type=int, nargs='?', const=True, default=2)
+    parser.add_argument('-lmuc',"--limitBottomUserCount", type=int, nargs='?', const=True, default=5)
     args = parser.parse_args()    # returns data from the options specified (source)
     DSource = args.source
     clusterTags = args.clusterTags
@@ -980,11 +980,15 @@ def main():
         topTagsList = overallNumOfUsersPerTag_global.most_common(tmax)
         #remove all tags that are used by less than x {limitBottomUserCount} photographers
         if removeLongTail is True:
+            print_store_log("Removing long tail..")
+            print_store_log(f"Len Before: {len(topTagsList)}")
             indexMin = next((i for i, (t1, t2) in enumerate(topTagsList) if t2 < limitBottomUserCount), None)
+            print_store_log(f"indexMin: {indexMin}")
             if indexMin:
                 lenBefore = len(topTagsList)
                 del topTagsList[indexMin:]
                 lenAfter = len(topTagsList)
+                print_store_log(f"lenAfter: {lenAfter}")
                 tmax = lenAfter
                 if not lenBefore == lenAfter:
                     print_store_log(f'Filtered {lenBefore - lenAfter} Tags that were used by less than {limitBottomUserCount} users.')
