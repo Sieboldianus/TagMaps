@@ -148,6 +148,7 @@ def main():
     parser.add_argument('-is',"--ignoreStoplists", type=Utils.str2bool, nargs='?', const=True, default= False)
     parser.add_argument('-ip',"--ignorePlaceCorrections", type=Utils.str2bool, nargs='?', const=True, default= False)
     parser.add_argument('-stat',"--statisticsOnly", type=Utils.str2bool, nargs='?', const=True, default= False)
+    parser.add_argument('-lmuc',"--limitBottomUserCount", type=int, nargs='?', const=True, default=2)
     args = parser.parse_args()    # returns data from the options specified (source)
     DSource = args.source
     clusterTags = args.clusterTags
@@ -162,6 +163,7 @@ def main():
     ignoreStoplists = args.ignoreStoplists
     ignorePlaceCorrections = args.ignorePlaceCorrections
     statisticsOnly = args.statisticsOnly
+    limitBottomUserCount = int(args.limitBottomUserCount)
     writeGISCompLine = True # writes placeholder entry after headerline for avoiding GIS import format issues
 
     ##Load Filterlists
@@ -976,16 +978,16 @@ def main():
 
         global topTagsList
         topTagsList = overallNumOfUsersPerTag_global.most_common(tmax)
-        #remove all tags that are used by less than two photographers
+        #remove all tags that are used by less than x {limitBottomUserCount} photographers
         if removeLongTail is True:
-            indexMin = next((i for i, (t1, t2) in enumerate(topTagsList) if t2 < 2), None)
+            indexMin = next((i for i, (t1, t2) in enumerate(topTagsList) if t2 < limitBottomUserCount), None)
             if indexMin:
                 lenBefore = len(topTagsList)
                 del topTagsList[indexMin:]
                 lenAfter = len(topTagsList)
                 tmax = lenAfter
                 if not lenBefore == lenAfter:
-                    print_store_log(f'Filtered {lenBefore - lenAfter} Tags that were used by less than 2 users.')
+                    print_store_log(f'Filtered {lenBefore - lenAfter} Tags that were used by less than {limitBottomUserCount} users.')
         #optional write topemojis to file
         globalEmojiSet = {}
         if clusterEmojis:

@@ -9,5 +9,9 @@
 #-j tokenizeJapanese, default= "False"
 #-w writeCleanedData, default= "True"
 #-c localSaturationCheck (will exclude any tags that are used over the whole area), default= "False"
-%~dp0generateTagClusters.exe -p "False" -o "False" -t "True"
+#-i shapefileIntersect (will clip with referenced shapefile, requires WGS1984 Projection
+#-f shapefilePath
+#-stat statisticsOnly
+#-lmuc limitBottomUserCount, default = 2
+%~dp0__main__.exe -p "False" -o "False" -t "True"
 exit

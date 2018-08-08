@@ -1,6 +1,6 @@
-tagmaps/01_Input/
-tagmaps/01_Input_More/
-tagmaps/02_Output/
+01_Input/
+01_Input_More/
+02_Output/
 notes/
 build/
 notes.md
