@@ -981,18 +981,14 @@ def main():
         topTagsList = overallNumOfUsersPerTag_global.most_common(tmax)
         #remove all tags that are used by less than x {limitBottomUserCount} photographers
         if removeLongTail is True:
-            print_store_log("Removing long tail..")
-            print_store_log(f"Len Before: {len(topTagsList)}")
             indexMin = next((i for i, (t1, t2) in enumerate(topTagsList) if t2 < limitBottomUserCount), None)
-            print_store_log(f"indexMin: {indexMin}")
             if indexMin:
                 lenBefore = len(topTagsList)
                 del topTagsList[indexMin:]
                 lenAfter = len(topTagsList)
-                print_store_log(f"lenAfter: {lenAfter}")
                 tmax = lenAfter
                 if not lenBefore == lenAfter:
-                    print_store_log(f'Filtered {lenBefore - lenAfter} Tags that were used by less than {limitBottomUserCount} users.')
+                    print_store_log(f'Long tail removal: Filtered {lenBefore - lenAfter} Tags that were used by less than {limitBottomUserCount} users.')
         #optional write topemojis to file
         globalEmojiSet = {}
         if clusterEmojis:

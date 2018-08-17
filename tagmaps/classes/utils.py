@@ -146,7 +146,7 @@ class Utils():
     def extract_emojis(str):
       #str = str.decode('utf-32').encode('utf-32', 'surrogatepass')
       #return list(c for c in str if c in emoji.UNICODE_EMOJI)
-      return list(c for c in str if c in emoji.UNICODE_EMOJI and checkEmojiType(c) is True)
+      return list(c for c in str if c in emoji.UNICODE_EMOJI and Utils.checkEmojiType(c) is True)
     #this class is needed to override tkinter window with drag&drop option when overrideredirect = true
     #class App:
     #    global tk
