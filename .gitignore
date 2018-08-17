@@ -13,6 +13,6 @@ scripts/
 emojifile.txt
 tagmaps.egg-info
 tagmaps.pyproj
-tests/pytest-env/
-.pytest_cache/
+tagmaps/tests/pytest-env/
+tagmaps/.pytest_cache/
 tagmaps.sln
