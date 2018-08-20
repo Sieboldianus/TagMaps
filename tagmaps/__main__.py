@@ -107,6 +107,7 @@ topTagsList = []
 lastselectionList = []
 tnum = 0
 tkScalebar = None
+cleanedPhotoList = []
 
 def main():
     from tagmaps.classes.utils import Utils
@@ -1026,6 +1027,7 @@ def main():
             #Optional: set global plotting bounds
             #plt.gca().set_xlim([limXMin, limXMax])
             #plt.gca().set_ylim([limYMin, limYMax])
+            global cleanedPhotoList
             cleanedPhotoList = list(cleanedPhotoDict.values())
             df = pd.DataFrame(cleanedPhotoList)
             points = df.as_matrix(['lng','lat'])
@@ -1783,10 +1785,14 @@ def main():
     if abort == False and clusterPhotos == True:
         print_store_log("########## STEP 6 of 6: Calculating Overall Photo Location Clusters ##########")
 
-        if not 'clusterTreeCuttingDist' in locals():
+        #if not 'clusterTreeCuttingDist' in locals():
+        #global clusterTreeCuttingDist
+        if clusterTreeCuttingDist == 0:
             clusterTreeCuttingDist = int(input("Specify Cluster (Cut) Distance:\n"))
         selectedPhotoList_Guids = []
-        if not 'cleanedPhotoList' in locals():
+        #if not 'cleanedPhotoList' in locals():
+        #global cleanedPhotoList
+        if len(cleanedPhotoList) == 0:
             cleanedPhotoList = list(cleanedPhotoDict.values())
         for cleanedPhotoLocation in cleanedPhotoList:
             selectedPhotoList_Guids.append(cleanedPhotoLocation.photo_guid)
