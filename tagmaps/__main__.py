@@ -755,16 +755,59 @@ def main():
                         photo_shortcode = None#item[18]
                         photo_uploadDate = item[8] #guid
                         photo_idDate = None#photo_uploadDate #use upload date as sorting ID
+                        #Process Spatial Query first (if skipping necessary)
+                        if SortOutPlaces:
+                            if not item[4] == "":
+                                if item[4] in SortOutPlaces_set:
+                                    skippedCount += 1
+                                    continue
+                        if item[2] == "" or item[3] == "":
+                            count_non_geotagged += 1
+                            continue #skip non-geotagged medias
+                        else:
+                            if CorrectPlaces and not item[4] and item[4] in CorrectPlaceLatLng_dict:
+                                photo_latitude = Decimal(CorrectPlaceLatLng_dict[item[4]][0]) #correct lat/lng
+                                photo_longitude = Decimal(CorrectPlaceLatLng_dict[item[4]][1]) #correct lat/lng
+                            else:
+                                photo_latitude = Decimal(item[2]) #guid
+                                photo_longitude = Decimal(item[3]) #guid
+                            setLatLngBounds(photo_latitude,photo_longitude)
+                        photo_locID = str(photo_latitude) + ':' + str(photo_longitude) #create loc_id from lat/lng
+                        #assign lat/lng coordinates from dict
+                        if shapefileIntersect:
+                            #skip all outside shapefile
+                            if photo_locID in shapeFileExcludelocIDhash:
+                                skippedCount += 1
+                                continue
+                            if not photo_locID in shapeFileIncludedlocIDhash:
+                                LngLatPoint = Point(photo_longitude, photo_latitude)
+                                if not LngLatPoint.within(shp_geom):
+                                    skippedCount += 1
+                                    shapeFileExcludelocIDhash.add(photo_locID)
+                                    continue
+                                else:
+                                    shapeFileIncludedlocIDhash.add(photo_locID)
                         if clusterTags or clusterEmojis or topicModeling:
                             photo_caption = item[9]
                         else:
                             photo_caption = ""
-                        photo_likes = None#item[13]
+                        photo_likes = 0
+                        if not item[9] == "":
+                            try:
+                                photo_likes = int(item[13])
+                            except TypeError:
+                                pass
+                            except ValueError:
+                                pass
                         photo_tags = set()
                         if clusterTags or topicModeling:
                             photo_tags = set(filter(None, item[11].strip('"').lstrip('{').rstrip('}').lower().split(","))) #[1:-1] removes curly brackets, second [1:-1] removes quotes
                             #Filter tags based on two stoplists
-                            photo_tags,count_tags,count_skipped = Utils.filterTags(photo_tags,SortOutAlways_set,SortOutAlways_inStr_set)
+                            if ignoreStoplists:
+                                count_tags = len(photo_tags)
+                                count_skipped = 0
+                            else:
+                                photo_tags,count_tags,count_skipped = Utils.filterTags(photo_tags,SortOutAlways_set,SortOutAlways_inStr_set)
                             count_tags_global += count_tags
                             count_tags_skipped += count_skipped
                         if clusterEmojis:
@@ -778,18 +821,15 @@ def main():
                         photo_comments = None#item[14]
                         photo_mediatype = None#item[19]
                         photo_locName = item[4] #guid
-                        if item[2] == "" or item[3] == "":
-                            count_non_geotagged += 1
-                            continue #skip non-geotagged medias
-                        else:
-                            photo_latitude = Decimal(item[2]) #guid
-                            photo_longitude = Decimal(item[3]) #guid
-                            setLatLngBounds(photo_latitude,photo_longitude)
-                        photo_locID = str(photo_latitude) + ':' + str(photo_longitude) #create loc_id from lat/lng
                         #empty for Instagram:
                         photo_mTags = ""
                         photo_dateTaken = ""
                         photo_views = 0
+                        #if not item[8] == "":
+                        #    try:
+                        #        photo_views = int(item[8])
+                        #    except TypeError:
+                        #        pass
                 elif DSource == "fromSensorData_InfWuerz":
                     if len(item) < 5:
                         #skip
