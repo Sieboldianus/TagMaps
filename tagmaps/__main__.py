@@ -302,6 +302,7 @@ def main():
     count_tags_skipped = 0
     shapeFileExcludelocIDhash = set()
     shapeFileIncludedlocIDhash  = set()
+    TotalTagCount_Counter_global = collections.Counter()
 
     def setLatLngBounds(Lat,Lng):
         global limLatMin, limLatMax, limLngMin, limLngMax
@@ -920,6 +921,7 @@ def main():
                 ##Calculate toplists
                 if photo_tags:
                     UserDict_TagCounters_global[photo_userid].update(photo_tags) #add tagcount of this media to overall tagcount or this user, initialize counter for user if not already done
+                    TotalTagCount_Counter_global.update(photo_tags)
                 msg = f'Cleaned output to {len(distinctLocations_set):02d} distinct locations from {count_glob:02d} photos (File {partcount} of {len(filelist)}) - Skipped Media: {skippedCount} - Skipped Tags: {count_tags_skipped} of {count_tags_global}'
                 print(msg, end='\r')
     #Append last message to log file
@@ -1019,6 +1021,7 @@ def main():
 
         global topTagsList
         print_store_log(f"Total unique tags: {len(overallNumOfUsersPerTag_global)}")
+
         topTagsList = overallNumOfUsersPerTag_global.most_common(tmax)
         #remove all tags that are used by less than x {limitBottomUserCount} photographers
         if removeLongTail is True:
@@ -1030,6 +1033,16 @@ def main():
                 tmax = lenAfter
                 if not lenBefore == lenAfter:
                     print_store_log(f'Long tail removal: Filtered {lenBefore - lenAfter} Tags that were used by less than {limitBottomUserCount} users.')
+
+        # Calculate Total Tags for selected topTagsList (Long Tail Stat)
+        totalTagCount = 0
+        for tag in topTagsList:
+            count = TotalTagCount_Counter_global.get(tag[0])
+            if count:
+                totalTagCount += count
+        #print(TotalTagCount_Counter_global.most_common(3))
+        print_store_log(f'Total tags count for selected Tags List (Top {tmax}): {totalTagCount}.')
+
         #optional write topemojis to file
         globalEmojiSet = {}
         if clusterEmojis:
