@@ -5,11 +5,13 @@ import sys
 
 with open('README.md') as f:
     long_description = f.read()
-     
+
+with open('VERSION') as version_file:
+    version_var = version_file.read().strip()         
      
 ## setuptools dev
 setup(  name = "tagmaps",
-        version = "0.9.3",
+        version = version_var,
         description = "Tag Clustering for Tag Maps",
         long_description=long_description,
         long_description_content_type='text/markdown',
@@ -18,7 +20,12 @@ setup(  name = "tagmaps",
         url='https://gitlab.vgiscience.de/ad/TagCluster',
         license='GNU GPLv3 or any higher',
         packages=['tagmaps'],
+        include_package_data=True,
         install_requires=[
+            'shapely',
+            'emoji',
+            'tkinter',
+            'hdbscan'
         ],
         entry_points={
         'console_scripts': [

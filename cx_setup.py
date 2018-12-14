@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import sys
 from cx_Freeze import setup, Executable
 
@@ -7,6 +9,9 @@ PYTHON_INSTALL_DIR = os.path.dirname(os.path.dirname(os.__file__))
 os.environ['TCL_LIBRARY'] = os.path.join(PYTHON_INSTALL_DIR, 'tcl', 'tcl8.6')
 os.environ['TK_LIBRARY'] = os.path.join(PYTHON_INSTALL_DIR, 'tcl', 'tk8.6')
 
+with open('VERSION') as version_file:
+    version_var = version_file.read().strip()   
+    
 # Dependencies are automatically detected, but it might need fine tuning.
 #build_exe_options = {"packages": ["os"], "excludes": []}
 includes_mod = ["tkinter.filedialog",
@@ -46,7 +51,7 @@ executables = [
 ]
 
 setup(  name = "tagmaps",
-        version = "0.9.3",
+        version = version_var,
         description = "Tag Clustering for Tag Maps",
         options = {'build_exe': {'includes': includes_mod, 'include_files': include_folders_files,'packages':packages_mod,'excludes':excludes_mod}},
         executables = executables)
