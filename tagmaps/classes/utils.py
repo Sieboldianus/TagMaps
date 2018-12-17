@@ -25,6 +25,11 @@ from scipy.spatial import Delaunay
 import argparse
 
 class Utils():
+    #def set_stdout_replace():
+    #    """Set Output to Replace in case of encoding issues (console/windows)
+    #    """
+    #    sys.stdout = io.TextIOWrapper(sys.stdout.detach(), sys.stdout.encoding, 'replace')
+
     def query_yes_no(question, default="yes"):
         """Ask a yes/no question via raw_input() and return their answer.
 

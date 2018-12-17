@@ -12,6 +12,9 @@ Tag Maps Clustering
 __author__      = "Alexander Dunkel"
 __license__   = "GNU GPLv3"
 
+import io
+import logging
+
 import csv
 import os
 os.system('mode con: cols=197 lines=40')
@@ -26,6 +29,7 @@ import collections
 import tkinter as tk
 from tkinter.messagebox import showerror
 import tkinter.messagebox
+
 
 #from .utils import *
 import datetime
@@ -113,21 +117,23 @@ def main():
     ######################
     ####config section####
     ######################
-    log_file = "02_Output/log.txt"
-    log_texts_list = []
 
-    def print_store_log(text,end=None):
-        if end is None:
-            addEnd = False
-            end = '\n'
-        else:
-            addEnd = True
-        #watch out for non-printable characters in console
-        try:
-            print(text,end=end)
-        except UnicodeEncodeError:
-            print("#".join(re.findall("[a-zA-Z]+", text)))
-        log_texts_list.append(text + end)
+    log = set_logger()
+    logging.getLogger("fiona.collection").disabled = True
+    #log_texts_list = []
+
+    #def log.info(text,end=None):
+    #    if end is None:
+    #        addEnd = False
+    #        end = '\n'
+    #    else:
+    #        addEnd = True
+    #    #watch out for non-printable characters in console
+    #    try:
+    #        print(text,end=end)
+    #    except UnicodeEncodeError:
+    #        print("#".join(re.findall("[a-zA-Z]+", text)))
+    #    log_texts_list.append(text + end)
 
     ##args
     config = BaseConfig()
@@ -219,7 +225,7 @@ def main():
         sys.exit("Source not supported yet.")
 
     print('\n')
-    print_store_log("########## STEP 1 of 6: Data Cleanup ##########")
+    log.info("########## STEP 1 of 6: Data Cleanup ##########")
     if (len(filelist) == 0):
         sys.exit(f'No *.json/csv/txt files found.')
     else:
@@ -861,17 +867,20 @@ def main():
                     TotalTagCount_Counter_global.update(photo_tags)
                 msg = f'Cleaned output to {len(distinctLocations_set):02d} distinct locations from {count_glob:02d} photos (File {partcount} of {len(filelist)}) - Skipped Media: {skippedCount} - Skipped Tags: {count_tags_skipped} of {count_tags_global}'
                 print(msg, end='\r')
-    #Append last message to log file
-    log_texts_list.append(msg)
+            #else:
+            #    #Append last message directly to log file
+            #    log.propagate = False
+            #    log.info(msg)
+            #    log.propagate = True
     total_distinct_locations = len(distinctLocations_set)
-    print_store_log(f'\nTotal users: {len(LocationsPerUserID_dict)} (UC)')
-    print_store_log(f'Total photos: {count_glob:02d} (PC)')
-    print_store_log(f'Total tags (PTC): {count_tags_global}')
-    print_store_log(f'Total emojis (PEC): {count_emojis_global}')
-    print_store_log(f'Total user photo locations (UPL): {len(distinctUserLocations_set)}')
+    log.info(f'\nTotal users: {len(LocationsPerUserID_dict)} (UC)')
+    log.info(f'Total photos: {count_glob:02d} (PC)')
+    log.info(f'Total tags (PTC): {count_tags_global}')
+    log.info(f'Total emojis (PEC): {count_emojis_global}')
+    log.info(f'Total user photo locations (UPL): {len(distinctUserLocations_set)}')
 
     #boundary:
-    print_store_log(f'Bounds are: Min {float(limLngMin)} {float(limLatMin)} Max {float(limLngMax)} {float(limLatMax)}')
+    log.info(f'Bounds are: Min {float(limLngMin)} {float(limLatMin)} Max {float(limLngMax)} {float(limLatMax)}')
 
     #create structure for tuple with naming for easy referencing
     cleanedPhotoLocation_tuple = namedtuple('cleanedPhotoLocation_tuple', 'source lat lng photo_guid photo_owner userid photo_caption photo_dateTaken photo_uploadDate photo_views photo_tags photo_thumbnail photo_mTags photo_likes photo_comments photo_shortcode photo_mediatype photo_locName photo_locID')
@@ -950,14 +959,14 @@ def main():
                 datawriter.writerow([" ".join(topics),"{" + ",".join(UserPhotoIDS_dict.get(user_key,None)) + "}",str(user_key)])
 
     if (config.cluster_tags or config.cluster_emoji):
-        print_store_log("########## STEP 2 of 6: Tag Ranking ##########")
+        log.info("########## STEP 2 of 6: Tag Ranking ##########")
         overallNumOfUsersPerTag_global = collections.Counter()
         for user_key, taghash in UserDict_TagCounters_global.items():
             #taghash contains unique values (= strings) for each user, thus summing up these taghashes counts each user only once per tag
             overallNumOfUsersPerTag_global.update(taghash)
 
         global topTagsList
-        print_store_log(f"Total unique tags: {len(overallNumOfUsersPerTag_global)}")
+        log.info(f"Total unique tags: {len(overallNumOfUsersPerTag_global)}")
 
         topTagsList = overallNumOfUsersPerTag_global.most_common(tmax)
         #remove all tags that are used by less than x {config.limit_bottom_user_count} photographers
@@ -969,7 +978,7 @@ def main():
                 lenAfter = len(topTagsList)
                 tmax = lenAfter
                 if not lenBefore == lenAfter:
-                    print_store_log(f'Long tail removal: Filtered {lenBefore - lenAfter} Tags that were used by less than {config.limit_bottom_user_count} users.')
+                    log.info(f'Long tail removal: Filtered {lenBefore - lenAfter} Tags that were used by less than {config.limit_bottom_user_count} users.')
 
         # Calculate Total Tags for selected topTagsList (Long Tail Stat)
         totalTagCount = 0
@@ -978,7 +987,7 @@ def main():
             if count:
                 totalTagCount += count
         #print(TotalTagCount_Counter_global.most_common(3))
-        print_store_log(f'Total tags count for selected Tags List (Top {tmax}): {totalTagCount}.')
+        log.info(f'Total tags count for selected Tags List (Top {tmax}): {totalTagCount}.')
 
         #optional write topemojis to file
         globalEmojiSet = {}
@@ -1002,7 +1011,7 @@ def main():
         if config.statistics_only == False:
             singleMostUsedtag = topTagsList[0]
             now = time.time()
-            print_store_log("########## STEP 3 of 6: Tag Location Clustering ##########")
+            log.info("########## STEP 3 of 6: Tag Location Clustering ##########")
             #prepare some variables
             label_size = 10
             #plt.rcParams['xtick.labelsize'] = label_size
@@ -1178,7 +1187,7 @@ def main():
                         text = unicode_name(toptag[0])
                     else:
                         text = toptag[0]
-                    print_store_log(f'({tnum} of {tmax}) Found {len(selectedPhotoList_Guids)} photos (UPL) for tag \'{text}\' ({percentageOfTotalLocations:.0f}% of total distinct locations in area)', end=" ")
+                    print(f'({tnum} of {tmax}) Found {len(selectedPhotoList_Guids)} photos (UPL) for tag \'{text}\' ({percentageOfTotalLocations:.0f}% of total distinct locations in area)', end=" ")
 
 
                 #clustering
@@ -1535,7 +1544,7 @@ def main():
                     numpy_selectedPhotoList_Guids = np.asarray(selectedPhotoList_Guids)
                     mask_noisy = (clusters == -1)
                     number_of_clusters = len(np.unique(clusters[~mask_noisy]))
-                    print_store_log(f'--> {number_of_clusters} cluster.')
+                    print(f'--> {number_of_clusters} cluster.')
                     clusterPhotosGuidsList = []
                     for x in range(number_of_clusters):
                         currentClusterPhotoGuids = numpy_selectedPhotoList_Guids[clusters==x]
@@ -1571,10 +1580,10 @@ def main():
                     else:
                         number_of_clusters = len(np.unique(clusters[~mask_noisy])) #mit noisy (=0)
                     #if number_of_clusters > 200:
-                    #    print_store_log("--> Too many, skipped for this scale.")
+                    #    log.info("--> Too many, skipped for this scale.")
                     #    continue
                     if not number_of_clusters == 0:
-                        print_store_log(f'--> {number_of_clusters} cluster.')
+                        print(f'--> {number_of_clusters} cluster.')
                         tnum += 1
                         photo_num = 0
                         #clusternum_photolist = zip(clusters,selectedPhotoList)
@@ -1589,7 +1598,7 @@ def main():
                         if not len(clusterPhotosGuidsList) == 0:
                             clustersPerTag[toptag[0]] = clusterPhotosGuidsList
                     else:
-                        print_store_log("--> No cluster.")
+                        print("--> No cluster.")
                         noClusterPhotos_perTag_DictOfLists[toptag[0]] = list(numpy_selectedPhotoList_Guids)
                     #for x in clusters:
                     #    #photolist = []
@@ -1611,7 +1620,7 @@ def main():
                     #    break
                         #plt.savefig('foo.png')
                         #sys.exit()
-                print_store_log("########## STEP 4 of 6: Generating Alpha Shapes ##########")
+                log.info("########## STEP 4 of 6: Generating Alpha Shapes ##########")
                 #if (tnum % 50 == 0):#modulo: if division has no remainder, force update cmd output
                 sys.stdout.flush()
                 #for each cluster of points, calculate boundary shape and add statistics (HImpTag etc.)
@@ -1656,11 +1665,11 @@ def main():
                             #result_polygon = pcoordinate.buffer(min(distXLng,distYLat)/100,resolution=3)
                             if result_polygon is not None and not result_polygon.is_empty:
                                 listOfAlphashapesAndMeta.append((result_polygon,1,max(single_photo.photo_views,single_photo.photo_likes),1,str(toptag[0]),toptag[1],1,1,1,shapetype))
-                print_store_log(f'{len(listOfAlphashapesAndMeta)} Alpha Shapes. Done.')
+                log.info(f'{len(listOfAlphashapesAndMeta)} Alpha Shapes. Done.')
                 if config.local_saturation_check and not saturationExcludeCount == 0:
-                    print_store_log(f'Excluded {saturationExcludeCount} Tags on local saturation check.')
+                    log.info(f'Excluded {saturationExcludeCount} Tags on local saturation check.')
                 ##Output Boundary Shapes in merged Shapefile##
-                print_store_log("########## STEP 5 of 6: Writing Results to Shapefile ##########")
+                log.info("########## STEP 5 of 6: Writing Results to Shapefile ##########")
 
                ##Calculate best UTM Zone SRID/EPSG Code
                #input_lon_center = bound_points_shapely.centroid.coords[0][0] #True centroid (coords may be multipoint)
@@ -1775,7 +1784,7 @@ def main():
     else:
         print(f'\nUser abort.')
     if abort == False and config.cluster_photos == True:
-        print_store_log("########## STEP 6 of 6: Calculating Overall Photo Location Clusters ##########")
+        log.info("########## STEP 6 of 6: Calculating Overall Photo Location Clusters ##########")
 
         #if not 'clusterTreeCuttingDist' in locals():
         #global clusterTreeCuttingDist
@@ -1804,7 +1813,7 @@ def main():
         numpy_selectedPhotoList_Guids = np.asarray(selectedPhotoList_Guids)
         mask_noisy = (clusters == -1)
         number_of_clusters = len(np.unique(clusters[~mask_noisy])) #mit noisy (=0)
-        print_store_log(f'--> {number_of_clusters} Photo cluster.')
+        print(f'--> {number_of_clusters} Photo cluster.')
         #clusternum_photolist = zip(clusters,selectedPhotoList)
         #clusterPhotosList = [[] for x in range(number_of_clusters)]
         clusterPhotosGuidsList = []
@@ -1865,14 +1874,32 @@ def main():
     hours, rem = divmod(later-now, 3600)
     minutes, seconds = divmod(rem, 60)
     difference = int(later - now)
-    reportMsg = f'\nDone.\n{int(hours):0>2} Hours {int(minutes):0>2} Minutes and {seconds:05.2f} Seconds passed.'
-    log_texts_list.append(reportMsg)
-    with open(log_file, "w", encoding='utf-8') as logfile_a:
-        for logtext in log_texts_list:
-            logfile_a.write(logtext)
-    print(reportMsg)
+    log.info(f'\nDone.\n{int(hours):0>2} Hours {int(minutes):0>2} Minutes and {seconds:05.2f} Seconds passed.')
+    #log_texts_list.append(reportMsg)
+    #with open(log_file, "w", encoding='utf-8') as logfile_a:
+    #    for logtext in log_texts_list:
+    #        logfile_a.write(logtext)
+    #print(reportMsg)
     input("Press any key to exit...")
     sys.exit()
+
+def set_logger():
+    """ Set logging handler manually, so we can also print to console while logging to file
+    """
+    __log_file = "02_Output/log.txt"
+
+    # Set Output to Replace in case of encoding issues (console/windows)
+    sys.stdout = io.TextIOWrapper(sys.stdout.detach(), sys.stdout.encoding, 'replace')
+    # Create logger with specific name
+    log = logging.getLogger("tagmaps")
+    log.format = '%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s'
+    log.datefmt = '%H:%M:%S'
+    log.setLevel(logging.DEBUG)
+    log.addHandler(logging.FileHandler(__log_file, 'w', 'utf-8'))
+    log.addHandler(logging.StreamHandler())
+    # flush once to clear console
+    sys.stdout.flush()
+    return log
 
 if __name__ == "__main__":
     main()
