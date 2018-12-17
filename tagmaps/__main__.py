@@ -1,9 +1,8 @@
 #!/usr/bin/env python
-# coding: utf-8
-# generateTagClusters
+# -*- coding: utf-8 -*-
 
 """
-generateTagClusters.py
+Tag Maps Clustering
 
 - will read in geotagged (lat/lng) decimal degree point data
 - will generate HDBSCAN Cluster Hierarchy
@@ -12,7 +11,6 @@ generateTagClusters.py
 
 __author__      = "Alexander Dunkel"
 __license__   = "GNU GPLv3"
-__version__ = "0.9.3"
 
 import csv
 import os
@@ -110,7 +108,8 @@ tkScalebar = None
 cleanedPhotoList = []
 
 def main():
-    from tagmaps.classes.utils import Utils
+    from .classes.utils import Utils
+    from .config.config import BaseConfig
     ######################
     ####config section####
     ######################
@@ -131,63 +130,10 @@ def main():
         log_texts_list.append(text + end)
 
     ##args
-    #Choose one of four options for Input data type:
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-s', "--source", default= "fromLBSN")     # naming it "source"
-    parser.add_argument('-r', "--removeLongTail", type=Utils.str2bool, nargs='?', const=True,default= True)
-    parser.add_argument('-e', "--EPSG")
-    parser.add_argument('-t', "--clusterTags", type=Utils.str2bool, nargs='?', const=True,default= True)
-    parser.add_argument('-p', "--clusterPhotos", type=Utils.str2bool, nargs='?', const=True,default= True)
-    parser.add_argument('-c', "--localSaturationCheck", type=Utils.str2bool, nargs='?', const=True, default= False)
-    parser.add_argument('-j', "--tokenizeJapanese", type=Utils.str2bool, nargs='?', const=True, default= False)
-    parser.add_argument('-o', "--clusterEmojis", type=Utils.str2bool, nargs='?', const=True, default= True)
-    parser.add_argument('-m', "--topicModeling", type=Utils.str2bool, nargs='?', const=True, default= False)
-    parser.add_argument('-w', "--writeCleanedData", type=Utils.str2bool, nargs='?', const=True, default= True)
-    parser.add_argument('-i', "--shapefileIntersect", type=Utils.str2bool, nargs='?', const=True, default= False)
-    parser.add_argument('-f', "--shapefilePath", default= "")
-    parser.add_argument('-is',"--ignoreStoplists", type=Utils.str2bool, nargs='?', const=True, default= False)
-    parser.add_argument('-ip',"--ignorePlaceCorrections", type=Utils.str2bool, nargs='?', const=True, default= False)
-    parser.add_argument('-stat',"--statisticsOnly", type=Utils.str2bool, nargs='?', const=True, default= False)
-    parser.add_argument('-lmuc',"--limitBottomUserCount", type=int, nargs='?', const=True, default=5)
-    args = parser.parse_args()    # returns data from the options specified (source)
-    DSource = args.source
-    clusterTags = args.clusterTags
-    clusterPhotos = args.clusterPhotos
-    removeLongTail = args.removeLongTail
-    clusterEmojis = args.clusterEmojis
-    topicModeling  = args.topicModeling
-    writeCleanedData = args.writeCleanedData
-    localSaturationCheck = args.localSaturationCheck
-    shapefileIntersect = args.shapefileIntersect
-    shapefilePath = args.shapefilePath
-    ignoreStoplists = args.ignoreStoplists
-    ignorePlaceCorrections = args.ignorePlaceCorrections
-    statisticsOnly = args.statisticsOnly
-    limitBottomUserCount = int(args.limitBottomUserCount)
-    writeGISCompLine = True # writes placeholder entry after headerline for avoiding GIS import format issues
+    config = BaseConfig()
+    config.parse_args()
+    config.load_filterlists()
 
-    ##Load Filterlists
-    SortOutAlways_file = "00_Config/SortOutAlways.txt"
-    SortOutAlways_inStr_file = "00_Config/SortOutAlways_inStr.txt"
-    SortOutAlways_set = set()
-    SortOutAlways_inStr_set = set()
-    if not os.path.isfile(SortOutAlways_file):
-        print(f'{SortOutAlways_file} not found.')
-    #else read logfile
-    else:
-        if ignoreStoplists == False:
-            with open(SortOutAlways_file, newline='', encoding='utf8') as f: #read each unsorted file and sort lines based on datetime (as string)
-                SortOutAlways_set = set([line.lower().rstrip('\r\n') for line in f])
-            print(f'Loaded {len(SortOutAlways_set)} stoplist items.')
-    if not os.path.isfile(SortOutAlways_inStr_file):
-        print(f'{SortOutAlways_inStr_file} not found.')
-    #else read logfile
-    else:
-        if ignoreStoplists == False:
-            with open(SortOutAlways_inStr_file, newline='', encoding='utf8') as f: #read each unsorted file and sort lines based on datetime (as string)
-                SortOutAlways_inStr_set = set([line.lower().rstrip('\r\n') for line in f])
-            print(f'Loaded {len(SortOutAlways_inStr_set)} inStr stoplist items.')
     #manually filter places or correct lat/lng
     SortOutPlaces_file = "00_Config/SortOutPlaces.txt"
     CorrectPlaceLatLng_file = "00_Config/CorrectPlaceLatLng.txt"
@@ -195,7 +141,7 @@ def main():
     CorrectPlaceLatLng_dict = dict()
     SortOutPlaces = False
     if os.path.isfile(SortOutPlaces_file):
-        if ignoreStoplists == False:
+        if config.ignore_stoplists == False:
             with open(SortOutPlaces_file, newline='', encoding='utf8') as f:
                 f.readline()
                 #placeid
@@ -204,7 +150,7 @@ def main():
             print(f'Loaded {len(SortOutPlaces_set)} stoplist places.')
     CorrectPlaces = False
     if os.path.isfile(CorrectPlaceLatLng_file):
-        if ignorePlaceCorrections == False:
+        if config.ignore_place_corrections == False:
             with open(CorrectPlaceLatLng_file, newline='', encoding='utf8') as f:
                 f.readline()
                 for line in f:
@@ -217,13 +163,13 @@ def main():
             print(f'Loaded {len(CorrectPlaceLatLng_dict)} place lat/lng corrections.')
 
     ###SHAPEFILESTUFF###
-    if shapefileIntersect:
-        if shapefilePath == "":
+    if config.shapefile_intersect:
+        if config.shapefile_path == "":
             sys.exit(f'No Shapefile-Path specified. Exiting..')
         from shapely.geometry import Polygon
         from shapely.geometry import shape
         from shapely.geometry import Point
-        PShape = fiona.open(shapefilePath)
+        PShape = fiona.open(config.shapefile_path)
         ######Single Polygon:######
         first = PShape.next()
         print("Loaded Shapefile with " + str(len(first['geometry']['coordinates'][0])) + " Vertices.") # (GeoJSON format)
@@ -236,18 +182,9 @@ def main():
         #print("Loaded Shapefile with Vertices ", sum([len(poly[0]) for poly in vcount])) # (GeoJSON format)
     ###END SHAPEFILESTUFF###
 
-    if args.EPSG is None:
-        overrideCRS = None
-    else:
-        #try loading Custom CRS at beginning
-        crs_proj = pyproj.Proj(init='epsg:{0}'.format(overrideCRS))
-        print("Custom CRS set: " + str(crs_proj.srs))
-        epsg_code = overrideCRS
-
-    tokenizeJapanese = args.tokenizeJapanese
-    if tokenizeJapanese:
+    if config.tokenize_japanese:
         from jNlp.jTokenize import jTokenize
-    #print(str(removeLongTail))
+    #print(str(config.remove_long_tail))
     pathname = os.getcwd()
     if not os.path.exists(pathname + '/02_Output/'):
         os.makedirs(pathname + '/02_Output/')
@@ -262,17 +199,17 @@ def main():
     count_glob = 0
     partcount = 0
     #filenameprev = ""
-    if (DSource == "fromFlickr_CSV"):
+    if (config.d_source == "fromFlickr_CSV"):
         filelist = glob('01_Input/*.txt')
         GMTTimetransform = 0
         guid_columnNameID = 5 #guid
         Sourcecode = 2
         quoting_opt = csv.QUOTE_NONE
-    elif (DSource == "fromInstagram_PGlbsnEmoji") or (DSource == "fromLBSN") or (DSource == "fromLBSN_old"):
+    elif (config.d_source == "fromInstagram_PGlbsnEmoji") or (config.d_source == "fromLBSN") or (config.d_source == "fromLBSN_old"):
         filelist = glob('01_Input/*.csv')
         guid_columnNameID = 1 #guid
         quoting_opt = csv.QUOTE_MINIMAL
-    elif (DSource == "fromSensorData_InfWuerz"):
+    elif (config.d_source == "fromSensorData_InfWuerz"):
         filelist = glob('01_Input/*.csv')
         GMTTimetransform = 0
         guid_columnNameID = 1 #guid
@@ -286,7 +223,7 @@ def main():
     if (len(filelist) == 0):
         sys.exit(f'No *.json/csv/txt files found.')
     else:
-        if clusterTags or clusterEmojis:
+        if config.cluster_tags or config.cluster_emoji:
             inputtext = input(f'Files to process: {len(filelist)}. \nOptional: Enter a Number for the variety of Tags to process (Default is 1000)\nPress Enter to proceed.. \n')
             if inputtext == "" or not inputtext.isdigit():
                 tmax = 1000
@@ -323,13 +260,13 @@ def main():
     photoIDHash = set()
     LocationsPerUserID_dict = defaultdict(set)
     UserLocationTagList_dict = defaultdict(set)
-    if topicModeling:
+    if config.topic_modeling:
         UserTopicList_dict  = defaultdict(set)
         UserPhotoIDS_dict  = defaultdict(set)
         UserPhotoFirstThumb_dict = defaultdict(str)
     UserLocationWordList_dict = defaultdict(set)
     UserLocationsFirstPhoto_dict = defaultdict(set)
-    if clusterEmojis:
+    if config.cluster_emoji:
         overallNumOfEmojis_global = collections.Counter()
 
     #UserDict_TagCounters = defaultdict(set)
@@ -353,10 +290,10 @@ def main():
         #    guid_list.clear() #duplicate detection only for last 500k items
         with open(file_name, newline='', encoding='utf8') as f: # On input, if newline is None, universal newlines mode is enabled. Lines in the input can end in '\n', '\r', or '\r\n', and these are translated into '\n' before being returned to the caller.
             partcount += 1
-            if (DSource == "fromInstagram_LocMedia_CSV" or DSource == "fromLBSN" or DSource == "fromLBSN_old" or DSource == "fromInstagram_UserMedia_CSV" or DSource == "fromFlickr_CSV" or DSource == "fromInstagram_PGlbsnEmoji" or DSource == "fromSensorData_InfWuerz"):
+            if (config.d_source == "fromInstagram_LocMedia_CSV" or config.d_source == "fromLBSN" or config.d_source == "fromLBSN_old" or config.d_source == "fromInstagram_UserMedia_CSV" or config.d_source == "fromFlickr_CSV" or config.d_source == "fromInstagram_PGlbsnEmoji" or config.d_source == "fromSensorData_InfWuerz"):
                 photolist = csv.reader(f, delimiter=',', quotechar='"', quoting=quoting_opt) #QUOTE_NONE is important because media saved from php/Flickr does not contain any " check; only ',' are replaced
                 next(photolist, None)  # skip headerline
-            elif (DSource == "fromInstagram_HashMedia_JSON"):
+            elif (config.d_source == "fromInstagram_HashMedia_JSON"):
                 photolist = photolist + json.loads(f.read())
             #PhotosPerDayLists = defaultdict(list)
             #keyCreatedHash = set()
@@ -367,7 +304,7 @@ def main():
                     continue
                 else:
                     photoIDHash.add(item[guid_columnNameID])
-                if (DSource == "fromInstagram_LocMedia_CSV"):
+                if (config.d_source == "fromInstagram_LocMedia_CSV"):
                     if len(item) < 15:
                         #skip
                         skippedCount += 1
@@ -393,7 +330,7 @@ def main():
                             photo_latitude = loc_dict[photo_locID][0]
                             photo_longitude = loc_dict[photo_locID][1]
                             #setLatLngBounds(photo_latitude,photo_longitude)
-                            if shapefileIntersect:
+                            if config.shapefile_intersect:
                                 #skip all outside shapefile
                                 if photo_locID in shapeFileExcludelocIDhash:
                                     count_outside_shape += 1
@@ -424,7 +361,7 @@ def main():
                         photo_mTags = ""
                         photo_dateTaken = ""
                         photo_views = ""
-                elif DSource == "fromInstagram_UserMedia_CSV":
+                elif config.d_source == "fromInstagram_UserMedia_CSV":
                     if len(item) < 15:
                         #skip
                         skippedCount += 1
@@ -452,7 +389,7 @@ def main():
                         if (photo_locID in loc_dict):
                             photo_latitude = loc_dict[photo_locID][0]
                             photo_longitude = loc_dict[photo_locID][1]
-                            if shapefileIntersect:
+                            if config.shapefile_intersect:
                                 #skip all outside shapefile
                                 if photo_locID in shapeFileExcludelocIDhash:
                                     count_outside_shape += 1
@@ -476,7 +413,7 @@ def main():
                         photo_mTags = ""
                         photo_dateTaken = ""
                         photo_views = ""
-                elif DSource == "fromFlickr_CSV":
+                elif config.d_source == "fromFlickr_CSV":
                     if len(item) < 12:
                         #skip
                         skippedCount += 1
@@ -493,10 +430,10 @@ def main():
                         photo_caption = item[3]
                         photo_likes = ""
                         #Filter tags based on two stoplists
-                        if clusterTags or topicModeling:
+                        if config.cluster_tags or config.topic_modeling:
                             photo_tags = set(filter(None, item[11].lower().split(";"))) #filter empty strings from photo_tags list and convert to set (hash) with unique values
                             #Filter tags based on two stoplists
-                            photo_tags, count_tags, count_skipped = Utils.filterTags(photo_tags,SortOutAlways_set,SortOutAlways_inStr_set)
+                            photo_tags, count_tags, count_skipped = Utils.filterTags(photo_tags,config.sort_out_always_set,config.sort_out_always_instr_set)
                             count_tags_global += count_tags
                             count_tags_skipped += count_skipped
                         else:
@@ -521,7 +458,7 @@ def main():
                         photo_locID = str(photo_latitude) + ':' + str(photo_longitude) #create loc_id from lat/lng
                         photo_mTags = "" #not used currently but available
                         photo_views = item[10]
-                elif (DSource == "fromInstagram_HashMedia_JSON"):
+                elif (config.d_source == "fromInstagram_HashMedia_JSON"):
                     photo_source = Sourcecode #HashMediaCode
                     if item.get('owner'):
                         photo_userid = item["owner"]["id"]
@@ -584,7 +521,7 @@ def main():
                     if (photo_locID in loc_dict):
                         photo_latitude = loc_dict[photo_locID][0]
                         photo_longitude = loc_dict[photo_locID][1]
-                        if shapefileIntersect:
+                        if config.shapefile_intersect:
                             #skip all outside shapefile
                             if photo_locID in shapeFileExcludelocIDhash:
                                 count_outside_shape += 1
@@ -617,7 +554,7 @@ def main():
                     photo_mTags = ""
                     photo_dateTaken = ""
                     photo_views = ""
-                elif DSource == "fromInstagram_PGlbsnEmoji":
+                elif config.d_source == "fromInstagram_PGlbsnEmoji":
                     if len(item) < 15:
                         #skip
                         skippedCount += 1
@@ -657,7 +594,7 @@ def main():
                         photo_mTags = ""
                         photo_dateTaken = ""
                         photo_views = 0
-                elif DSource == "fromLBSN":
+                elif config.d_source == "fromLBSN":
                     if len(item) < 15:
                         #skip
                         skippedCount += 1
@@ -689,7 +626,7 @@ def main():
                             setLatLngBounds(photo_latitude,photo_longitude)
                         photo_locID = str(photo_latitude) + ':' + str(photo_longitude) #create loc_id from lat/lng
                         #assign lat/lng coordinates from dict
-                        if shapefileIntersect:
+                        if config.shapefile_intersect:
                             #skip all outside shapefile
                             if photo_locID in shapeFileExcludelocIDhash:
                                 skippedCount += 1
@@ -702,7 +639,7 @@ def main():
                                     continue
                                 else:
                                     shapeFileIncludedlocIDhash.add(photo_locID)
-                        if clusterTags or clusterEmojis or topicModeling:
+                        if config.cluster_tags or config.cluster_emoji or config.topic_modeling:
                             photo_caption = item[14]
                         else:
                             photo_caption = ""
@@ -713,17 +650,17 @@ def main():
                             except TypeError:
                                 pass
                         photo_tags = set()
-                        if clusterTags or topicModeling:
+                        if config.cluster_tags or config.topic_modeling:
                             photo_tags = set(filter(None, item[11].lower().split(";"))) #[1:-1] removes curly brackets, second [1:-1] removes quotes
                             #Filter tags based on two stoplists
-                            if ignoreStoplists:
+                            if config.ignore_stoplists:
                                 count_tags = len(photo_tags)
                                 count_skipped = 0
                             else:
-                                photo_tags,count_tags,count_skipped = Utils.filterTags(photo_tags,SortOutAlways_set,SortOutAlways_inStr_set)
+                                photo_tags,count_tags,count_skipped = Utils.filterTags(photo_tags,config.sort_out_always_set,config.sort_out_always_instr_set)
                             count_tags_global += count_tags
                             count_tags_skipped += count_skipped
-                        if clusterEmojis:
+                        if config.cluster_emoji:
                             emojis_filtered = set(Utils.extract_emojis(photo_caption))
                             if not len(emojis_filtered) == 0:
                                 count_emojis_global += len(emojis_filtered)
@@ -743,7 +680,7 @@ def main():
                                 photo_views = int(item[8])
                             except TypeError:
                                 pass
-                elif DSource == "fromLBSN_old":
+                elif config.d_source == "fromLBSN_old":
                     if len(item) < 15:
                         #skip
                         skippedCount += 1
@@ -775,7 +712,7 @@ def main():
                             setLatLngBounds(photo_latitude,photo_longitude)
                         photo_locID = str(photo_latitude) + ':' + str(photo_longitude) #create loc_id from lat/lng
                         #assign lat/lng coordinates from dict
-                        if shapefileIntersect:
+                        if config.shapefile_intersect:
                             #skip all outside shapefile
                             if photo_locID in shapeFileExcludelocIDhash:
                                 skippedCount += 1
@@ -788,7 +725,7 @@ def main():
                                     continue
                                 else:
                                     shapeFileIncludedlocIDhash.add(photo_locID)
-                        if clusterTags or clusterEmojis or topicModeling:
+                        if config.cluster_tags or config.cluster_emoji or config.topic_modeling:
                             photo_caption = item[9]
                         else:
                             photo_caption = ""
@@ -801,17 +738,17 @@ def main():
                             except ValueError:
                                 pass
                         photo_tags = set()
-                        if clusterTags or topicModeling:
+                        if config.cluster_tags or config.topic_modeling:
                             photo_tags = set(filter(None, item[11].strip('"').lstrip('{').rstrip('}').lower().split(","))) #[1:-1] removes curly brackets, second [1:-1] removes quotes
                             #Filter tags based on two stoplists
-                            if ignoreStoplists:
+                            if config.ignore_stoplists:
                                 count_tags = len(photo_tags)
                                 count_skipped = 0
                             else:
-                                photo_tags,count_tags,count_skipped = Utils.filterTags(photo_tags,SortOutAlways_set,SortOutAlways_inStr_set)
+                                photo_tags,count_tags,count_skipped = Utils.filterTags(photo_tags,config.sort_out_always_set,config.sort_out_always_instr_set)
                             count_tags_global += count_tags
                             count_tags_skipped += count_skipped
-                        if clusterEmojis:
+                        if config.cluster_emoji:
                             emojis_filtered = set(Utils.extract_emojis(photo_caption))
                             if not len(emojis_filtered) == 0:
                                 count_emojis_global += len(emojis_filtered)
@@ -831,7 +768,7 @@ def main():
                         #        photo_views = int(item[8])
                         #    except TypeError:
                         #        pass
-                elif DSource == "fromSensorData_InfWuerz":
+                elif config.d_source == "fromSensorData_InfWuerz":
                     if len(item) < 5:
                         #skip
                         skippedCount += 1
@@ -854,11 +791,11 @@ def main():
                         photo_tags_filtered = set()
                         for tag in photo_tags:
                             count_tags_global += 1
-                            #exclude numbers and those tags that are in SortOutAlways_set
-                            if tag.isdigit() or tag in SortOutAlways_set:
+                            #exclude numbers and those tags that are in config.sort_out_always_set
+                            if tag.isdigit() or tag in config.sort_out_always_set:
                                 count_tags_skipped += 1
                                 continue
-                            for inStr in SortOutAlways_inStr_set:
+                            for inStr in config.sort_out_always_instr_set:
                                 if inStr in tag:
                                     count_tags_skipped += 1
                                     break
@@ -911,7 +848,7 @@ def main():
                                                                        photo_locID)
                 UserLocationTagList_dict[photo_locIDUserID] |= photo_tags #union tags per userid/unique location
                 removeSpecialChars = photo_caption.translate ({ord(c): " " for c in "?.!/;:,[]()'-&#"})
-                if tokenizeJapanese:
+                if config.tokenize_japanese:
                     wordlist = [word for word in jTokenize(input_sentence) for input_sentence in removeSpecialChars.split(' ')]
                 else:
                     wordlist = [word for word in removeSpecialChars.lower().split(' ') if len(word) > 2]  #first replace specia characters in caption, then split by space-character
@@ -968,7 +905,7 @@ def main():
                               photo[15],#photo_locName = 17
                               photo[16]#photo_locID = 18
                               )
-                if writeCleanedData:
+                if config.write_cleaned_data:
                     ###optional Write Cleaned Data to CSV/TXT
                     datawriter.writerow([cleanedPhotoLocation.source,#Source = 0
                                   cleanedPhotoLocation.lat, #Lat = 1
@@ -992,14 +929,14 @@ def main():
                                   )
                 ##optional Write Cleaned Search Terms to CSV for Topic Modeling
                 #topics = cleanedPhotoLocation.photo_caption.union(cleanedPhotoLocation.photo_tags)
-                if topicModeling:
+                if config.topic_modeling:
                     if not len(cleanedPhotoLocation.photo_tags) == 0:
                         UserTopicList_dict[user_key] |= cleanedPhotoLocation.photo_tags
                         UserTopicList_dict[user_key] |= cleanedPhotoLocation.photo_caption #also use descriptions for Topic Modeling
                         UserPhotoIDS_dict[user_key] |= {cleanedPhotoLocation.photo_guid} # Bit wise or and assignment in one step. -> assign PhotoGuid to UserDict list if not already contained
                         #UserPhotoFirstThumb_dict[user_key] = photo[5]
                 cleanedPhotoDict[cleanedPhotoLocation.photo_guid] = cleanedPhotoLocation
-    if topicModeling:
+    if config.topic_modeling:
         #export list of cleaned topics on a per user basis for LDA/TSNE etc.
         with open("02_Output/Output_usertopics_anonymized.csv", 'w', encoding='utf8') as csvfile:
             csvfile.write("TOPICS,PhotoIDs,UserID" + '\n')
@@ -1012,7 +949,7 @@ def main():
             for user_key, topics in UserTopicList_dict.items():
                 datawriter.writerow([" ".join(topics),"{" + ",".join(UserPhotoIDS_dict.get(user_key,None)) + "}",str(user_key)])
 
-    if (clusterTags or clusterEmojis):
+    if (config.cluster_tags or config.cluster_emoji):
         print_store_log("########## STEP 2 of 6: Tag Ranking ##########")
         overallNumOfUsersPerTag_global = collections.Counter()
         for user_key, taghash in UserDict_TagCounters_global.items():
@@ -1023,16 +960,16 @@ def main():
         print_store_log(f"Total unique tags: {len(overallNumOfUsersPerTag_global)}")
 
         topTagsList = overallNumOfUsersPerTag_global.most_common(tmax)
-        #remove all tags that are used by less than x {limitBottomUserCount} photographers
-        if removeLongTail is True:
-            indexMin = next((i for i, (t1, t2) in enumerate(topTagsList) if t2 < limitBottomUserCount), None)
+        #remove all tags that are used by less than x {config.limit_bottom_user_count} photographers
+        if config.remove_long_tail is True:
+            indexMin = next((i for i, (t1, t2) in enumerate(topTagsList) if t2 < config.limit_bottom_user_count), None)
             if indexMin:
                 lenBefore = len(topTagsList)
                 del topTagsList[indexMin:]
                 lenAfter = len(topTagsList)
                 tmax = lenAfter
                 if not lenBefore == lenAfter:
-                    print_store_log(f'Long tail removal: Filtered {lenBefore - lenAfter} Tags that were used by less than {limitBottomUserCount} users.')
+                    print_store_log(f'Long tail removal: Filtered {lenBefore - lenAfter} Tags that were used by less than {config.limit_bottom_user_count} users.')
 
         # Calculate Total Tags for selected topTagsList (Long Tail Stat)
         totalTagCount = 0
@@ -1045,7 +982,7 @@ def main():
 
         #optional write topemojis to file
         globalEmojiSet = {}
-        if clusterEmojis:
+        if config.cluster_emoji:
             topEmojisList = overallNumOfEmojis_global.most_common()
             globalEmojiSet =  {tuple[0] for tuple in topEmojisList}
             if (not len(globalEmojiSet) == 0):
@@ -1054,7 +991,7 @@ def main():
                     file.write("emoji,usercount\n")
                     file.write(topemojis)
 
-        if clusterTags:
+        if config.cluster_tags:
             #optional write toptags to file
             toptags = ''.join("%s,%i" % v + '\n' for v in topTagsList if not v[0] in globalEmojiSet)
             if (not len(topTagsList) == 0):
@@ -1062,7 +999,7 @@ def main():
                     file.write("tag,usercount\n")
                     file.write(toptags)
 
-        if statisticsOnly == False:
+        if config.statistics_only == False:
             singleMostUsedtag = topTagsList[0]
             now = time.time()
             print_store_log("########## STEP 3 of 6: Tag Location Clustering ##########")
@@ -1231,6 +1168,7 @@ def main():
                 if silent is None:
                     silent = False
                 global currentDisplayTag
+                global tnum
                 global limYMin, limYMax, limXMin, limXMax, imgRatio, floaterX, floaterY
                 global fig1, fig2, fig3, fig4
                 selectedPhotoList_Guids, distinctLocalLocationCount = sel_photos(toptag[0],cleanedPhotoList)
@@ -1532,7 +1470,7 @@ def main():
             l.pack(padx=10, pady=10)
             l = tk.Label(canvas, text="Select all tags you wish to exclude from analysis \n and click on remove to proceed.", background="gray7",fg="gray80")
             l.pack(padx=10, pady=10)
-            #if DSource == "fromInstagram_PGlbsnEmoji":
+            #if config.d_source == "fromInstagram_PGlbsnEmoji":
             #    listbox_font = ("twitter Color Emoji", 12, "bold")
             #    #listbox_font = ("Symbola", 12, "bold")
             #else:
@@ -1583,7 +1521,7 @@ def main():
             if proceedClusting:
                 #Proceed with clustering all tags
                 crs_wgs = pyproj.Proj(init='epsg:4326') #data always in lat/lng WGS1984
-                if overrideCRS is None:
+                if config.override_crs is None:
                     #Calculate best UTM Zone SRID/EPSG Code
                     input_lon_center = bound_points_shapely.centroid.coords[0][0] #True centroid (coords may be multipoint)
                     input_lat_center = bound_points_shapely.centroid.coords[0][1]
@@ -1592,7 +1530,7 @@ def main():
                 project = lambda x, y: pyproj.transform(pyproj.Proj(init='epsg:4326'), pyproj.Proj(init=f'epsg:{epsg_code}'), x, y)
                 #geom_proj = transform(project, alphaShapeAndMeta[0])
 
-                if localSaturationCheck:
+                if config.local_saturation_check:
                     clusters, selectedPhotoList_Guids = cluster_tag(singleMostUsedtag, None, True)
                     numpy_selectedPhotoList_Guids = np.asarray(selectedPhotoList_Guids)
                     mask_noisy = (clusters == -1)
@@ -1607,9 +1545,10 @@ def main():
                     clusterPhotosGuidsList.sort(key=len, reverse=True)
                     if not len(clusterPhotosGuidsList) == 0:
                         clustersPerTag[singleMostUsedtag[0]] = clusterPhotosGuidsList
+                global tnum
                 tnum = 1
                 for toptag in topTagsList:
-                    if localSaturationCheck and tnum == 1 and toptag[0] in clustersPerTag:
+                    if config.local_saturation_check and tnum == 1 and toptag[0] in clustersPerTag:
                         #skip toptag if already clustered due to local saturation
                         continue
                     clusters, selectedPhotoList_Guids = cluster_tag(toptag, None, True)
@@ -1678,21 +1617,21 @@ def main():
                 #for each cluster of points, calculate boundary shape and add statistics (HImpTag etc.)
                 listOfAlphashapesAndMeta = []
                 tnum = 0
-                if localSaturationCheck:
+                if config.local_saturation_check:
                     #calculate total area of Top1-Tag for 80% saturation check for lower level tags
                     saturationExcludeCount = 0
                     clusterPhotoGuidList = clustersPerTag.get(singleMostUsedtag[0], None)
                     #print("Toptag: " + str(singleMostUsedtag[0]))
                     if clusterPhotoGuidList is None:
                         sys.exit(f'No Photos found for toptag: {singleMostUsedtag}')
-                    toptagArea = Utils.generateClusterShape(toptag,clusterPhotoGuidList,cleanedPhotoDict,crs_wgs,crs_proj,clusterTreeCuttingDist,localSaturationCheck)[1]
+                    toptagArea = Utils.generateClusterShape(toptag,clusterPhotoGuidList,cleanedPhotoDict,crs_wgs,crs_proj,clusterTreeCuttingDist,config.local_saturation_check)[1]
                 for toptag in topTagsList:
                     tnum += 1
                     clusterPhotoGuidList = clustersPerTag.get(toptag[0], None)
                     #Generate tag Cluster Shapes
                     if clusterPhotoGuidList:
-                        listOfAlphashapesAndMeta_tmp,tagArea = Utils.generateClusterShape(toptag,clusterPhotoGuidList,cleanedPhotoDict,crs_wgs,crs_proj,clusterTreeCuttingDist,localSaturationCheck)
-                        if localSaturationCheck and not tagArea == 0 and not tnum == 1:
+                        listOfAlphashapesAndMeta_tmp,tagArea = Utils.generateClusterShape(toptag,clusterPhotoGuidList,cleanedPhotoDict,crs_wgs,crs_proj,clusterTreeCuttingDist,config.local_saturation_check)
+                        if config.local_saturation_check and not tagArea == 0 and not tnum == 1:
                             localSaturation = tagArea/(toptagArea/100)
                             #print("Local Saturation for Tag " + toptag[0] + ": " + str(round(localSaturation,0)))
                             if localSaturation > 60:
@@ -1718,7 +1657,7 @@ def main():
                             if result_polygon is not None and not result_polygon.is_empty:
                                 listOfAlphashapesAndMeta.append((result_polygon,1,max(single_photo.photo_views,single_photo.photo_likes),1,str(toptag[0]),toptag[1],1,1,1,shapetype))
                 print_store_log(f'{len(listOfAlphashapesAndMeta)} Alpha Shapes. Done.')
-                if localSaturationCheck and not saturationExcludeCount == 0:
+                if config.local_saturation_check and not saturationExcludeCount == 0:
                     print_store_log(f'Excluded {saturationExcludeCount} Tags on local saturation check.')
                 ##Output Boundary Shapes in merged Shapefile##
                 print_store_log("########## STEP 5 of 6: Writing Results to Shapefile ##########")
@@ -1767,7 +1706,7 @@ def main():
                 #######################################
                 # Write a new Shapefile
                 # WGS1984
-                if (clusterTags == False and clusterEmojis == True):
+                if (config.cluster_tags == False and config.cluster_emoji == True):
                     shapefileName = "allEmojiCluster"
                 else:
                     shapefileName = "allTagCluster"
@@ -1801,7 +1740,7 @@ def main():
                         #geom_proj = transform(project, alphaShapeAndMeta[0])
                         #c.write({
                         #    'geometry': geometry.mapping(geom_proj),
-                        if clusterEmojis and alphaShapeAndMeta[4] in globalEmojiSet:
+                        if config.cluster_emoji and alphaShapeAndMeta[4] in globalEmojiSet:
                             emoji = 1
                             ImpTagText = ""
                         else:
@@ -1821,7 +1760,7 @@ def main():
                                            #'shapetype': alphaShapeAndMeta[9],
                                            'emoji': emoji},
                         })
-                if clusterEmojis:
+                if config.cluster_emoji:
                     with open("02_Output/emojiTable.csv", "w", encoding='utf-8') as emojiTable:
                         emojiTable.write("FID,Emoji\n")
                         idx = 0
@@ -1835,7 +1774,7 @@ def main():
 
     else:
         print(f'\nUser abort.')
-    if abort == False and clusterPhotos == True:
+    if abort == False and config.cluster_photos == True:
         print_store_log("########## STEP 6 of 6: Calculating Overall Photo Location Clusters ##########")
 
         #if not 'clusterTreeCuttingDist' in locals():
@@ -1874,12 +1813,12 @@ def main():
             clusterPhotosGuidsList.append(currentClusterPhotoGuids)
         noClusterPhotos = list(numpy_selectedPhotoList_Guids[clusters==-1])
         clusterPhotosGuidsList.sort(key=len,reverse=True)
-        if clusterTags is False:
+        if config.cluster_tags is False:
             #detect projection if not already
             limYMin,limYMax,limXMin,limXMax = Utils.getRectangleBounds(points)
             bound_points_shapely = geometry.MultiPoint([(limXMin, limYMin), (limXMax, limYMax)])
             crs_wgs = pyproj.Proj(init='epsg:4326') #data always in lat/lng WGS1984
-            if overrideCRS is None:
+            if config.override_crs is None:
                 #Calculate best UTM Zone SRID/EPSG Code
                 input_lon_center = bound_points_shapely.centroid.coords[0][0] #True centroid (coords may be multipoint)
                 input_lat_center = bound_points_shapely.centroid.coords[0][1]

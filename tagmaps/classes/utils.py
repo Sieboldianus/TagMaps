@@ -194,13 +194,13 @@ class Utils():
             epsg_code = '327' + utm_band
         return epsg_code
 
-    def str2bool(v):
-        if v.lower() in ('yes', 'true', 't', 'y', '1'):
-            return True
-        elif v.lower() in ('no', 'false', 'f', 'n', '0'):
-            return False
-        else:
-            raise argparse.ArgumentTypeError('Boolean value expected.')
+    #def str2bool(v):
+    #    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+    #        return True
+    #    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+    #        return False
+    #    else:
+    #        raise argparse.ArgumentTypeError('Boolean value expected.')
 
     def generateClusterShape(toptag,clusterPhotoGuidList,cleanedPhotoDict,crs_wgs,crs_proj,clusterTreeCuttingDist,localSaturationCheck):
         #we define a new list of Temp Alpha Shapes outside the loop, so that it is not overwritten each time
