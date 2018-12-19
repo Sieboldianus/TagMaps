@@ -5,10 +5,6 @@ import os
 import sys
 
 class BaseConfig():
-    # static class variables
-    sort_out_always_set = set()
-    sort_out_always_instr_set = set()
-
     def __init__(self):
         ## Set Default Config options here
         ## or define options as input args
@@ -31,6 +27,8 @@ class BaseConfig():
         self.write_gis_comp_line = True #
 
         # additional auto settings
+        self.sort_out_always_set = set()
+        self.sort_out_always_instr_set = set()
         self.override_crs = None
         self.crs_proj = ''
         self.epsg_code = ''
@@ -98,23 +96,23 @@ class BaseConfig():
     def load_filterlists(self):
         """Load filterlists for filtering terms (instring and full match)
         """
-        __sort_out_always_file = "00_Config/SortOutAlways.txt"
-        __sort_out_always_instr_file = "00_Config/SortOutAlways_inStr.txt"
+        sort_out_always_file = "00_Config/SortOutAlways.txt"
+        sort_out_always_instr_file = "00_Config/SortOutAlways_inStr.txt"
 
-        if not os.path.isfile(__sort_out_always_file):
-            print(f'{__sort_out_always_file} not found.')
+        if not os.path.isfile(sort_out_always_file):
+            print(f'{sort_out_always_file} not found.')
         #else read logfile
         else:
             if self.ignore_stoplists == False:
-                with open(__sort_out_always_file, newline='', encoding='utf8') as f: #read each unsorted file and sort lines based on datetime (as string)
+                with open(sort_out_always_file, newline='', encoding='utf8') as f: #read each unsorted file and sort lines based on datetime (as string)
                     self.sort_out_always_set = set([line.lower().rstrip('\r\n') for line in f])
                 print(f'Loaded {len(self.sort_out_always_set)} stoplist items.')
-        if not os.path.isfile(__sort_out_always_instr_file):
-            print(f'{__sort_out_always_instr_file} not found.')
+        if not os.path.isfile(sort_out_always_instr_file):
+            print(f'{sort_out_always_instr_file} not found.')
         #else read logfile
         else:
             if self.ignore_stoplists == False:
-                with open(__sort_out_always_instr_file, newline='', encoding='utf8') as f: #read each unsorted file and sort lines based on datetime (as string)
+                with open(sort_out_always_instr_file, newline='', encoding='utf8') as f: #read each unsorted file and sort lines based on datetime (as string)
                     self.sort_out_always_instr_set = set([line.lower().rstrip('\r\n') for line in f])
                 print(f'Loaded {len(self.sort_out_always_instr_set)} inStr stoplist items.')
 

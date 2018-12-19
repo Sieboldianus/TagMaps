@@ -9,8 +9,9 @@ Tag Maps Clustering
 - will output Alpha Shapes/Delauney for cluster cut at specific distance
 """
 
-__author__      = "Alexander Dunkel"
-__license__   = "GNU GPLv3"
+__author__  = "Alexander Dunkel"
+__license__ = "GNU GPLv3"
+__version__ = "0.9.32"
 
 import io
 import logging
@@ -1622,7 +1623,7 @@ def main():
                         #sys.exit()
                 log.info("########## STEP 4 of 6: Generating Alpha Shapes ##########")
                 #if (tnum % 50 == 0):#modulo: if division has no remainder, force update cmd output
-                sys.stdout.flush()
+                #sys.stdout.flush()
                 #for each cluster of points, calculate boundary shape and add statistics (HImpTag etc.)
                 listOfAlphashapesAndMeta = []
                 tnum = 0
