@@ -4,6 +4,10 @@ import argparse
 import os
 import sys
 
+from shapely.geometry import Polygon
+from shapely.geometry import shape
+from shapely.geometry import Point
+
 class BaseConfig():
     def __init__(self):
         ## Set Default Config options here
@@ -24,7 +28,7 @@ class BaseConfig():
         self.ignore_place_corrections = False
         self.statistics_only = False
         self.limit_bottom_user_count = 5
-        self.write_gis_comp_line = True #
+        self.write_gis_comp_line = True
 
         # additional auto settings
         self.sort_out_always_set = set()
@@ -32,6 +36,17 @@ class BaseConfig():
         self.override_crs = None
         self.crs_proj = ''
         self.epsg_code = ''
+        self.sort_out_places_set = set()
+        self.sort_out_places = False
+        self.correct_places = False
+        self.correct_place_latlng_dict = dict()
+        self.shp_geom = None
+
+        # initialization
+        self.parse_args()
+        self.load_filterlists()
+        if self.shapefile_intersect:
+            self.load_shapefile()
 
     def parse_args(self):
         """Parse init args and set default values
@@ -95,26 +110,90 @@ class BaseConfig():
 
     def load_filterlists(self):
         """Load filterlists for filtering terms (instring and full match)
+        and places, including place lat/lng corrections.
         """
+        # locations for files
         sort_out_always_file = "00_Config/SortOutAlways.txt"
         sort_out_always_instr_file = "00_Config/SortOutAlways_inStr.txt"
+        sort_out_places_file = "00_Config/SortOutPlaces.txt"
+        correct_place_latlng_file = "00_Config/CorrectPlaceLatLng.txt"
+        # load lists
+        self.sort_out_always_set = self.load_stoplists(sort_out_always_file)
+        self.sort_out_always_instr_set = self.load_stoplists(sort_out_always_instr_file)
+        self.sort_out_places_set = self.load_place_stoplist(sort_out_places_file)
+        self.correct_place_latlng_dict = self.load_place_corrections(correct_place_latlng_file)
+        # print results, ignore empty
+        try:
+            print(f'Loaded {len(self.sort_out_always_set)} stoplist items.')
+            print(f'Loaded {len(self.sort_out_always_instr_set)} inStr stoplist items.')
+            print(f'Loaded {len(self.sort_out_places_set)} stoplist places.')
+            print(f'Loaded {len(self.correct_place_latlng_dict)} place lat/lng corrections.')
+        except TypeError:
+            pass
+                
+    def load_stoplists(self, file):
+        """Loads stoplist terms from file and stores in set"""
+        if self.ignore_stoplists is True:
+            return
+        if not os.path.isfile(file):
+            print(f'{file} not found.')
+            return
+        store_set = set()
+        with open(file, newline='', encoding='utf8') as f:
+            store_set = set([line.lower().rstrip('\r\n') for line in f])
+        return store_set
 
-        if not os.path.isfile(sort_out_always_file):
-            print(f'{sort_out_always_file} not found.')
-        #else read logfile
-        else:
-            if self.ignore_stoplists == False:
-                with open(sort_out_always_file, newline='', encoding='utf8') as f: #read each unsorted file and sort lines based on datetime (as string)
-                    self.sort_out_always_set = set([line.lower().rstrip('\r\n') for line in f])
-                print(f'Loaded {len(self.sort_out_always_set)} stoplist items.')
-        if not os.path.isfile(sort_out_always_instr_file):
-            print(f'{sort_out_always_instr_file} not found.')
-        #else read logfile
-        else:
-            if self.ignore_stoplists == False:
-                with open(sort_out_always_instr_file, newline='', encoding='utf8') as f: #read each unsorted file and sort lines based on datetime (as string)
-                    self.sort_out_always_instr_set = set([line.lower().rstrip('\r\n') for line in f])
-                print(f'Loaded {len(self.sort_out_always_instr_set)} inStr stoplist items.')
+    def load_place_stoplist(self, file):
+        """Loads stoplist places from file and stores in set"""
+        if not os.path.isfile(file) or self.ignore_stoplists is True:
+            return
+        store_set = set()
+        with open(file, newline='', encoding='utf8') as f:
+            f.readline()
+            # Get placeid
+            store_set = set([line.rstrip('\r\n').split(",")[0] for line in f if len(line) > 0])
+        self.sort_out_places = True
+        return store_set
+            
+    def load_place_corrections(self, file):
+        """Fills dictionary with list of corrected lat/lng entries
+        e.g.: Dictionary: placeid = lat, lng
+
+        - sets self.correct_places to True
+        """
+        store_dict = dict()
+        if os.path.isfile(file) or self.ignore_place_corrections is True:
+            return
+        with open(file, newline='', encoding='utf8') as f:
+            f.readline()
+            for line in f:
+                if len(line) == 0:
+                    continue
+                linesplit = line.rstrip('\r\n').split(",")
+                if len(linesplit) == 1:
+                    continue
+                store_dict[linesplit[0]] = (linesplit[1], linesplit[2])
+        self.correct_places = True
+        return store_dict
+
+    def load_shapefile(self):
+        """Imports single polygon shapefile for intersecting points"""
+        if self.shapefile_intersect is False:
+            return
+        if self.shapefile_path == "":
+            sys.exit(f'No Shapefile-Path specified. Exiting..')
+            return
+        poly_shape = fiona.open(cfg.shapefile_path)
+        first = poly_shape.next()
+        print("Loaded Shapefile with " + str(len(first['geometry']['coordinates'][0])) + " Vertices.")
+        self.shp_geom = shape(first['geometry'])
+        ###For Multi-Polygon:
+        ###- not yet implemented
+        ###
+        #vcount = PShape.next()['geometry']['coordinates'] #needed for count of vertices
+        #geom = MultiPolygon([shape(pol['geometry']) for pol in PShape])
+        #shp_geom = geom
+        #print("Loaded Shapefile with Vertices ", sum([len(poly[0]) for poly in vcount])) # (GeoJSON format)
 
     def load_custom_crs(self, override_crs):
         """Optionally, create custom crs for projecting data base don user input

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 # TimeTransponse_from_json definition of functions file
+import os
 import sys
 import tkinter as tk
 import emoji
@@ -29,6 +30,12 @@ class Utils():
     #    """Set Output to Replace in case of encoding issues (console/windows)
     #    """
     #    sys.stdout = io.TextIOWrapper(sys.stdout.detach(), sys.stdout.encoding, 'replace')
+    @staticmethod
+    def init_output_dir():
+        pathname = os.getcwd()
+        if not os.path.exists(pathname + '/02_Output/'):
+            os.makedirs(pathname + '/02_Output/')
+            print("Folder /02_Output was created")
 
     def query_yes_no(question, default="yes"):
         """Ask a yes/no question via raw_input() and return their answer.
