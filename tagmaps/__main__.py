@@ -113,8 +113,8 @@ tkScalebar = None
 cleanedPhotoList = []
 
 def main():
-    from .classes.utils import Utils
-    from .config.config import BaseConfig
+    from tagmaps.classes.utils import Utils
+    from tagmaps.config.config import BaseConfig
     ######################
     ####config section####
     ######################
@@ -1621,6 +1621,7 @@ def main():
                     #    break
                         #plt.savefig('foo.png')
                         #sys.exit()
+                sys.stdout.flush()
                 log.info("########## STEP 4 of 6: Generating Alpha Shapes ##########")
                 #if (tnum % 50 == 0):#modulo: if division has no remainder, force update cmd output
                 #sys.stdout.flush()
@@ -1887,6 +1888,9 @@ def main():
 def set_logger():
     """ Set logging handler manually, so we can also print to console while logging to file
     """
+    
+    if not os.path.exists("02_Output/"):
+        os.makedirs("02_Output/")
     __log_file = "02_Output/log.txt"
 
     # Set Output to Replace in case of encoding issues (console/windows)

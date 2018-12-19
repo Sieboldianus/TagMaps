@@ -24,7 +24,6 @@ setup(  name = "tagmaps",
         install_requires=[
             'shapely',
             'emoji',
-            'tkinter',
             'hdbscan'
         ],
         entry_points={

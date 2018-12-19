@@ -47,7 +47,7 @@ base = None
 #    base = "Win32GUI"
 
 executables = [
-    Executable('tagmaps/__main__.py', base=base)
+    Executable('tagmaps/__main__.py', base=base, targetName="tagmaps.exe")
 ]
 
 setup(  name = "tagmaps",

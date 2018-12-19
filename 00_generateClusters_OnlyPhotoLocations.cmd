@@ -13,5 +13,5 @@
 #-f shapefilePath
 #-stat statisticsOnly
 #-lmuc limitBottomUserCount, default = 5
-%~dp0__main__.exe -p "True" -o "False" -t "False"
+%~dp0tagmaps.exe -p "True" -o "False" -t "False"
 exit
