@@ -16,3 +16,4 @@ tagmaps.pyproj
 tagmaps/tests/pytest-env/
 tagmaps/.pytest_cache/
 tagmaps.sln
+/tagmaps.pyproj.user
