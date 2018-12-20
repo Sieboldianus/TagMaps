@@ -25,18 +25,66 @@ from descartes import PolygonPatch
 from scipy.spatial import Delaunay
 import argparse
 
+import io
+import logging
+from tagmaps.config.config import BaseConfig
+
 class Utils():
-    #def set_stdout_replace():
-    #    """Set Output to Replace in case of encoding issues (console/windows)
-    #    """
-    #    sys.stdout = io.TextIOWrapper(sys.stdout.detach(), sys.stdout.encoding, 'replace')
+    """Collection of various tools and helper functions
+    
+    Primarily @classmethods and @staticmethods
+    """
+
+    @classmethod
+    def init_main(cls):
+        """Initializing main procedure if package is executed directly"""
+    
+        # set console view parameters
+        os.system('mode con: cols=197 lines=40')
+        # initialize logger
+        log = cls.set_logger()
+        logging.getLogger("fiona.collection").disabled = True
+        cfg = BaseConfig()
+        # optional import
+        if cfg.tokenize_japanese:
+            from jNlp.jTokenize import jTokenize
+        # create output dir if not exists
+        Utils.init_output_dir()
+    
+        return cfg, log
+
+    @classmethod
+    def set_logger(cls):
+        """ Set logging handler manually, 
+        so we can also print to console while logging to file
+        """
+        
+        cls.init_output_dir()
+        __log_file = "02_Output/log.txt"
+    
+        # Set Output to Replace in case of encoding issues (console/windows)
+        sys.stdout = io.TextIOWrapper(sys.stdout.detach(), sys.stdout.encoding, 'replace')
+        # Create logger with specific name
+        log = logging.getLogger("tagmaps")
+        log.format = '%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s'
+        log.datefmt = '%H:%M:%S'
+        log.setLevel(logging.DEBUG)
+        log.addHandler(logging.FileHandler(__log_file, 'w', 'utf-8'))
+        log.addHandler(logging.StreamHandler())
+        # flush once to clear console
+        sys.stdout.flush()
+        return log
+
     @staticmethod
     def init_output_dir():
+        """Creates local output dir if not exists"""
+
         pathname = os.getcwd()
         if not os.path.exists(pathname + '/02_Output/'):
             os.makedirs(pathname + '/02_Output/')
             print("Folder /02_Output was created")
-
+    
+    @staticmethod
     def query_yes_no(question, default="yes"):
         """Ask a yes/no question via raw_input() and return their answer.
 
@@ -68,12 +116,12 @@ class Utils():
             else:
                 sys.stdout.write("'yes' or 'no' "
                                  "(or 'y' or 'n').\n")
-
+    @staticmethod
     def daterange(start_date, end_date):
         for n in range(int ((end_date - start_date).days)):
             yield start_date + timedelta(n)
 
-
+    @staticmethod
     def haversine(lon1, lat1, lon2, lat2):
         """
         Calculate the great circle distance between two points
@@ -91,6 +139,7 @@ class Utils():
         m = km*1000
         return m
 
+    @staticmethod
     def getRadiansFromMeters(dist):
         dist = dist/1000
         degreesDist = dist/111.325
@@ -101,6 +150,8 @@ class Utils():
         #then see https://sciencing.com/convert-distances-degrees-meters-7858322.html
         #Multiply the number of degrees by 111.325
         #To convert this to meters, multiply by 1,000. So, 2 degrees is 222,65 meters.
+
+    @staticmethod
     def getMetersFromRadians(dist):
         dist = dist * 57.2958
         dist = dist * 111.325
@@ -113,8 +164,9 @@ class Utils():
         #To convert this to meters, multiply by 1,000. So, 2 degrees is 222,65 meters.
         #plt.close('all') #clear memory
 
-    #This function is not really needed, makes no difference! (really?)
+    @staticmethod
     def checkEmojiType(strEmo):
+        """Is this function really needed, makes no difference! (really?)"""
         if unicodedata.name(strEmo).startswith(("EMOJI MODIFIER","VARIATION SELECTOR","ZERO WIDTH")):
             return False
         else:
@@ -184,7 +236,7 @@ class Utils():
     #tc unicode problem
     #https://stackoverflow.com/questions/40222971/python-find-equivalent-surrogate-pair-from-non-bmp-unicode-char
 
-    _nonbmp = re.compile(r'[\U00010000-\U0010FFFF]')
+    
     def _surrogatepair(match):
         char = match.group()
         assert ord(char) > 0xffff
@@ -192,7 +244,9 @@ class Utils():
         return (
             chr(int.from_bytes(encoded[:2], 'little')) +
             chr(int.from_bytes(encoded[2:], 'little')))
+
     def with_surrogates(text):
+        _nonbmp = re.compile(r'[\U00010000-\U0010FFFF]')
         return _nonbmp.sub(_surrogatepair, text)
 
     #https://stackoverflow.com/questions/40132542/get-a-cartesian-projection-accurate-around-a-lat-lng-pair

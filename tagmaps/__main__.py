@@ -13,12 +13,9 @@ __author__  = "Alexander Dunkel"
 __license__ = "GNU GPLv3"
 __version__ = "0.9.32"
 
-import io
-import logging
 
 import csv
 import os
-os.system('mode con: cols=197 lines=40')
 import sys
 import re
 from glob import glob
@@ -112,23 +109,17 @@ tnum = 0
 tkScalebar = None
 cleanedPhotoList = []
 
+from tagmaps.classes.utils import Utils
+
 def main():
     """Main tag maps function for direct processing
     
     - will read from 01_Input/ folder
     - will output clustered data in  02_Input/
     """
-    from tagmaps.classes.utils import Utils
-    from tagmaps.config.config import BaseConfig
-
-    log = set_logger()
-    logging.getLogger("fiona.collection").disabled = True
-    cfg = BaseConfig()
-
-    if cfg.tokenize_japanese:
-        from jNlp.jTokenize import jTokenize
-
-    Utils.init_output_dir()
+    
+    # initialize logger and config
+    cfg, log = Utils.init_main()
 
 
     # READ All JSON in Current Folder and join to list
@@ -1815,27 +1806,6 @@ def main():
     #print(reportMsg)
     input("Press any key to exit...")
     sys.exit()
-
-def set_logger():
-    """ Set logging handler manually, so we can also print to console while logging to file
-    """
-    
-    if not os.path.exists("02_Output/"):
-        os.makedirs("02_Output/")
-    __log_file = "02_Output/log.txt"
-
-    # Set Output to Replace in case of encoding issues (console/windows)
-    sys.stdout = io.TextIOWrapper(sys.stdout.detach(), sys.stdout.encoding, 'replace')
-    # Create logger with specific name
-    log = logging.getLogger("tagmaps")
-    log.format = '%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s'
-    log.datefmt = '%H:%M:%S'
-    log.setLevel(logging.DEBUG)
-    log.addHandler(logging.FileHandler(__log_file, 'w', 'utf-8'))
-    log.addHandler(logging.StreamHandler())
-    # flush once to clear console
-    sys.stdout.flush()
-    return log
 
 if __name__ == "__main__":
     main()
