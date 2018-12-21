@@ -110,6 +110,7 @@ tkScalebar = None
 cleanedPhotoList = []
 
 from tagmaps.classes.utils import Utils
+from tagmaps.classes.load_data import LoadData
 
 def main():
     """Main tag maps function for direct processing
@@ -120,7 +121,7 @@ def main():
     
     # initialize logger and config
     cfg, log = Utils.init_main()
-
+    filelist = LoadData.read_local_files(cfg)
 
     # READ All JSON in Current Folder and join to list
     #partnum = 0
@@ -128,24 +129,24 @@ def main():
     count_glob = 0
     partcount = 0
     #filenameprev = ""
-    if (cfg.d_source == "fromFlickr_CSV"):
-        filelist = glob('01_Input/*.txt')
-        GMTTimetransform = 0
-        guid_columnNameID = 5 #guid
-        Sourcecode = 2
-        quoting_opt = csv.QUOTE_NONE
-    elif (cfg.d_source == "fromInstagram_PGlbsnEmoji") or (cfg.d_source == "fromLBSN") or (cfg.d_source == "fromLBSN_old"):
-        filelist = glob('01_Input/*.csv')
-        guid_columnNameID = 1 #guid
-        quoting_opt = csv.QUOTE_MINIMAL
-    elif (cfg.d_source == "fromSensorData_InfWuerz"):
-        filelist = glob('01_Input/*.csv')
-        GMTTimetransform = 0
-        guid_columnNameID = 1 #guid
-        Sourcecode = 11
-        quoting_opt = csv.QUOTE_NONE
-    else:
-        sys.exit("Source not supported yet.")
+    #if (cfg.data_source == "fromFlickr_CSV"):
+    #    filelist = glob('01_Input/*.txt')
+    #    GMTTimetransform = 0
+    #    guid_columnNameID = 5 #guid
+    #    Sourcecode = 2
+    #    quoting_opt = csv.QUOTE_NONE
+    #elif (cfg.data_source == "fromInstagram_PGlbsnEmoji") or (cfg.data_source == "fromLBSN") or (cfg.data_source == "fromLBSN_old"):
+    #    filelist = glob('01_Input/*.csv')
+    #    guid_columnNameID = 1 #guid
+    #    quoting_opt = csv.QUOTE_MINIMAL
+    #elif (cfg.data_source == "fromSensorData_InfWuerz"):
+    #    filelist = glob('01_Input/*.csv')
+    #    GMTTimetransform = 0
+    #    guid_columnNameID = 1 #guid
+    #    Sourcecode = 11
+    #    quoting_opt = csv.QUOTE_NONE
+    #else:
+    #    sys.exit("Source not supported yet.")
 
     print('\n')
     log.info("########## STEP 1 of 6: Data Cleanup ##########")
@@ -219,10 +220,10 @@ def main():
         #    guid_list.clear() #duplicate detection only for last 500k items
         with open(file_name, newline='', encoding='utf8') as f: # On input, if newline is None, universal newlines mode is enabled. Lines in the input can end in '\n', '\r', or '\r\n', and these are translated into '\n' before being returned to the caller.
             partcount += 1
-            if (cfg.d_source == "fromInstagram_LocMedia_CSV" or cfg.d_source == "fromLBSN" or cfg.d_source == "fromLBSN_old" or cfg.d_source == "fromInstagram_UserMedia_CSV" or cfg.d_source == "fromFlickr_CSV" or cfg.d_source == "fromInstagram_PGlbsnEmoji" or cfg.d_source == "fromSensorData_InfWuerz"):
+            if (cfg.data_source == "fromInstagram_LocMedia_CSV" or cfg.data_source == "fromLBSN" or cfg.data_source == "fromLBSN_old" or cfg.data_source == "fromInstagram_UserMedia_CSV" or cfg.data_source == "fromFlickr_CSV" or cfg.data_source == "fromInstagram_PGlbsnEmoji" or cfg.data_source == "fromSensorData_InfWuerz"):
                 photolist = csv.reader(f, delimiter=',', quotechar='"', quoting=quoting_opt) #QUOTE_NONE is important because media saved from php/Flickr does not contain any " check; only ',' are replaced
                 next(photolist, None)  # skip headerline
-            elif (cfg.d_source == "fromInstagram_HashMedia_JSON"):
+            elif (cfg.data_source == "fromInstagram_HashMedia_JSON"):
                 photolist = photolist + json.loads(f.read())
             #PhotosPerDayLists = defaultdict(list)
             #keyCreatedHash = set()
@@ -233,7 +234,7 @@ def main():
                     continue
                 else:
                     photoIDHash.add(item[guid_columnNameID])
-                if (cfg.d_source == "fromInstagram_LocMedia_CSV"):
+                if (cfg.data_source == "fromInstagram_LocMedia_CSV"):
                     if len(item) < 15:
                         #skip
                         skippedCount += 1
@@ -290,7 +291,7 @@ def main():
                         photo_mTags = ""
                         photo_dateTaken = ""
                         photo_views = ""
-                elif cfg.d_source == "fromInstagram_UserMedia_CSV":
+                elif cfg.data_source == "fromInstagram_UserMedia_CSV":
                     if len(item) < 15:
                         #skip
                         skippedCount += 1
@@ -342,7 +343,7 @@ def main():
                         photo_mTags = ""
                         photo_dateTaken = ""
                         photo_views = ""
-                elif cfg.d_source == "fromFlickr_CSV":
+                elif cfg.data_source == "fromFlickr_CSV":
                     if len(item) < 12:
                         #skip
                         skippedCount += 1
@@ -387,7 +388,7 @@ def main():
                         photo_locID = str(photo_latitude) + ':' + str(photo_longitude) #create loc_id from lat/lng
                         photo_mTags = "" #not used currently but available
                         photo_views = item[10]
-                elif (cfg.d_source == "fromInstagram_HashMedia_JSON"):
+                elif (cfg.data_source == "fromInstagram_HashMedia_JSON"):
                     photo_source = Sourcecode #HashMediaCode
                     if item.get('owner'):
                         photo_userid = item["owner"]["id"]
@@ -483,7 +484,7 @@ def main():
                     photo_mTags = ""
                     photo_dateTaken = ""
                     photo_views = ""
-                elif cfg.d_source == "fromInstagram_PGlbsnEmoji":
+                elif cfg.data_source == "fromInstagram_PGlbsnEmoji":
                     if len(item) < 15:
                         #skip
                         skippedCount += 1
@@ -523,7 +524,7 @@ def main():
                         photo_mTags = ""
                         photo_dateTaken = ""
                         photo_views = 0
-                elif cfg.d_source == "fromLBSN":
+                elif cfg.data_source == "fromLBSN":
                     if len(item) < 15:
                         #skip
                         skippedCount += 1
@@ -609,7 +610,7 @@ def main():
                                 photo_views = int(item[8])
                             except TypeError:
                                 pass
-                elif cfg.d_source == "fromLBSN_old":
+                elif cfg.data_source == "fromLBSN_old":
                     if len(item) < 15:
                         #skip
                         skippedCount += 1
@@ -697,7 +698,7 @@ def main():
                         #        photo_views = int(item[8])
                         #    except TypeError:
                         #        pass
-                elif cfg.d_source == "fromSensorData_InfWuerz":
+                elif cfg.data_source == "fromSensorData_InfWuerz":
                     if len(item) < 5:
                         #skip
                         skippedCount += 1
@@ -1402,7 +1403,7 @@ def main():
             l.pack(padx=10, pady=10)
             l = tk.Label(canvas, text="Select all tags you wish to exclude from analysis \n and click on remove to proceed.", background="gray7",fg="gray80")
             l.pack(padx=10, pady=10)
-            #if cfg.d_source == "fromInstagram_PGlbsnEmoji":
+            #if cfg.data_source == "fromInstagram_PGlbsnEmoji":
             #    listbox_font = ("twitter Color Emoji", 12, "bold")
             #    #listbox_font = ("Symbola", 12, "bold")
             #else:

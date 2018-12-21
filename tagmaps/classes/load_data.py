@@ -1,20 +1,22 @@
 # -*- coding: utf-8 -*-
 
+import sys
 import os
 import ntpath
 import csv
+from pathlib import Path
 from _csv import QUOTE_MINIMAL
 from glob import glob
 from .utils import Utils
 
 class LoadData():
-    """Main Class for ingesting data and building summary statistics
-    for tag maps clustering.
+    """Main Class for ingesting data and building summary statistics.
 
-    - will filter data, cleaned output can be stored
     - will process CSV data into dict/set structures
-    - generate statistics
+    - will filter data, cleaned output can be stored
+    - will generate statistics
     """
+
     def loop_input_records(records, transferlimit, import_mapper, config):
         """Loops input json or csv records, converts to ProtoBuf structure and adds to records_dict
 
@@ -47,7 +49,7 @@ class LoadData():
         return processed_records, finished
 
     @staticmethod
-    def fetch_csv_data_from_file(loc_filelist, start_file_id=0):
+    def fetch_csv_data_from_file(source_config):
         """Read csv entries from file (either *.txt or *.csv).
 
         The actual CSV formatting is not setable in config yet. There are many specifics, e.g.
@@ -65,11 +67,21 @@ class LoadData():
         return records
 
     @staticmethod
+    def read_local_files(config):
+       """Read Local Files according to config parameters and returns list of file-paths"""
+       input_path = config.input_folder
+       filelist = list(input_path.glob(f'*.{config.source["Main"]["file_extension"]}'))
+       input_count = len(filelist)
+       if input_count == 0:
+           sys.exit("No input files found.")
+       else:
+           return filelist
+
+    @staticmethod
     def skip_empty_or_other(single_record):
-        """Detect  Rate Limiting Notice or empty records
-           so they can be skipped.
-        """
-        skip = False
-        if not single_record or (isinstance(single_record,dict) and single_record.get('limit')):
-            skip = True
-        return skip
+        """Detect empty records"""
+        if not single_record:
+            return False
+        return True
+
+

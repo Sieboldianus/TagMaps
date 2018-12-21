@@ -3,7 +3,8 @@
 import argparse
 import os
 import sys
-
+from pathlib import Path
+import configparser
 from shapely.geometry import Polygon
 from shapely.geometry import shape
 from shapely.geometry import Point
@@ -12,7 +13,7 @@ class BaseConfig():
     def __init__(self):
         ## Set Default Config options here
         ## or define options as input args
-        self.d_source = "fromLBSN"
+        self.data_source = "fromLBSN"
         self.cluster_tags = True
         self.cluster_photos = True
         self.epsg = True
@@ -43,10 +44,15 @@ class BaseConfig():
         self.shp_geom = None
 
         # initialization
+        self.pathname = Path.cwd()
+        self.config_folder = Path.cwd() / '00_Config'
+        self.input_folder = Path.cwd() / '01_Input'
+        self.output_folder = Path.cwd() / '02_Output'
         self.parse_args()
         self.load_filterlists()
         if self.shapefile_intersect:
             self.load_shapefile()
+        self.source = self.load_sourcemapping()
 
     def parse_args(self):
         """Parse init args and set default values
@@ -74,7 +80,7 @@ class BaseConfig():
 
         args = parser.parse_args()
         if args.source:
-            self.d_source = args.source
+            self.data_source = args.source
         if args.clusterTags:
             self.cluster_tags = args.clusterTags
         if args.clusterPhotos:
@@ -203,3 +209,16 @@ class BaseConfig():
         self.crs_proj = pyproj.Proj(init='epsg:{0}'.format(override_crs))
         print("Custom CRS set: " + str(self.crs_proj.srs))
         self.epsg_code = override_crs
+
+    def load_sourcemapping(self):
+        """Loads source mapping, if available.
+        
+        Otherwise, try to read structure from first line of CSV.
+        """
+        mapping_config_path = self.config_folder / f'sourcemapping_{self.data_source}.ini'
+        if not os.path.exists(mapping_config_path):
+            return
+        source_config = configparser.ConfigParser()
+        source_config.read(mapping_config_path)
+        return source_config
+
