@@ -112,10 +112,10 @@ from tagmaps.classes.utils import Utils
 from tagmaps.classes.load_data import LoadData
 
 def main():
-    """Main tag maps function for direct processing
+    """Main tag maps function for direct execution of package
     
     - will read from 01_Input/ folder
-    - will output clustered data in  02_Input/
+    - will output clustered data to 02_Output/
     """
     
     # initialize logger and config
