@@ -9,6 +9,7 @@ from _csv import QUOTE_MINIMAL
 from glob import glob
 from .utils import Utils
 
+
 class LoadData():
     """Main Class for ingesting data and building summary statistics.
 
@@ -36,8 +37,9 @@ class LoadData():
             if LoadData.skip_empty_or_other(single_record):
                 continue
             if config.local_file_type == 'json' or not config.is_local_input:
-                import_mapper.parseJsonRecord(single_record, config.input_lbsn_type)
-            elif config.local_file_type in ('txt','csv'):
+                import_mapper.parseJsonRecord(
+                    single_record, config.input_lbsn_type)
+            elif config.local_file_type in ('txt', 'csv'):
                 import_mapper.parse_csv_record(single_record)
             else:
                 exit(f'Format {config.local_file_type} not supportet.')
@@ -59,7 +61,8 @@ class LoadData():
         loc_file = loc_filelist[start_file_id]
         HF.log_main_debug(f'\nCurrent file: {ntpath.basename(loc_file)}')
         with open(loc_file, 'r', encoding="utf-8", errors='replace') as file:
-            reader = csv.reader(file, delimiter=',', quotechar='"', quoting=csv.QUOTE_NONE)
+            reader = csv.reader(file, delimiter=',',
+                                quotechar='"', quoting=csv.QUOTE_NONE)
             next(reader, None)  # skip headerline
             records = list(reader)
         if not records:
@@ -68,14 +71,15 @@ class LoadData():
 
     @staticmethod
     def read_local_files(config):
-       """Read Local Files according to config parameters and returns list of file-paths"""
-       input_path = config.input_folder
-       filelist = list(input_path.glob(f'*.{config.source["Main"]["file_extension"]}'))
-       input_count = len(filelist)
-       if input_count == 0:
-           sys.exit("No input files found.")
-       else:
-           return filelist
+        """Read Local Files according to config parameters and returns list of file-paths"""
+        input_path = config.input_folder
+        filelist = list(input_path.glob(
+            f'*.{config.source["Main"]["file_extension"]}'))
+        input_count = len(filelist)
+        if input_count == 0:
+            sys.exit("No input files found.")
+        else:
+            return filelist
 
     @staticmethod
     def skip_empty_or_other(single_record):
@@ -83,5 +87,3 @@ class LoadData():
         if not single_record:
             return False
         return True
-
-

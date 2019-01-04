@@ -16,12 +16,12 @@ try:
 except ImportError:
     pass
 
-VERSION: dict
+VERSION_NUMBER = {}
 with open("tagmaps/version.py") as fp:
-    exec(fp.read(), VERSION)
+    exec(fp.read(), VERSION_NUMBER)
 
 setup(name="tagmaps",
-      version=VERSION['__version__'],
+      version=VERSION_NUMBER['__version__'],
       description="Tag Clustering for Tag Maps",
       long_description=LONG_DESCRIPTION,
       long_description_content_type='text/markdown',
