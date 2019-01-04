@@ -3,11 +3,14 @@
 """
 Config processing for tag maps package.
 """
-import argparse
+
 import os
 import sys
-from pathlib import Path
+import argparse
 import configparser
+import fiona
+import pyproj
+from pathlib import Path
 from shapely.geometry import Polygon
 from shapely.geometry import shape
 from shapely.geometry import Point
@@ -39,7 +42,7 @@ class BaseConfig:
         self.sort_out_always_set = set()
         self.sort_out_always_instr_set = set()
         self.override_crs = None
-        self.crs_proj = ""
+        self.crs_proj = None
         self.epsg_code = ""
         self.sort_out_places_set = set()
         self.sort_out_places = False
@@ -65,68 +68,116 @@ class BaseConfig:
         parser = argparse.ArgumentParser()
         parser.add_argument("-s",
                             "--source",
-                            default="fromLBSN")
+                            default="fromLBSN",
+                            help="Specify source of data. "
+                            "This is needed to read data.")
         parser.add_argument("-r",
                             "--removeLongTail",
                             action="store_true",
-                            default=True)
-        parser.add_argument("-e", "--EPSG")
+                            default=True,
+                            help="Defaults to true. This will exclude"
+                            "any tags that are used by only a "
+                            "small number of users")
+        parser.add_argument("-e",
+                            "--EPSG",
+                            help="If provided, will overwrite "
+                            "auto EPSG code")
         parser.add_argument("-t", "--clusterTags",
                             action="store_true",
-                            default=True)
+                            default=True,
+                            help="Cluster tag locations"
+                            "Clusters will be generated per "
+                            "distinct tag.")
         parser.add_argument("-p",
                             "--clusterPhotos",
-                            action="store_true", default=True)
+                            action="store_true",
+                            default=True,
+                            help="Cluster photo locations "
+                            "(no filtering based on tags)"
+                            )
         parser.add_argument("-c",
                             "--localSaturationCheck",
                             action="store_true",
-                            default=False
+                            default=False,
+                            help="Will exclude any tags that "
+                            "are (over)used at above a certain percentage "
+                            "of locations in processing extent. Since this "
+                            "will usually improve legibility of tag maps, it "
+                            "is enabled by default."
                             )
         parser.add_argument("-j",
                             "--tokenizeJapanese",
                             action="store_true",
-                            default=False
+                            default=False,
+                            help="Japanese language requires "
+                            "tokenization prior to clustering. "
+                            "Disabled by default. Note:"
+                            "Not fully implemented"
                             )
         parser.add_argument("-o",
                             "--clusterEmojis",
                             action="store_true",
-                            default=True)
+                            default=True,
+                            help="Defaults to True. Will cluster "
+                            "emoji in addition to tags.")
         parser.add_argument("-m",
                             "--topicModeling",
                             action="store_true",
-                            default=False)
+                            default=False,
+                            help="This will used topic modeling "
+                            "to detect groups of tags (based on "
+                            "Latent Dirichlet Allocation). Note: "
+                            "Not fully implemented")
         parser.add_argument("-w",
                             "--writeCleanedData",
                             action="store_true",
-                            default=True
+                            default=True,
+                            help="Defaults to True. This will "
+                            "write out a file limited to the data "
+                            "that will be used for tag clustering "
+                            "(filtered based on stoplists, clipped boundary, "
+                            "minimum user threshold etc.)"
                             )
         parser.add_argument("-i",
                             "--shapefileIntersect",
                             action="store_true",
-                            default=False
+                            default=False,
+                            help="If set to true, clip "
+                            "data to shapefile (specify path "
+                            "with --shapefilePath)"
                             )
         parser.add_argument("-f",
                             "--shapefilePath",
-                            default="")
+                            default="",
+                            help="Provide a (full) path to a shapefile "
+                            "to clip data prior to clustering.")
         parser.add_argument("-is",
                             "--ignoreStoplists",
                             action="store_true",
-                            default=False
+                            default=False,
+                            help="If stoplist is available "
+                            "ignore it."
                             )
         parser.add_argument("-ip",
                             "--ignorePlaceCorrections",
                             action="store_true",
-                            default=False
+                            default=False,
+                            help="If place corrections are available, "
+                            "ignore them."
                             )
         parser.add_argument("-stat",
                             "--statisticsOnly",
                             action="store_true",
-                            default=False
+                            default=False,
+                            help="Do not cluster, only read input data"
+                            " and calculate statistics."
                             )
         parser.add_argument("-lmuc",
                             "--limitBottomUserCount",
                             type=int,
-                            default=5)
+                            default=5,
+                            help="Remove all tags that are used by "
+                            "less than x photographers. Defaults to 5.")
         parser.add_argument("-wG",
                             "--writeGISCompLine",
                             action="store_true",
@@ -191,13 +242,14 @@ class BaseConfig:
         )
         # print results, ignore empty
         try:
-            print(f"Loaded {len(self.sort_out_always_set)} stoplist items.")
-            print(
-                f"Loaded {len(self.sort_out_always_instr_set)} inStr stoplist items.")
+            print(f"Loaded {len(self.sort_out_always_set)} "
+                  f"stoplist items.")
+            print(f"Loaded {len(self.sort_out_always_instr_set)} "
+                  f"inStr stoplist items.")
             print(f"Loaded {len(self.sort_out_places_set)} stoplist places.")
-            print(
-                f"Loaded {len(self.correct_place_latlng_dict)} place lat/lng corrections."
-            )
+            print(f"Loaded {len(self.correct_place_latlng_dict)} "
+                  f"place lat/lng corrections."
+                  )
         except TypeError:
             pass
 
@@ -256,24 +308,28 @@ class BaseConfig:
         if self.shapefile_path == "":
             sys.exit(f"No Shapefile-Path specified. Exiting..")
             return
-        poly_shape = fiona.open(cfg.shapefile_path)
+        poly_shape = fiona.open(self.shapefile_path)
         first = poly_shape.next()
         print(
-            "Loaded Shapefile with "
-            + str(len(first["geometry"]["coordinates"][0]))
-            + " Vertices."
+            f'Loaded Shapefile with '
+            f'{str(len(first["geometry"]["coordinates"][0]))}'
+            f' Vertices.'
         )
         self.shp_geom = shape(first["geometry"])
         # For Multi-Polygon:
         # - not yet implemented
         ###
-        # vcount = PShape.next()['geometry']['coordinates'] #needed for count of vertices
-        # geom = MultiPolygon([shape(pol['geometry']) for pol in PShape])
+        # vcount = PShape.next()['geometry']['coordinates']
+        # #needed for count of vertices
+        # geom = MultiPolygon([shape(pol['geometry']) for pol
+        # in PShape])
         # shp_geom = geom
-        # print("Loaded Shapefile with Vertices ", sum([len(poly[0]) for poly in vcount])) # (GeoJSON format)
+        # print("Loaded Shapefile with Vertices ",
+        # sum([len(poly[0]) for poly in vcount])) # (GeoJSON format)
 
     def load_custom_crs(self, override_crs):
-        """Optionally, create custom crs for projecting data base don user input
+        """Optionally, create custom crs for projecting
+        data base don user input
 
         Note: not fully implemented
         """
