@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 
+"""
+Module for loading data and calculating basic statistics.
+"""
+
 import sys
 import os
 import ntpath
