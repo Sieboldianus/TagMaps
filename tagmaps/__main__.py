@@ -11,7 +11,6 @@ Tag Maps Clustering
 
 __author__  = "Alexander Dunkel"
 __license__ = "GNU GPLv3"
-__version__ = "0.9.32"
 
 
 import csv
