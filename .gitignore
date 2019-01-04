@@ -10,6 +10,7 @@ foo.png
 graph.png
 scripts/
 .vs/
+.vscode/
 emojifile.txt
 tagmaps.egg-info
 tagmaps.pyproj
