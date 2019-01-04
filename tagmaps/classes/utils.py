@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # coding: utf-8
 # TimeTransponse_from_json definition of functions file
+
+"""Module with general utility methods used in tag maps package.
+"""
+
 import os
 import sys
 import tkinter as tk
