@@ -78,7 +78,7 @@ class LoadData():
         """Read Local Files according to config parameters and returns list of file-paths"""
         input_path = config.input_folder
         filelist = list(input_path.glob(
-            f'*.{config.source["Main"]["file_extension"]}'))
+            f'*.{config.source_map.file_extension}'))
         input_count = len(filelist)
         if input_count == 0:
             sys.exit("No input files found.")

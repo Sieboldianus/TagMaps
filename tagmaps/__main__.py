@@ -219,8 +219,18 @@ def main():
         #    guid_list.clear() #duplicate detection only for last 500k items
         with open(file_name, newline='', encoding='utf8') as f: # On input, if newline is None, universal newlines mode is enabled. Lines in the input can end in '\n', '\r', or '\r\n', and these are translated into '\n' before being returned to the caller.
             partcount += 1
-            if (cfg.data_source == "fromInstagram_LocMedia_CSV" or cfg.data_source == "fromLBSN" or cfg.data_source == "fromLBSN_old" or cfg.data_source == "fromInstagram_UserMedia_CSV" or cfg.data_source == "fromFlickr_CSV" or cfg.data_source == "fromInstagram_PGlbsnEmoji" or cfg.data_source == "fromSensorData_InfWuerz"):
-                photolist = csv.reader(f, delimiter=',', quotechar='"', quoting=quoting_opt) #QUOTE_NONE is important because media saved from php/Flickr does not contain any " check; only ',' are replaced
+            if (cfg.data_source == "fromInstagram_LocMedia_CSV" or
+            cfg.data_source == "fromLBSN" or cfg.data_source == "fromLBSN_old" or
+            cfg.data_source == "fromInstagram_UserMedia_CSV" or
+            cfg.data_source == "fromFlickr_CSV" or
+            cfg.data_source == "fromInstagram_PGlbsnEmoji" or
+            cfg.data_source == "fromSensorData_InfWuerz"):
+                photolist = csv.reader(f,
+                                       delimiter=cfg.source_map.delimiter,
+                                       quotechar=cfg.source_map.quote_char,
+                                       quoting=cfg.source_map.quoting)
+                                       #QUOTE_NONE is important because media saved from
+                                       # php/Flickr does not contain any " check; only ',' are replaced
                 next(photolist, None)  # skip headerline
             elif (cfg.data_source == "fromInstagram_HashMedia_JSON"):
                 photolist = photolist + json.loads(f.read())
@@ -228,11 +238,11 @@ def main():
             #keyCreatedHash = set()
             for item in photolist:
                 #duplicate check based on GUID
-                if item[guid_columnNameID] in photoIDHash:
+                if item[cfg.source_map.post_guid_col] in photoIDHash:
                     skippedCount += 1
                     continue
                 else:
-                    photoIDHash.add(item[guid_columnNameID])
+                    photoIDHash.add(item[cfg.source_map.post_guid_col])
                 if (cfg.data_source == "fromInstagram_LocMedia_CSV"):
                     if len(item) < 15:
                         #skip

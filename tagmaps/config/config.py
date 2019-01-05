@@ -8,14 +8,13 @@ import os
 import sys
 import argparse
 import configparser
+import csv
 import fiona
 import pyproj
 from pathlib import Path
 from shapely.geometry import Polygon
 from shapely.geometry import shape
 from shapely.geometry import Point
-
-# test
 
 
 class BaseConfig:
@@ -61,7 +60,7 @@ class BaseConfig:
         self.load_filterlists()
         if self.shapefile_intersect:
             self.load_shapefile()
-        self.source = self.load_sourcemapping()
+        self.source_map = self.load_sourcemapping()
 
     def parse_args(self):
         """Parse init args and set default values
@@ -345,10 +344,60 @@ class BaseConfig:
         Otherwise, try to read structure from first line of CSV.
         """
         mapping_config_path = (
-            self.config_folder / f"sourcemapping_{self.data_source}.ini"
+            self.config_folder /
+            f"sourcemapping_{self.data_source.lower()}.cfg"
         )
         if not os.path.exists(mapping_config_path):
-            return
+            exit("Source mapping does not exist: "
+                 f"sourcemapping_{self.data_source.lower()}.cfg")
         source_config = configparser.ConfigParser()
         source_config.read(mapping_config_path)
-        return source_config
+        source_config_py = ConfigMap(source_config)
+        return source_config_py
+
+
+class ConfigMap:
+    """Retrieves python object from config.cfg"""
+
+    def __init__(self, source_config):
+        # [Main]
+        self.name = source_config["Main"]["name"]
+        self.file_extension = source_config["Main"]["file_extension"]
+        self.delimiter = source_config["Main"]["delimiter"]
+        self.array_separator = source_config["Main"]["array_separator"]
+        self.quoting = self._quote_selector(
+            source_config["Main"]["quoting"])
+        self.quote_char = source_config["Main"]["quote_char"].strip('\'')
+        self.date_time_format = source_config["Main"]["file_extension"]
+        # [Columns]
+        self.post_guid_col = int(source_config["Columns"]["post_guid_col"])
+        self.latitude_col = int(source_config["Columns"]["latitude_col"])
+        self.longitude_col = int(source_config["Columns"]["longitude_col"])
+        self.user_guid_col = int(source_config["Columns"]["user_guid_col"])
+        self.post_create_date_col = int(
+            source_config["Columns"]["post_create_date_col"])
+        self.post_publish_date_col = int(
+            source_config["Columns"]["post_publish_date_col"])
+        self.post_views_count_col = int(
+            source_config["Columns"]["post_views_count_col"])
+        self.post_like_count_col = int(
+            source_config["Columns"]["post_like_count_col"])
+        self.post_url_col = int(source_config["Columns"]["post_url_col"])
+        self.tags_col = int(source_config["Columns"]["tags_col"])
+        self.emoji_col = int(source_config["Columns"]["emoji_col"])
+        self.post_title_col = int(source_config["Columns"]["post_title_col"])
+        self.post_body_col = int(source_config["Columns"]["post_body_col"])
+        self.post_geoaccuracy_col = int(
+            source_config["Columns"]["post_geoaccuracy_col"])
+        self.place_guid_col = int(source_config["Columns"]["place_guid_col"])
+
+    @staticmethod
+    def _quote_selector(quote_string):
+        quote_switch = {
+            "QUOTE_MINIMAL": csv.QUOTE_MINIMAL,
+            "QUOTE_ALL": csv.QUOTE_ALL,
+            "QUOTE_NONNUMERIC": csv.QUOTE_NONNUMERIC,
+            "QUOTE_NONE": csv.QUOTE_NONE,
+        }
+        quoting = quote_switch.get(quote_string)
+        return quoting
