@@ -38,6 +38,7 @@ class BaseConfig:
         self.statistics_only = False
         self.limit_bottom_user_count = 5
         self.write_gis_comp_line = True
+        self.auto_mode = False
 
         # additional auto settings
         self.sort_out_always_set = set()
@@ -186,6 +187,13 @@ class BaseConfig:
                             help="Writes placeholder entry after headerline "
                             "for avoiding GIS import format issues",
                             )
+        parser.add_argument("-aM",
+                            "--autoMode",
+                            action="store_true",
+                            default=False,
+                            help="If set to true, no user input will "
+                            "be requested during processing.",
+                            )
 
         args = parser.parse_args()
         if args.source:
@@ -222,6 +230,8 @@ class BaseConfig:
             self.limit_bottom_user_count = int(args.limitBottomUserCount)
         if args.writeGISCompLine:
             self.write_gis_comp_line = args.writeGISCompLine
+        if args.autoMode:
+            self.auto_mode = args.autoMode
 
     def load_filterlists(self):
         """Load filterlists for filtering terms (instring and full match)

@@ -38,6 +38,14 @@ class Utils():
     
     Primarily @classmethods and @staticmethods
     """
+    @staticmethod
+    def is_number(s):
+        """Check if variable is number (float)"""
+        try:
+            float(s)
+            return True
+        except ValueError:
+            return False
 
     @classmethod
     def init_main(cls):

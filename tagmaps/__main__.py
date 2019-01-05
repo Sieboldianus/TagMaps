@@ -84,12 +84,8 @@ from decimal import Decimal
 #    for _c in n:
 #        emojifile.write(str(unicode_name(_c)) + '\n')
 #        emojifile.write('Each Codepoint: U+%04x' % ord(_c) +  '\n')
-
 #initialize global variables for analysis bounds (lat, lng coordinates)
-limLatMin = None
-limLatMax = None
-limLngMin = None
-limLngMax = None
+
 abort = False
 #definition of global figure for reusing windows
 fig1 = None
@@ -106,7 +102,6 @@ topTagsList = []
 lastselectionList = []
 tnum = 0
 tkScalebar = None
-cleanedPhotoList = []
 
 from tagmaps.classes.utils import Utils
 from tagmaps.classes.load_data import LoadData
@@ -120,13 +115,11 @@ def main():
     
     # initialize logger and config
     cfg, log = Utils.init_main()
-    filelist = LoadData.read_local_files(cfg)
+    lbsn_data = LoadData(cfg)
 
     # READ All JSON in Current Folder and join to list
     #partnum = 0
-    guid_list = set() #global list of guids
-    count_glob = 0
-    partcount = 0
+    
     #filenameprev = ""
     #if (cfg.data_source == "fromFlickr_CSV"):
     #    filelist = glob('01_Input/*.txt')
@@ -147,64 +140,11 @@ def main():
     #else:
     #    sys.exit("Source not supported yet.")
 
+
     print('\n')
     log.info("########## STEP 1 of 6: Data Cleanup ##########")
-    if (len(filelist) == 0):
-        sys.exit(f'No *.json/csv/txt files found.')
-    else:
-        if cfg.cluster_tags or cfg.cluster_emoji:
-            inputtext = input(f'Files to process: {len(filelist)}. \nOptional: Enter a Number for the variety of Tags to process (Default is 1000)\nPress Enter to proceed.. \n')
-            if inputtext == "" or not inputtext.isdigit():
-                tmax = 1000
-            else:
-                tmax = int(inputtext)
-
-    skippedCount = 0
-    appendToAlreadyExist = False
-    count_non_geotagged = 0
-    count_outside_shape = 0
-    count_tags_global = 0
-    count_emojis_global = 0
-    count_tags_skipped = 0
-    shapeFileExcludelocIDhash = set()
-    shapeFileIncludedlocIDhash  = set()
-    TotalTagCount_Counter_global = collections.Counter()
-
-    def setLatLngBounds(Lat,Lng):
-        global limLatMin, limLatMax, limLngMin, limLngMax
-        if limLatMin is None or (Lat < limLatMin and not Lat == 0):
-            limLatMin = Lat
-        if limLatMax is None or (Lat > limLatMax and not Lat == 0):
-            limLatMax = Lat
-        if limLngMin is None or (Lng < limLngMin and not Lng == 0):
-            limLngMin = Lng
-        if limLngMax is None or (Lng > limLngMax and not Lng == 0):
-            limLngMax = Lng
-    def is_number(s):
-        try:
-            float(s)
-            return True
-        except ValueError:
-            return False
-    photoIDHash = set()
-    LocationsPerUserID_dict = defaultdict(set)
-    UserLocationTagList_dict = defaultdict(set)
-    if cfg.topic_modeling:
-        UserTopicList_dict  = defaultdict(set)
-        UserPhotoIDS_dict  = defaultdict(set)
-        UserPhotoFirstThumb_dict = defaultdict(str)
-    UserLocationWordList_dict = defaultdict(set)
-    UserLocationsFirstPhoto_dict = defaultdict(set)
-    if cfg.cluster_emoji:
-        overallNumOfEmojis_global = collections.Counter()
-
-    #UserDict_TagCounters = defaultdict(set)
-    UserDict_TagCounters_global = defaultdict(set)
-    #UserIDsPerLocation_dict = defaultdict(set)
-    #PhotoLocDict = defaultdict(set)
-    distinctLocations_set = set()
-    distinctUserLocations_set = set()
-    count_loc = 0
+    lbsn_data.parse_input_records(cfg)
+    
     now = time.time()
     for file_name in filelist:
         #filename = "02_Output/" + os.path.basename(file_name)
@@ -238,15 +178,15 @@ def main():
             #keyCreatedHash = set()
             for item in photolist:
                 #duplicate check based on GUID
-                if item[cfg.source_map.post_guid_col] in photoIDHash:
-                    skippedCount += 1
+                if item[cfg.source_map.post_guid_col] in guid_hash:
+                    skipped_count += 1
                     continue
                 else:
-                    photoIDHash.add(item[cfg.source_map.post_guid_col])
+                    guid_hash.add(item[cfg.source_map.post_guid_col])
                 if (cfg.data_source == "fromInstagram_LocMedia_CSV"):
                     if len(item) < 15:
                         #skip
-                        skippedCount += 1
+                        skipped_count += 1
                         continue
                     else:
                         photo_source = Sourcecode #LocamediaCode
@@ -271,20 +211,20 @@ def main():
                             #setLatLngBounds(photo_latitude,photo_longitude)
                             if cfg.shapefile_intersect:
                                 #skip all outside shapefile
-                                if photo_locID in shapeFileExcludelocIDhash:
+                                if photo_locID in shape_exclude_locid_hash:
                                     count_outside_shape += 1
                                     continue
-                                if not photo_locID in shapeFileIncludedlocIDhash:
+                                if not photo_locID in shape_included_locid_hash:
                                     LngLatPoint = Point(photo_longitude, photo_latitude)
                                     if not LngLatPoint.within(shp_geom):
                                         count_outside_shape += 1
-                                        shapeFileExcludelocIDhash.add(photo_locID)
+                                        shape_exclude_locid_hash.add(photo_locID)
                                         continue
                                     else:
-                                        shapeFileIncludedlocIDhash.add(photo_locID)
+                                        shape_included_locid_hash.add(photo_locID)
                         else:
                             if excludeWhereMissingGeocode:
-                                skippedCount += 1
+                                skipped_count += 1
                                 continue #skip non-geotagged medias
                             else:
                                 photo_latitude = ""
@@ -303,7 +243,7 @@ def main():
                 elif cfg.data_source == "fromInstagram_UserMedia_CSV":
                     if len(item) < 15:
                         #skip
-                        skippedCount += 1
+                        skipped_count += 1
                         continue
                     else:
                         photo_source = Sourcecode #LocMediaCode
@@ -330,20 +270,20 @@ def main():
                             photo_longitude = loc_dict[photo_locID][1]
                             if cfg.shapefile_intersect:
                                 #skip all outside shapefile
-                                if photo_locID in shapeFileExcludelocIDhash:
+                                if photo_locID in shape_exclude_locid_hash:
                                     count_outside_shape += 1
                                     continue
-                                if not photo_locID in shapeFileIncludedlocIDhash:
+                                if not photo_locID in shape_included_locid_hash:
                                     LngLatPoint = Point(photo_longitude, photo_latitude)
                                     if not LngLatPoint.within(shp_geom):
                                         count_outside_shape += 1
-                                        shapeFileExcludelocIDhash.add(photo_locID)
+                                        shape_exclude_locid_hash.add(photo_locID)
                                         continue
                                     else:
-                                        shapeFileIncludedlocIDhash.add(photo_locID)
+                                        shape_included_locid_hash.add(photo_locID)
                         else:
                             if excludeWhereMissingGeocode:
-                                skippedCount += 1
+                                skipped_count += 1
                                 continue #skip non-geotagged medias
                             else:
                                 photo_latitude = ""
@@ -355,7 +295,7 @@ def main():
                 elif cfg.data_source == "fromFlickr_CSV":
                     if len(item) < 12:
                         #skip
-                        skippedCount += 1
+                        skipped_count += 1
                         continue
                     else:
                         photo_source = Sourcecode #LocMediaCode
@@ -386,14 +326,14 @@ def main():
                         if is_number(item[1]):
                             photo_latitude = Decimal(item[1])
                         else:
-                            skippedCount += 1
+                            skipped_count += 1
                             continue
                         if is_number(item[2]):
                             photo_longitude = Decimal(item[2])
                         else:
-                            skippedCount += 1
+                            skipped_count += 1
                             continue
-                        setLatLngBounds(photo_latitude,photo_longitude)
+                        upd_latlng_bounds(photo_latitude,photo_longitude)
                         photo_locID = str(photo_latitude) + ':' + str(photo_longitude) #create loc_id from lat/lng
                         photo_mTags = "" #not used currently but available
                         photo_views = item[10]
@@ -403,7 +343,7 @@ def main():
                         photo_userid = item["owner"]["id"]
                     else:
                         # skip problematic entries
-                        skippedCount += 1
+                        skipped_count += 1
                         continue
                     if item.get('edge_liked_by'):
                         photo_likes = item["edge_liked_by"]["count"]
@@ -421,7 +361,7 @@ def main():
                         photo_guid = item["id"]
                     else:
                         # skip problematic entries
-                        skippedCount += 1
+                        skipped_count += 1
                         continue
                     if item.get('is_video'):
                         photo_mediatype = "video"
@@ -449,7 +389,7 @@ def main():
                         photo_idDate = photo_uploadDate
                     else:
                         # skip problematic entries
-                        skippedCount += 1
+                        skipped_count += 1
                         continue
                     if item.get('thumbnail_src'):
                         photo_thumbnail = item["thumbnail_src"]
@@ -462,21 +402,21 @@ def main():
                         photo_longitude = loc_dict[photo_locID][1]
                         if cfg.shapefile_intersect:
                             #skip all outside shapefile
-                            if photo_locID in shapeFileExcludelocIDhash:
+                            if photo_locID in shape_exclude_locid_hash:
                                 count_outside_shape += 1
                                 continue
-                            if not photo_locID in shapeFileIncludedlocIDhash:
+                            if not photo_locID in shape_included_locid_hash:
                                 LngLatPoint = Point(photo_longitude, photo_latitude)
                                 if not LngLatPoint.within(shp_geom):
                                     count_outside_shape += 1
-                                    shapeFileExcludelocIDhash.add(photo_locID)
+                                    shape_exclude_locid_hash.add(photo_locID)
                                     continue
                                 else:
-                                    shapeFileIncludedlocIDhash.add(photo_locID)
+                                    shape_included_locid_hash.add(photo_locID)
                     else:
                         if excludeWhereMissingGeocode:
                             #count_non_geotagged += 1
-                            skippedCount += 1
+                            skipped_count += 1
                             continue #skip non-geotagged medias
                         else:
                             photo_latitude = ""
@@ -496,7 +436,7 @@ def main():
                 elif cfg.data_source == "fromInstagram_PGlbsnEmoji":
                     if len(item) < 15:
                         #skip
-                        skippedCount += 1
+                        skipped_count += 1
                         continue
                     else:
                         photo_source = item[0]
@@ -527,7 +467,7 @@ def main():
                         else:
                             photo_latitude = Decimal(item[2]) #guid
                             photo_longitude = Decimal(item[3]) #guid
-                            setLatLngBounds(photo_latitude,photo_longitude)
+                            upd_latlng_bounds(photo_latitude,photo_longitude)
                         photo_locID = str(photo_latitude) + ':' + str(photo_longitude) #create loc_id from lat/lng
                         #empty for Instagram:
                         photo_mTags = ""
@@ -536,7 +476,7 @@ def main():
                 elif cfg.data_source == "fromLBSN":
                     if len(item) < 15:
                         #skip
-                        skippedCount += 1
+                        skipped_count += 1
                         continue
                     else:
                         photo_source = item[0] #LocMediaCode
@@ -550,7 +490,7 @@ def main():
                         if cfg.sort_out_places:
                             if not item[19] == "":
                                 if item[19] in cfg.sort_out_places_set:
-                                    skippedCount += 1
+                                    skipped_count += 1
                                     continue
                         if item[2] == "" or item[3] == "":
                             count_non_geotagged += 1
@@ -562,22 +502,22 @@ def main():
                             else:
                                 photo_latitude = Decimal(item[2]) #guid
                                 photo_longitude = Decimal(item[3]) #guid
-                            setLatLngBounds(photo_latitude,photo_longitude)
+                            upd_latlng_bounds(photo_latitude,photo_longitude)
                         photo_locID = str(photo_latitude) + ':' + str(photo_longitude) #create loc_id from lat/lng
                         #assign lat/lng coordinates from dict
                         if cfg.shapefile_intersect:
                             #skip all outside shapefile
-                            if photo_locID in shapeFileExcludelocIDhash:
-                                skippedCount += 1
+                            if photo_locID in shape_exclude_locid_hash:
+                                skipped_count += 1
                                 continue
-                            if not photo_locID in shapeFileIncludedlocIDhash:
+                            if not photo_locID in shape_included_locid_hash:
                                 LngLatPoint = Point(photo_longitude, photo_latitude)
                                 if not LngLatPoint.within(shp_geom):
-                                    skippedCount += 1
-                                    shapeFileExcludelocIDhash.add(photo_locID)
+                                    skipped_count += 1
+                                    shape_exclude_locid_hash.add(photo_locID)
                                     continue
                                 else:
-                                    shapeFileIncludedlocIDhash.add(photo_locID)
+                                    shape_included_locid_hash.add(photo_locID)
                         if cfg.cluster_tags or cfg.cluster_emoji or cfg.topic_modeling:
                             photo_caption = item[14]
                         else:
@@ -603,7 +543,7 @@ def main():
                             emojis_filtered = set(Utils.extract_emojis(photo_caption))
                             if not len(emojis_filtered) == 0:
                                 count_emojis_global += len(emojis_filtered)
-                                overallNumOfEmojis_global.update(emojis_filtered)
+                                total_emoji_count_global.update(emojis_filtered)
                                 photo_tags = set.union(emojis_filtered)
                         #photo_tags = ";" + item[11] + ";"
                         photo_thumbnail = None#item[17]
@@ -622,7 +562,7 @@ def main():
                 elif cfg.data_source == "fromLBSN_old":
                     if len(item) < 15:
                         #skip
-                        skippedCount += 1
+                        skipped_count += 1
                         continue
                     else:
                         photo_source = item[0] #LocMediaCode
@@ -636,7 +576,7 @@ def main():
                         if cfg.sort_out_places:
                             if not item[4] == "":
                                 if item[4] in cfg.sort_out_places_set:
-                                    skippedCount += 1
+                                    skipped_count += 1
                                     continue
                         if item[2] == "" or item[3] == "":
                             count_non_geotagged += 1
@@ -648,22 +588,22 @@ def main():
                             else:
                                 photo_latitude = Decimal(item[2]) #guid
                                 photo_longitude = Decimal(item[3]) #guid
-                            setLatLngBounds(photo_latitude,photo_longitude)
+                            upd_latlng_bounds(photo_latitude,photo_longitude)
                         photo_locID = str(photo_latitude) + ':' + str(photo_longitude) #create loc_id from lat/lng
                         #assign lat/lng coordinates from dict
                         if cfg.shapefile_intersect:
                             #skip all outside shapefile
-                            if photo_locID in shapeFileExcludelocIDhash:
-                                skippedCount += 1
+                            if photo_locID in shape_exclude_locid_hash:
+                                skipped_count += 1
                                 continue
-                            if not photo_locID in shapeFileIncludedlocIDhash:
+                            if not photo_locID in shape_included_locid_hash:
                                 LngLatPoint = Point(photo_longitude, photo_latitude)
                                 if not LngLatPoint.within(shp_geom):
-                                    skippedCount += 1
-                                    shapeFileExcludelocIDhash.add(photo_locID)
+                                    skipped_count += 1
+                                    shape_exclude_locid_hash.add(photo_locID)
                                     continue
                                 else:
-                                    shapeFileIncludedlocIDhash.add(photo_locID)
+                                    shape_included_locid_hash.add(photo_locID)
                         if cfg.cluster_tags or cfg.cluster_emoji or cfg.topic_modeling:
                             photo_caption = item[9]
                         else:
@@ -691,7 +631,7 @@ def main():
                             emojis_filtered = set(Utils.extract_emojis(photo_caption))
                             if not len(emojis_filtered) == 0:
                                 count_emojis_global += len(emojis_filtered)
-                                overallNumOfEmojis_global.update(emojis_filtered)
+                                total_emoji_count_global.update(emojis_filtered)
                                 photo_tags = set.union(emojis_filtered)
                         #photo_tags = ";" + item[11] + ";"
                         photo_thumbnail = None#item[17]
@@ -710,7 +650,7 @@ def main():
                 elif cfg.data_source == "fromSensorData_InfWuerz":
                     if len(item) < 5:
                         #skip
-                        skippedCount += 1
+                        skipped_count += 1
                         continue
                     else:
                         photo_source = Sourcecode #LocMediaCode
@@ -747,7 +687,7 @@ def main():
                         else:
                             photo_latitude = Decimal(item[7]) #guid
                             photo_longitude = Decimal(item[6]) #guid
-                            setLatLngBounds(photo_latitude,photo_longitude)
+                            upd_latlng_bounds(photo_latitude,photo_longitude)
                         photo_locID = str(photo_latitude) + ':' + str(photo_longitude) #create loc_id from lat/lng
                         #empty for SensorWuerz:
                         photo_likes = ""
@@ -761,14 +701,14 @@ def main():
                 #this code will union all tags of a single user for each location
                 #further information is derived from the first image for each user-location
                 photo_locIDUserID =  photo_locID + '::' + str(photo_userid) #create userid_loc_id
-                distinctLocations_set.add(photo_locID)
+                distinct_locations_set.add(photo_locID)
                 #print(f'Added: {photo_locID} to distinctLocations_set (len: {len(distinctLocations_set)})')
-                distinctUserLocations_set.add(photo_locIDUserID)
+                distinct_userlocations_set.add(photo_locIDUserID)
                 #print(f'Added: {photo_locIDUserID} to distinctUserLocations_set (len: {len(distinctUserLocations_set)})')
-                if not photo_userid in LocationsPerUserID_dict or not photo_locID in LocationsPerUserID_dict[photo_userid]:
-                    LocationsPerUserID_dict[photo_userid] |= {photo_locID} # Bit wise or and assignment in one step. -> assign locID to UserDict list if not already contained
+                if not photo_userid in locations_per_userid_dict or not photo_locID in locations_per_userid_dict[photo_userid]:
+                    locations_per_userid_dict[photo_userid] |= {photo_locID} # Bit wise or and assignment in one step. -> assign locID to UserDict list if not already contained
                     count_loc += 1
-                    UserLocationsFirstPhoto_dict[photo_locIDUserID] = (photo_source,
+                    userlocations_firstphoto_dict[photo_locIDUserID] = (photo_source,
                                                                        photo_guid,
                                                                        photo_owner,
                                                                        photo_userid,
@@ -785,19 +725,19 @@ def main():
                                                                        photo_mediatype,
                                                                        photo_locName,
                                                                        photo_locID)
-                UserLocationTagList_dict[photo_locIDUserID] |= photo_tags #union tags per userid/unique location
+                userlocation_taglist_dict[photo_locIDUserID] |= photo_tags #union tags per userid/unique location
                 removeSpecialChars = photo_caption.translate ({ord(c): " " for c in "?.!/;:,[]()'-&#"})
                 if cfg.tokenize_japanese:
                     wordlist = [word for word in jTokenize(input_sentence) for input_sentence in removeSpecialChars.split(' ')]
                 else:
                     wordlist = [word for word in removeSpecialChars.lower().split(' ') if len(word) > 2]  #first replace specia characters in caption, then split by space-character
-                UserLocationWordList_dict[photo_locIDUserID] |= set(wordlist) #union words per userid/unique location
+                userlocation_wordlist_dict[photo_locIDUserID] |= set(wordlist) #union words per userid/unique location
                 count_glob += 1
 
                 ##Calculate toplists
                 if photo_tags:
-                    UserDict_TagCounters_global[photo_userid].update(photo_tags) #add tagcount of this media to overall tagcount or this user, initialize counter for user if not already done
-                    TotalTagCount_Counter_global.update(photo_tags)
+                    userdict_tagcounters_global[photo_userid].update(photo_tags) #add tagcount of this media to overall tagcount or this user, initialize counter for user if not already done
+                    total_tag_counter_glob.update(photo_tags)
                 msg = f'Cleaned output to {len(distinctLocations_set):02d} distinct locations from {count_glob:02d} photos (File {partcount} of {len(filelist)}) - Skipped Media: {skippedCount} - Skipped Tags: {count_tags_skipped} of {count_tags_global}'
                 print(msg, end='\r')
             #else:
@@ -805,7 +745,7 @@ def main():
             #    log.propagate = False
             #    log.info(msg)
             #    log.propagate = True
-    total_distinct_locations = len(distinctLocations_set)
+    total_distinct_locations = len(distinct_locations_set)
     log.info(f'\nTotal users: {len(LocationsPerUserID_dict)} (UC)')
     log.info(f'Total photos: {count_glob:02d} (PC)')
     log.info(f'Total tags (PTC): {count_tags_global}')
@@ -821,11 +761,11 @@ def main():
     with open("02_Output/Output_cleaned.txt", 'w', encoding='utf8') as csvfile:
         csvfile.write("SOURCE,Latitude,Longitude,PhotoID,Owner,UserID,Name,DateTaken,UploadDate,Views,Tags,URL,MTags,Likes,Comments,Shortcode,Type,LocName,LocID," + '\n')
         datawriter = csv.writer(csvfile, delimiter=',', lineterminator='\n', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
-        for user_key, locationhash in LocationsPerUserID_dict.items():
+        for user_key, locationhash in locations_per_userid_dict.items():
             for location in locationhash:
                 locIDUserID = str(location) + '::' + str(user_key)
                 photo_latlng = location.split(':')
-                photo = UserLocationsFirstPhoto_dict.get(locIDUserID,(" "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," "))
+                photo = userlocations_firstphoto_dict.get(locIDUserID,(" "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," "))
                 #create tuple with cleaned photo data
                 cleanedPhotoLocation = cleanedPhotoLocation_tuple(photo[0],#Source = 0
                               float(photo_latlng[0]), #Lat = 1
@@ -833,11 +773,11 @@ def main():
                               photo[1],#photo_guid = 3
                               photo[2],#photo_owner = 4
                               user_key, #userid = 5
-                              UserLocationWordList_dict.get(locIDUserID,("",)),#photo_caption = 6
+                              userlocation_wordlist_dict.get(locIDUserID,("",)),#photo_caption = 6
                               photo[6],#photo_dateTaken = 7
                               photo[7],#photo_uploadDate = 8
                               photo[8],#photo_views = 9
-                              UserLocationTagList_dict.get(locIDUserID,("",)),#photo_tags = 10
+                              userlocation_taglist_dict.get(locIDUserID,("",)),#photo_tags = 10
                               photo[5],#photo_thumbnail = 11
                               photo[10],#photo_mTags = 12
                               photo[11],#photo_likes = 13
@@ -873,9 +813,9 @@ def main():
                 #topics = cleanedPhotoLocation.photo_caption.union(cleanedPhotoLocation.photo_tags)
                 if cfg.topic_modeling:
                     if not len(cleanedPhotoLocation.photo_tags) == 0:
-                        UserTopicList_dict[user_key] |= cleanedPhotoLocation.photo_tags
-                        UserTopicList_dict[user_key] |= cleanedPhotoLocation.photo_caption #also use descriptions for Topic Modeling
-                        UserPhotoIDS_dict[user_key] |= {cleanedPhotoLocation.photo_guid} # Bit wise or and assignment in one step. -> assign PhotoGuid to UserDict list if not already contained
+                        user_topiclist_dict[user_key] |= cleanedPhotoLocation.photo_tags
+                        user_topiclist_dict[user_key] |= cleanedPhotoLocation.photo_caption #also use descriptions for Topic Modeling
+                        user_post_ids_dict[user_key] |= {cleanedPhotoLocation.photo_guid} # Bit wise or and assignment in one step. -> assign PhotoGuid to UserDict list if not already contained
                         #UserPhotoFirstThumb_dict[user_key] = photo[5]
                 cleanedPhotoDict[cleanedPhotoLocation.photo_guid] = cleanedPhotoLocation
     if cfg.topic_modeling:
@@ -883,18 +823,18 @@ def main():
         with open("02_Output/Output_usertopics_anonymized.csv", 'w', encoding='utf8') as csvfile:
             csvfile.write("TOPICS,PhotoIDs,UserID" + '\n')
             datawriter = csv.writer(csvfile, delimiter=',', lineterminator='\n', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
-            for user_key, topics in UserTopicList_dict.items():
-                datawriter.writerow([" ".join(topics),"{" + ",".join([hashlib.sha3_256(photoid.encode("utf8")).hexdigest() for photoid in UserPhotoIDS_dict.get(user_key,None)]) + "}",hashlib.sha3_256(user_key.encode("utf8")).hexdigest()])
+            for user_key, topics in user_topiclist_dict.items():
+                datawriter.writerow([" ".join(topics),"{" + ",".join([hashlib.sha3_256(photoid.encode("utf8")).hexdigest() for photoid in user_post_ids_dict.get(user_key,None)]) + "}",hashlib.sha3_256(user_key.encode("utf8")).hexdigest()])
         with open("02_Output/Output_usertopics.csv", 'w', encoding='utf8') as csvfile:
             csvfile.write("TOPICS,PhotoIDs,UserID" + '\n')
             datawriter = csv.writer(csvfile, delimiter=',', lineterminator='\n', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
-            for user_key, topics in UserTopicList_dict.items():
-                datawriter.writerow([" ".join(topics),"{" + ",".join(UserPhotoIDS_dict.get(user_key,None)) + "}",str(user_key)])
+            for user_key, topics in user_topiclist_dict.items():
+                datawriter.writerow([" ".join(topics),"{" + ",".join(user_post_ids_dict.get(user_key,None)) + "}",str(user_key)])
 
     if (cfg.cluster_tags or cfg.cluster_emoji):
         log.info("########## STEP 2 of 6: Tag Ranking ##########")
         overallNumOfUsersPerTag_global = collections.Counter()
-        for user_key, taghash in UserDict_TagCounters_global.items():
+        for user_key, taghash in userdict_tagcounters_global.items():
             #taghash contains unique values (= strings) for each user, thus summing up these taghashes counts each user only once per tag
             overallNumOfUsersPerTag_global.update(taghash)
 
@@ -916,7 +856,7 @@ def main():
         # Calculate Total Tags for selected topTagsList (Long Tail Stat)
         totalTagCount = 0
         for tag in topTagsList:
-            count = TotalTagCount_Counter_global.get(tag[0])
+            count = total_tag_counter_glob.get(tag[0])
             if count:
                 totalTagCount += count
         #print(TotalTagCount_Counter_global.most_common(3))
@@ -925,7 +865,7 @@ def main():
         #optional write topemojis to file
         globalEmojiSet = {}
         if cfg.cluster_emoji:
-            topEmojisList = overallNumOfEmojis_global.most_common()
+            topEmojisList = total_emoji_count_global.most_common()
             globalEmojiSet =  {tuple[0] for tuple in topEmojisList}
             if (not len(globalEmojiSet) == 0):
                 topemojis = ''.join("%s,%i" % v + '\n' for v in topEmojisList)
@@ -959,9 +899,9 @@ def main():
             #Optional: set global plotting bounds
             #plt.gca().set_xlim([limXMin, limXMax])
             #plt.gca().set_ylim([limYMin, limYMax])
-            global cleanedPhotoList
-            cleanedPhotoList = list(cleanedPhotoDict.values())
-            df = pd.DataFrame(cleanedPhotoList)
+            global cleaned_photo_list
+            cleaned_photo_list = list(cleanedPhotoDict.values())
+            df = pd.DataFrame(cleaned_photo_list)
             points = df.as_matrix(['lng','lat'])
             limYMin,limYMax,limXMin,limXMax = Utils.getRectangleBounds(points)
             bound_points_shapely = geometry.MultiPoint([(limXMin, limYMin), (limXMax, limYMax)])
@@ -1113,7 +1053,7 @@ def main():
                 global tnum
                 global limYMin, limYMax, limXMin, limXMax, imgRatio, floaterX, floaterY
                 global fig1, fig2, fig3, fig4
-                selectedPhotoList_Guids, distinctLocalLocationCount = sel_photos(toptag[0],cleanedPhotoList)
+                selectedPhotoList_Guids, distinctLocalLocationCount = sel_photos(toptag[0],cleaned_photo_list)
                 percentageOfTotalLocations = distinctLocalLocationCount/(total_distinct_locations/100)
                 if silent:
                     if toptag[0] in globalEmojiSet:
@@ -1727,11 +1667,11 @@ def main():
         selectedPhotoList_Guids = []
         #if not 'cleanedPhotoList' in locals():
         #global cleanedPhotoList
-        if len(cleanedPhotoList) == 0:
-            cleanedPhotoList = list(cleanedPhotoDict.values())
-        for cleanedPhotoLocation in cleanedPhotoList:
+        if len(cleaned_photo_list) == 0:
+            cleaned_photo_list = list(cleanedPhotoDict.values())
+        for cleanedPhotoLocation in cleaned_photo_list:
             selectedPhotoList_Guids.append(cleanedPhotoLocation.photo_guid)
-        selectedPhotoList = cleanedPhotoList
+        selectedPhotoList = cleaned_photo_list
         df = pd.DataFrame(selectedPhotoList)
         points = df.as_matrix(['lng','lat'])
         tagRadiansData = np.radians(points)

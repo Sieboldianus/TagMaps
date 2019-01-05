@@ -9,9 +9,14 @@ import os
 import ntpath
 import csv
 from pathlib import Path
-from _csv import QUOTE_MINIMAL
 from glob import glob
-from .utils import Utils
+from _csv import QUOTE_MINIMAL
+import collections
+from collections import Counter
+from collections import defaultdict
+from collections import namedtuple
+from tagmaps.classes.utils import Utils
+from lbsntransform.classes.shared_structure_proto_lbsndb import PostAttrShared
 
 
 class LoadData():
@@ -22,37 +27,57 @@ class LoadData():
     - will generate statistics
     """
 
-    def loop_input_records(records, transferlimit, import_mapper, config):
-        """Loops input json or csv records, converts to ProtoBuf structure and adds to records_dict
+    def __init__(self, cfg):
+        """Initializes Load Data structure"""
+        self.filelist = self.read_local_files(cfg)
+        self.guid_hash = set()  # global list of guids
+        self.cleaned_photo_list = []
+        self.append_to_already_exist = False  # unused?
+        self.shape_exclude_locid_hash = set()
+        self.shape_included_locid_hash = set()
+        self.total_tag_counter_glob = collections.Counter()
+        self.bounds = AnalysisBounds()
+        self.stats = DataStats()
+        # Hashsets:
+        self.locations_per_userid_dict = defaultdict(set)
+        self.userlocation_taglist_dict = defaultdict(set)
+        if cfg.topic_modeling:
+            self.user_topiclist_dict = defaultdict(set)
+            self.user_post_ids_dict = defaultdict(set)
+            self.userpost_first_thumb_dict = defaultdict(str)
+        self.userlocation_wordlist_dict = defaultdict(set)
+        self.userlocations_firstphoto_dict = defaultdict(set)
+        if cfg.cluster_emoji:
+            self.total_emoji_count_global = collections.Counter()
+        # UserDict_TagCounters = defaultdict(set)
+        self.userdict_tagcounters_global = defaultdict(set)
+        # UserIDsPerLocation_dict = defaultdict(set)
+        # PhotoLocDict = defaultdict(set)
+        self.distinct_locations_set = set()
+        self.distinct_userlocations_set = set()
+        self.tmax = 1000  # default value
 
-        Returns statistic-counts, modifies (adds results to) import_mapper
+    def parse_input_records(self, cfg):
+        """Loops input csv records and adds to records_dict
+
+        Returns statistic-counts, modifies (adds results to) class structures
         """
+        # get user input for max tags to process
+        self.tmax = self.get_tmax(cfg)
 
-        finished = False
-        processed_records = 0
-        db_row_number = 0
-        for record in records:
-            processed_records += 1
-            if config.is_local_input:
-                single_record = record
+    @staticmethod
+    def get_tmax(cfg):
+        """User Input to get number of tags to process"""
+        if cfg.auto_mode:
+            return 1000
+        if cfg.cluster_tags or cfg.cluster_emoji:
+            inputtext = input(f'Files to process: {len(filelist)}. \nOptional: '
+                              f'Enter a Number for the variety of Tags to process '
+                              f'(Default is 1000)\nPress Enter to proceed.. \n')
+            if inputtext == "" or not inputtext.isdigit():
+                return 1000
             else:
-                db_row_number = record[0]
-                single_record = record[2]
-            if LoadData.skip_empty_or_other(single_record):
-                continue
-            if config.local_file_type == 'json' or not config.is_local_input:
-                import_mapper.parseJsonRecord(
-                    single_record, config.input_lbsn_type)
-            elif config.local_file_type in ('txt', 'csv'):
-                import_mapper.parse_csv_record(single_record)
-            else:
-                exit(f'Format {config.local_file_type} not supportet.')
-
-            if (transferlimit and processed_records >= transferlimit) or \
-               (not config.is_local_input and config.end_with_db_row_number and db_row_number >= config.end_with_db_row_number):
-                finished = True
-                break
-        return processed_records, finished
+                return int(inputtext)
 
     @staticmethod
     def fetch_csv_data_from_file(source_config):
@@ -81,7 +106,8 @@ class LoadData():
             f'*.{config.source_map.file_extension}'))
         input_count = len(filelist)
         if input_count == 0:
-            sys.exit("No input files found.")
+            sys.exit(f"No input files *.{config.source_map.file_extension} "
+                     "found.")
         else:
             return filelist
 
@@ -91,3 +117,48 @@ class LoadData():
         if not single_record:
             return False
         return True
+
+
+class AnalysisBounds():
+    """Class stroing boundary (lim lat/lng)"""
+
+    def __init__(self):
+        """initialize global variables for analysis bounds
+
+        (lat, lng coordinates)
+        """
+        self.lim_lat_min = None
+        self.lim_lat_max = None
+        self.lim_lng_min = None
+        self.lim_lng_max = None
+
+    def upd_latlng_bounds(self, lat, lng):
+        """Update lat/lng bounds based on coordinate pair."""
+        if self.lim_lat_min is None or \
+                (lat < self.lim_lat_min and not lat == 0):
+            self.lim_lat_min = lat
+        if self.lim_lat_max is None or \
+                (lat > self.lim_lat_max and not lat == 0):
+            self.lim_lat_max = lat
+        if self.lim_lng_min is None or \
+                (lng < self.lim_lng_min and not lng == 0):
+            self.lim_lng_min = lng
+        if self.lim_lng_max is None or \
+                (lng > self.lim_lng_max and not lng == 0):
+            self.lim_lng_max = lng
+
+
+class DataStats():
+    """Class storing analysis stats"""
+
+    def __init__(self):
+        """Initialize stats."""
+        self.count_non_geotagged = 0
+        self.count_outside_shape = 0
+        self.count_tags_global = 0
+        self.count_emojis_global = 0
+        self.count_tags_skipped = 0
+        self.skipped_count = 0
+        self.count_glob = 0
+        self.partcount = 0
+        self.count_loc = 0
