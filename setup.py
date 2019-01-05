@@ -34,7 +34,8 @@ setup(name="tagmaps",
       install_requires=[
           'shapely',
           'emoji',
-          'hdbscan'
+          'hdbscan',
+          'lbsntransform>=0.3.7'
       ],
       entry_points={
           'console_scripts': [
