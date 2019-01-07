@@ -11,12 +11,17 @@ import csv
 from pathlib import Path
 from glob import glob
 from _csv import QUOTE_MINIMAL
+from decimal import Decimal
+import json
 import collections
 from collections import Counter
 from collections import defaultdict
 from collections import namedtuple
+from shapely.geometry import Polygon
+from shapely.geometry import shape
+from shapely.geometry import Point
 from tagmaps.classes.utils import Utils
-from lbsntransform.classes.shared_structure_proto_lbsndb import PostAttrShared
+from tagmaps.classes.shared_structure import PostStructure
 
 
 class LoadData():
@@ -38,6 +43,7 @@ class LoadData():
         self.total_tag_counter_glob = collections.Counter()
         self.bounds = AnalysisBounds()
         self.stats = DataStats()
+        self.cfg = cfg
         # Hashsets:
         self.locations_per_userid_dict = defaultdict(set)
         self.userlocation_taglist_dict = defaultdict(set)
@@ -48,7 +54,7 @@ class LoadData():
         self.userlocation_wordlist_dict = defaultdict(set)
         self.userlocations_firstphoto_dict = defaultdict(set)
         if cfg.cluster_emoji:
-            self.total_emoji_count_global = collections.Counter()
+            self.total_emoji_counter = collections.Counter()
         # UserDict_TagCounters = defaultdict(set)
         self.userdict_tagcounters_global = defaultdict(set)
         # UserIDsPerLocation_dict = defaultdict(set)
@@ -56,51 +62,294 @@ class LoadData():
         self.distinct_locations_set = set()
         self.distinct_userlocations_set = set()
         self.tmax = 1000  # default value
+        if cfg.tokenize_japanese:
+            from jNlp.jTokenize import jTokenize
 
-    def parse_input_records(self, cfg):
+    def parse_input_records(self):
         """Loops input csv records and adds to records_dict
 
         Returns statistic-counts, modifies (adds results to) class structures
         """
         # get user input for max tags to process
-        self.tmax = self.get_tmax(cfg)
+        tmax_input = self.get_tmax()
+        if tmax_input:
+            self.tmax = tmax_input
+        partcount = 0
+        for file_name in self.filelist:
+            with open(file_name, newline='', encoding='utf8') as f:
+                partcount += 1
+                self.process_inputfile(f)
+
+    def process_inputfile(self, file_handle):
+        """File parse for CSV or JSON
+
+        Output: produces a list of post that can be parsed
+        """
+        post_list = []  # needed?
+        if self.cfg.source_map.file_extension == "csv":
+            post_list = csv.reader(
+                file_handle,
+                delimiter=self.cfg.source_map.delimiter,
+                quotechar=self.cfg.source_map.quote_char,
+                quoting=self.cfg.source_map.quoting)
+            next(post_list, None)  # skip headerline
+        elif self.cfg.source_map.file_extension == "json":
+            post_list = post_list + json.loads(file_handle.read())
+        self.parse_postlist(post_list)
+
+    def parse_postlist(self, post_list):
+        """Process posts according to specifications"""
+        for post in post_list:
+            # skip duplicates and erroneous entries
+            if post[self.cfg.source_map.post_guid_col] in self.guid_hash \
+                    or len(post) < 15:
+                self.stats.skipped_count += 1
+                continue
+            else:
+                self.guid_hash.add(post[self.cfg.source_map.post_guid_col])
+            lbsn_post = self.process_post(post)
+            if lbsn_post is None:
+                continue
+            self.merge_posts(lbsn_post)
+            # status report
+            msg = \
+                f'Cleaned output to {len(self.distinct_locations_set):02d} ' \
+                f'distinct locations from ' \
+                f'{self.stats.count_glob:02d} photos ' \
+                f'(File {self.stats.partcount} of {len(self.filelist)}) - ' \
+                f'Skipped Media: {self.stats.skipped_count} - Skipped Tags: ' \
+                f'{self.stats.count_tags_skipped} of ' \
+                f'{self.stats.count_tags_global}'
+            print(msg, end='\r')
+
+    def merge_posts(self, lbsn_post):
+        """Methid will union all tags of a single user for each location
+
+        - further information is derived from the first
+        image for each user-location
+        - the result is a cleaned output containing only
+        the information that is necessary
+        """
+        # create userid_loc_id
+        post_locid_userid = f'{lbsn_post.loc_id}::{lbsn_post.user_guid}'
+        self.distinct_locations_set.add(lbsn_post.loc_id)
+        # print(f'Added: {photo_locID} to distinct_locations_set '
+        #       f'(len: {len(self.distinct_locations_set)})')
+        self.distinct_userlocations_set.add(post_locid_userid)
+        # print(f'Added: {post_locid_userid} to distinct_userlocations_set '
+        #       f'(len: {len(distinct_userlocations_set)})')
+        if lbsn_post.user_guid not in \
+                self.locations_per_userid_dict or \
+                lbsn_post.loc_id not in \
+                self.locations_per_userid_dict[lbsn_post.user_guid]:
+            # Bit wise or and assignment in one step.
+            # -> assign locID to UserDict list if not already contained
+            self.locations_per_userid_dict[lbsn_post.user_guid] |= {
+                lbsn_post.loc_id}
+            self.stats.count_loc += 1
+            self.userlocations_firstphoto_dict[post_locid_userid] = lbsn_post
+        # union tags per userid/unique location
+        self.userlocation_taglist_dict[post_locid_userid] |= lbsn_post.hashtags
+        cleaned_wordlist = self.get_cleaned_wordlist(lbsn_post.post_body)
+        # union words per userid/unique location
+        self.userlocation_wordlist_dict[post_locid_userid] |= set(
+            cleaned_wordlist)
+        self.stats.count_glob += 1
+        # Calculate toplists
+        if not lbsn_post.hashtags:
+            return
+        # add tagcount of this media to overall tagcount or this user,
+        # initialize counter for user if not already done
+        self.userdict_tagcounters_global[lbsn_post.user_guid].update(
+            lbsn_post.hashtags)
+        self.total_tag_counter_glob.update(lbsn_post.hashtags)
+
+    def generate_cleaned_post_dict(self):
+        """Will produce output list
+
+        - optionally writes output to file
+        """
+
+    def get_cleaned_wordlist(self, post_body_string):
+        cleaned_post_body = Utils.remove_special_chars(post_body_string)
+        if self.cfg.tokenize_japanese:
+            cleaned_wordlist = LoadData.get_wordlist_jp(cleaned_post_body)
+        else:
+            cleaned_wordlist = LoadData.get_wordlist(cleaned_post_body)
+        return cleaned_wordlist
 
     @staticmethod
-    def get_tmax(cfg):
+    def get_wordlist_jp(cleaned_post_body):
+        wordlist = [word for word in jTokenize(
+            input_sentence) for input_sentence in cleaned_post_body.split(' ')]
+        return wordlist
+
+    @staticmethod
+    def get_wordlist(cleaned_post_body):
+        """split by space-characterm, filter by length"""
+        wordlist = [word for word in cleaned_post_body.lower().split(
+            ' ') if len(word) > 2]
+        return wordlist
+
+    def process_post(self, post):
+        """Process single post and attach to common structure"""
+        lbsn_post = PostStructure()
+        # photo_source
+        lbsn_post.origin_id = post[self.cfg.source_map.originid_col]
+        lbsn_post.guid = post[self.cfg.source_map.post_guid_col]  # guid
+        lbsn_post.guid = post[self.cfg.source_map.user_guid_col]  # user guid
+        # user guid
+        lbsn_post.post_url = post[self.cfg.source_map.post_url_col]
+        # user guid
+        lbsn_post.post_publish_date = \
+            post[self.cfg.source_map.post_publish_date_col]
+        # Process Spatial Query first (if skipping necessary)
+        if self.cfg.sort_out_places and \
+                self.is_sortout_place(post):
+            return
+        if self.is_empty_latlng(post):
+            return
+        else:
+            # assign lat/lng coordinates from dict
+            lat, lng = self.correct_placelatlng(
+                post[self.cfg.source_map.place_guid_col])
+            # update boundary
+            self.bounds.upd_latlng_bounds(lat, lng)
+        lbsn_post.latitude = lat
+        lbsn_post.longitude = lng
+        lbsn_post.loc_id = str(lat) + ':' + \
+            str(lng)  # create loc_id from lat/lng
+        # exclude posts outside boundary
+        if self.cfg.shapefile_intersect and \
+                self.is_outside_shapebounds(post):
+            return
+        if self.cfg.cluster_tags or \
+                self.cfg.cluster_emoji or \
+                self.cfg.topic_modeling:
+            lbsn_post.post_body = post[self.cfg.source_map.post_body_col]
+        else:
+            lbsn_post.post_body = ""
+        lbsn_post.post_like_count = self.get_count_frompost(
+            post[self.cfg.source_map.post_like_count_col])
+        lbsn_post.hashtags = set()
+        if self.cfg.cluster_tags or self.cfg.topic_modeling:
+            lbsn_post.hashtags = self.get_tags(
+                post[self.cfg.source_map.tags_col])
+        if self.cfg.cluster_emoji:
+            post_emoji = self.get_emoji(lbsn_post.post_body)
+            lbsn_post.hashtags = set.union(post_emoji)
+        lbsn_post.post_create_date = \
+            post[self.cfg.source_map.post_create_date_col]
+        lbsn_post.post_views_count = self.get_count_frompost(
+            post[self.cfg.source_map.post_views_count_col])
+        # return parsed post object
+        return lbsn_post
+
+    def get_emoji(self, post_body):
+        emoji_filtered = set(Utils.extract_emoji(post_body))
+        if not len(emoji_filtered) == 0:
+            self.stats.count_emojis_global += len(emoji_filtered)
+            self.total_emoji_counter.update(emoji_filtered)
+        return emoji_filtered
+
+    def get_tags(self, tags_string):
+        # [1:-1] removes curly brackets, second [1:-1] removes quotes
+        tags = set(filter(None, tags_string.lower().split(";")))
+        # Filter tags based on two stoplists
+        if self.cfg.ignore_stoplists:
+            count_tags = len(tags)
+            count_skipped = 0
+        else:
+            tags, count_tags, count_skipped = \
+                Utils.filterTags(
+                    tags,
+                    self.cfg.sort_out_always_set,
+                    self.cfg.sort_out_always_instr_set
+                )
+        self.stats.count_tags_global += count_tags
+        self.stats.count_tags_skipped += count_skipped
+        return tags
+
+    @staticmethod
+    def get_count_frompost(count_string):
+        if count_string and not count_string == "":
+            try:
+                photo_likes_int = int(count_string)
+                return photo_likes_int
+            except TypeError:
+                pass
+        return 0
+
+    def correct_placelatlng(self, place_guid_string):
+        """If place corrections available, update lat/lng coordinates
+        Needs test: not place_guid_string
+        """
+        if self.cfg.correct_places \
+                and not place_guid_string \
+                and place_guid_string \
+                in self.cfg.correct_place_latlng_dict:
+            lat = Decimal(
+                # correct lat
+                self.cfg.correct_place_latlng_dict[place_guid_string][0])
+            lng = Decimal(
+                # correct lng
+                self.cfg.correct_place_latlng_dict[place_guid_string][1])
+        else:
+            lat = Decimal(lat)  # original lat
+            lng = Decimal(lng)  # original lng
+        return lat, lng
+
+    def is_outside_shapebounds(self, post):
+        """Skip all posts outside shapefile """
+        # do not expensive spatial check twice:
+        if post.loc_id in self.shape_exclude_locid_hash:
+            self.stats.skipped_count += 1
+            return True
+        if post.loc_id not in self.cfg.shape_included_locid_hash:
+            LngLatPoint = Point(post.longitude, post.latitude)
+            if not LngLatPoint.within(self.cfg.shp_geom):
+                self.stats.skipped_count += 1
+                self.shape_exclude_locid_hash.add(post.loc_id)
+                return True
+            else:
+                self.shape_included_locid_hash.add(post.loc_id)
+        return False
+
+    def is_empty_latlng(self, post):
+        if post[self.cfg.source_map.latitude_col] == "" \
+                or post[self.cfg.source_map.longitude_col] == "":
+            self.stats.count_non_geotagged += 1
+            return True  # skip non-geotagged medias
+        return False
+
+    def is_sortout_place(self, post):
+        if not post[self.cfg.source_map.place_guid_col] == "":
+            if post[self.cfg.source_map.place_guid_col] \
+                    in self.cfg.sort_out_places_set:
+                self.stats.skipped_count += 1
+                return True
+        return False
+
+    def get_tmax(self):
         """User Input to get number of tags to process"""
-        if cfg.auto_mode:
-            return 1000
-        if cfg.cluster_tags or cfg.cluster_emoji:
-            inputtext = input(f'Files to process: {len(filelist)}. \nOptional: '
-                              f'Enter a Number for the variety of Tags to process '
-                              f'(Default is 1000)\nPress Enter to proceed.. \n')
+        if self.cfg.auto_mode:
+            return None
+        if self.cfg.cluster_tags or self.cfg.cluster_emoji:
+            inputtext = \
+                input(f'Files to process: {len(self.filelist)}. \nOptional: '
+                      f'Enter a Number for the variety of Tags to process '
+                      f'(Default is 1000)\nPress Enter to proceed.. \n')
             if inputtext == "" or not inputtext.isdigit():
-                return 1000
+                return None
             else:
                 return int(inputtext)
 
     @staticmethod
-    def fetch_csv_data_from_file(source_config):
-        """Read csv entries from file (either *.txt or *.csv).
-
-        The actual CSV formatting is not setable in config yet. There are many specifics, e.g.
-        #QUOTE_NONE is used here because media saved from Flickr does not contain any quotes ""
-        """
-        records = []
-        loc_file = loc_filelist[start_file_id]
-        HF.log_main_debug(f'\nCurrent file: {ntpath.basename(loc_file)}')
-        with open(loc_file, 'r', encoding="utf-8", errors='replace') as file:
-            reader = csv.reader(file, delimiter=',',
-                                quotechar='"', quoting=csv.QUOTE_NONE)
-            next(reader, None)  # skip headerline
-            records = list(reader)
-        if not records:
-            return None
-        return records
-
-    @staticmethod
     def read_local_files(config):
-        """Read Local Files according to config parameters and returns list of file-paths"""
+        """Read Local Files according to config parameters
+
+        - returns list of file-paths
+        """
         input_path = config.input_folder
         filelist = list(input_path.glob(
             f'*.{config.source_map.file_extension}'))
@@ -110,13 +359,6 @@ class LoadData():
                      "found.")
         else:
             return filelist
-
-    @staticmethod
-    def skip_empty_or_other(single_record):
-        """Detect empty records"""
-        if not single_record:
-            return False
-        return True
 
 
 class AnalysisBounds():
@@ -146,6 +388,12 @@ class AnalysisBounds():
         if self.lim_lng_max is None or \
                 (lng > self.lim_lng_max and not lng == 0):
             self.lim_lng_max = lng
+
+    def get_bound_report(self):
+        bound_report = f'Bounds are: ' \
+                 f'Min {float(self.lim_lng_min)} {float(self.lim_lat_min)} ' \
+                 f'Max {float(self.lim_lng_max)} {float(self.lim_lat_max)}'
+        return bound_report
 
 
 class DataStats():

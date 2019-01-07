@@ -15,6 +15,8 @@ import numpy as np
 import math
 from math import radians, cos, sin, asin, sqrt
 import re
+import io
+import logging
 import fiona #Fiona needed for reading Shapefile
 from fiona.crs import from_epsg
 import shapely.geometry as geometry
@@ -28,16 +30,22 @@ from decimal import Decimal
 from descartes import PolygonPatch
 from scipy.spatial import Delaunay
 import argparse
-
-import io
-import logging
 from tagmaps.config.config import BaseConfig
+
 
 class Utils():
     """Collection of various tools and helper functions
     
     Primarily @classmethods and @staticmethods
     """
+    @staticmethod
+    def remove_special_chars(s):
+        """Removes any special char from string"""
+        SPECIAL_CHARS = "?.!/;:,[]()'-&#"
+        s_cleaned = s.translate(
+            {ord(c): " " for c in SPECIAL_CHARS})
+        return s_cleaned
+
     @staticmethod
     def is_number(s):
         """Check if variable is number (float)"""
@@ -57,9 +65,6 @@ class Utils():
         log = cls.set_logger()
         logging.getLogger("fiona.collection").disabled = True
         cfg = BaseConfig()
-        # optional import
-        if cfg.tokenize_japanese:
-            from jNlp.jTokenize import jTokenize
         # create output dir if not exists
         Utils.init_output_dir()
     
@@ -181,8 +186,20 @@ class Utils():
         """Is this function really needed, makes no difference! (really?)"""
         if unicodedata.name(strEmo).startswith(("EMOJI MODIFIER","VARIATION SELECTOR","ZERO WIDTH")):
             return False
-        else:
-            return True
+        return True
+
+    @staticmethod
+    def extract_emoji(str):
+        """Extracts emoji from string
+
+        str = str.decode('utf-32').encode('utf-32', 'surrogatepass')
+        return list(c for c in str if c in emoji.UNICODE_EMOJI)
+        """
+        emoji_list = list(c for c in str if c in
+                          emoji.UNICODE_EMOJI and
+                          Utils.checkEmojiType(c) is True)
+        return emoji_list
+
         #see https://stackoverflow.com/questions/43852668/using-collections-counter-to-count-emojis-with-different-colors
         # we want to ignore fitzpatrick modifiers and treat all differently colored emojis the same
         #https://stackoverflow.com/questions/38100329/some-emojis-e-g-have-two-unicode-u-u2601-and-u-u2601-ufe0f-what-does
@@ -219,10 +236,8 @@ class Utils():
     #    return(c)
     #https://github.com/carpedm20/emoji/
     #https://github.com/carpedm20/emoji/issues/75
-    def extract_emojis(str):
-      #str = str.decode('utf-32').encode('utf-32', 'surrogatepass')
-      #return list(c for c in str if c in emoji.UNICODE_EMOJI)
-      return list(c for c in str if c in emoji.UNICODE_EMOJI and Utils.checkEmojiType(c) is True)
+
+
     #this class is needed to override tkinter window with drag&drop option when overrideredirect = true
     #class App:
     #    global tk

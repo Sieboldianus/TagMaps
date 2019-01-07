@@ -372,7 +372,7 @@ class ConfigMap:
     def __init__(self, source_config):
         # [Main]
         self.name = source_config["Main"]["name"]
-        self.file_extension = source_config["Main"]["file_extension"]
+        self.file_extension = source_config["Main"]["file_extension"].lower()
         self.delimiter = source_config["Main"]["delimiter"]
         self.array_separator = source_config["Main"]["array_separator"]
         self.quoting = self._quote_selector(
@@ -380,6 +380,7 @@ class ConfigMap:
         self.quote_char = source_config["Main"]["quote_char"].strip('\'')
         self.date_time_format = source_config["Main"]["file_extension"]
         # [Columns]
+        self.originid_col = int(source_config["Columns"]["originid_col"])
         self.post_guid_col = int(source_config["Columns"]["post_guid_col"])
         self.latitude_col = int(source_config["Columns"]["latitude_col"])
         self.longitude_col = int(source_config["Columns"]["longitude_col"])
