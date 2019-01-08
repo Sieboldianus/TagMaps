@@ -43,3 +43,41 @@ class PostStructure():
         self.latitude = None
         self.longitude = None
         self.loc_id = None
+
+
+class CleanedPost():
+    """Shared structure for Post Attributes
+
+    Contains only the attributes needed for tag maps.
+    - in correct order for CSV read/write (PostStructure.__dict__)
+    """
+
+    def __init__(self):
+        self.origin_id = None
+        self.latitude = None
+        self.longitude = None
+        self.guid = None
+        self.place_guid = None
+        self.user_guid = None
+        self.post_create_date = None
+        self.post_publish_date = None
+        self.post_body = None
+        self.hashtags = None
+        self.emoji = None
+        self.post_views_count = None
+        self.loc_id = None
+
+    def __iter__(self):
+        return iter([self.origin_id,
+                     self.latitude,
+                     self.longitude,
+                     self.guid,
+                     self.place_guid,
+                     self.user_guid,
+                     self.post_create_date,
+                     self.post_publish_date,
+                     self.post_body,
+                     self.hashtags,
+                     self.emoji,
+                     self.post_views_count,
+                     self.loc_id])

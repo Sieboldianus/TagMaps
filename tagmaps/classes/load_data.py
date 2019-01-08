@@ -17,11 +17,13 @@ import collections
 from collections import Counter
 from collections import defaultdict
 from collections import namedtuple
+
 from shapely.geometry import Polygon
 from shapely.geometry import shape
 from shapely.geometry import Point
 from tagmaps.classes.utils import Utils
-from tagmaps.classes.shared_structure import PostStructure
+from tagmaps.classes.shared_structure \
+    import PostStructure, CleanedPost
 
 
 class LoadData():
@@ -61,7 +63,7 @@ class LoadData():
         # PhotoLocDict = defaultdict(set)
         self.distinct_locations_set = set()
         self.distinct_userlocations_set = set()
-        self.tmax = 1000  # default value
+        
         if cfg.tokenize_japanese:
             from jNlp.jTokenize import jTokenize
 
@@ -71,13 +73,10 @@ class LoadData():
         Returns statistic-counts, modifies (adds results to) class structures
         """
         # get user input for max tags to process
-        tmax_input = self.get_tmax()
-        if tmax_input:
-            self.tmax = tmax_input
-        partcount = 0
+        self.get_tmax()
         for file_name in self.filelist:
             with open(file_name, newline='', encoding='utf8') as f:
-                partcount += 1
+                self.stats.partcount += 1
                 self.process_inputfile(f)
 
     def process_inputfile(self, file_handle):
@@ -107,7 +106,7 @@ class LoadData():
                 continue
             else:
                 self.guid_hash.add(post[self.cfg.source_map.post_guid_col])
-            lbsn_post = self.process_post(post)
+            lbsn_post = self.parse_post(post)
             if lbsn_post is None:
                 continue
             self.merge_posts(lbsn_post)
@@ -115,15 +114,15 @@ class LoadData():
             msg = \
                 f'Cleaned output to {len(self.distinct_locations_set):02d} ' \
                 f'distinct locations from ' \
-                f'{self.stats.count_glob:02d} photos ' \
+                f'{self.stats.count_glob:02d} posts ' \
                 f'(File {self.stats.partcount} of {len(self.filelist)}) - ' \
-                f'Skipped Media: {self.stats.skipped_count} - Skipped Tags: ' \
+                f'Skipped posts: {self.stats.skipped_count} - skipped tags: ' \
                 f'{self.stats.count_tags_skipped} of ' \
                 f'{self.stats.count_tags_global}'
             print(msg, end='\r')
 
     def merge_posts(self, lbsn_post):
-        """Methid will union all tags of a single user for each location
+        """Method will union all tags of a single user for each location
 
         - further information is derived from the first
         image for each user-location
@@ -164,11 +163,162 @@ class LoadData():
             lbsn_post.hashtags)
         self.total_tag_counter_glob.update(lbsn_post.hashtags)
 
-    def generate_cleaned_post_dict(self):
-        """Will produce output list
+    def get_cleaned_post_dict(self):
+        """Output wrapper
 
-        - optionally writes output to file
+        - calls loop user locations method
+        - optionally initializes output to file
         """
+        if self.cfg.write_cleaned_data:
+            with open(f'{self.cfg.output_folder}/Output_cleaned.csv', 'w',
+                      encoding='utf8') as csvfile:
+                # get headerline from class structure
+                headerline = ','.join(CleanedPost().__dict__.keys())
+                csvfile.write(headerline)
+                # values will be written with CSV writer module
+                datawriter = csv.writer(
+                    csvfile, delimiter=',', lineterminator='\n',
+                    quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
+                cleaned_post_dict = self.loop_loc_per_userid(datawriter)
+        else:
+            cleaned_post_dict = self.loop_loc_per_userid(None)
+        if self.cfg.topic_modeling:
+            self.write_topic_models()
+        return cleaned_post_dict
+
+    def loop_loc_per_userid(self, datawriter=None):
+        """Will produce final cleaned list
+        of items to be processed by clustering.
+
+        - optionally writes entries to file, if handler exists
+        """
+        cleaned_post_dict = defaultdict(CleanedPost)
+        for user_key, locationhash in \
+                self.locations_per_userid_dict.items():
+            for location in locationhash:
+                locid_userid = f'{location}::{user_key}'
+                post_latlng = location.split(':')
+                first_post = self.userlocations_firstphoto_dict.get(
+                    locid_userid, None)
+                if first_post is None:
+                    return
+                # create tuple with cleaned photo data
+                cleaned_post_location = self.get_cleaned_location(
+                    first_post, locid_userid, post_latlng, user_key)
+
+                if datawriter is not None:
+                    LoadData.write_location_tocsv(
+                        datawriter, cleaned_post_location)
+                if self.cfg.topic_modeling:
+                    self.update_topic_models(
+                        cleaned_post_location, user_key)
+                cleaned_post_dict[cleaned_post_location.guid] = \
+                    cleaned_post_location
+        return cleaned_post_dict
+
+    def write_topic_models(self):
+        """Initialize two lists for topic modeling output
+
+        - hashed (anonymized) output (*add salt)
+        - original output
+        """
+        headerline = "topics,post_ids,user_ids\n"
+        with open(f'{self.cfg.output_folder}/'
+                  f'"Output_usertopics_anonymized.csv', 'w',
+                  encoding='utf8') as csvfile_anon, \
+            open(f'{self.cfg.output_folder}/'
+                 f'"Output_usertopics.csv', 'w',
+                 encoding='utf8') as csvfile:
+            dw_list = list()
+            for cfile in (csvfile, csvfile_anon):
+                cfile.write(headerline)
+                dw = csv.writer(cfile, delimiter=',',
+                                lineterminator='\n', quotechar='"',
+                                quoting=csv.QUOTE_NONNUMERIC)
+                dw_list.append(dw)
+            self.write_topic_rows(dw_list)
+
+    def write_topic_rows(self, dw_list):
+        """Write Topic models to file"""
+        dw = dw_list[0]
+        dw_anon = dw_list[1]
+
+        def join_encode(keys):
+            joined_keys = ",".join(keys)
+            joined_encoded_keys = ",".join(
+                [Utils.encode_string(post_id) for post_id in keys])
+            return joined_keys, joined_encoded_keys
+        for user_key, topics in self.user_topiclist_dict.items():
+            joined_topics = " ".join(topics)
+            post_keys = self.user_post_ids_dict.get(user_key, None)
+            joined_keys, joined_encoded_keys = join_encode(post_keys)
+            dw_anon.writerow([joined_topics,
+                              "{" + joined_encoded_keys + "}",
+                              Utils.encode_string(user_key)])
+            dw.writerow([joined_topics,
+                         "{" + joined_keys + "}",
+                         str(user_key)])
+
+    def update_topic_models(self,
+                            cleaned_post_location,
+                            user_key):
+        """If Topic Modeling enabled, update
+        required dictionaries with merged words from
+        title, tags and post_body
+        """
+        if not len(
+                cleaned_post_location.hashtags) == 0:
+            self.user_topiclist_dict[user_key] |= \
+                cleaned_post_location.hashtags
+            # also use descriptions for Topic Modeling
+            self. user_topiclist_dict[user_key] |= \
+                cleaned_post_location.post_body
+            # Bit wise or and assignment in one step.
+            # -> assign PhotoGuid to UserDict list
+            # if not already contained
+            self.user_post_ids_dict[user_key] |= {
+                cleaned_post_location.guid}
+            # UserPhotoFirstThumb_dict[user_key] = photo[5]
+
+    def get_cleaned_location(self, first_post, locid_userid,
+                             post_latlng, user_key):
+        """Merge cleaned post from all posts of a certain user
+        at a specific location
+
+        - some information is not needed, those post attributes
+        are simply skipped (e.g. location name)
+        - some information must not be merged, this can be directly copied
+        from the first post at a location/user (e.g. origin_id - will always be
+        the same for a particular user, post_create_date, post_publish_date)
+        - some information (e.g. hashtags) need merge with removing dupliates:
+        use prepared dictionaries
+        - some important information is type-checked (longitude, latitude)
+        """
+        cleaned_post = CleanedPost()
+        cleaned_post.origin_id = first_post.origin_id
+        cleaned_post.latitude = float(post_latlng[0])
+        cleaned_post.longitude = float(post_latlng[1])
+        cleaned_post.guid = first_post.guid
+        cleaned_post.user_guid = user_key
+        cleaned_post.post_body = \
+            self.userlocation_wordlist_dict.get(
+                locid_userid, ("",))  # ("",) = substitute default
+        cleaned_post.post_create_date = first_post.post_create_date
+        cleaned_post.post_publish_date = first_post.post_publish_date
+        cleaned_post.post_views_count = first_post.post_views_count
+        cleaned_post.hashtags = \
+            self.userlocation_taglist_dict.get(locid_userid, ("",))
+        cleaned_post.loc_id = first_post.loc_id
+        return cleaned_post
+
+    @staticmethod
+    def write_location_tocsv(datawriter, cleaned_post_location):
+        """Writes list of cleaned posts to CSV list
+
+        - for later use
+        """
+        datawriter.writerow(list(cleaned_post_location)
+                            )
 
     def get_cleaned_wordlist(self, post_body_string):
         cleaned_post_body = Utils.remove_special_chars(post_body_string)
@@ -191,13 +341,14 @@ class LoadData():
             ' ') if len(word) > 2]
         return wordlist
 
-    def process_post(self, post):
+    def parse_post(self, post):
         """Process single post and attach to common structure"""
         lbsn_post = PostStructure()
         # photo_source
         lbsn_post.origin_id = post[self.cfg.source_map.originid_col]
         lbsn_post.guid = post[self.cfg.source_map.post_guid_col]  # guid
-        lbsn_post.guid = post[self.cfg.source_map.user_guid_col]  # user guid
+        # user guid
+        lbsn_post.user_guid = post[self.cfg.source_map.user_guid_col]
         # user guid
         lbsn_post.post_url = post[self.cfg.source_map.post_url_col]
         # user guid
@@ -212,7 +363,9 @@ class LoadData():
         else:
             # assign lat/lng coordinates from dict
             lat, lng = self.correct_placelatlng(
-                post[self.cfg.source_map.place_guid_col])
+                post[self.cfg.source_map.place_guid_col],
+                post[self.cfg.source_map.latitude_col],
+                post[self.cfg.source_map.longitude_col])
             # update boundary
             self.bounds.upd_latlng_bounds(lat, lng)
         lbsn_post.latitude = lat
@@ -280,7 +433,7 @@ class LoadData():
                 pass
         return 0
 
-    def correct_placelatlng(self, place_guid_string):
+    def correct_placelatlng(self, place_guid_string, lat, lng):
         """If place corrections available, update lat/lng coordinates
         Needs test: not place_guid_string
         """
@@ -295,6 +448,7 @@ class LoadData():
                 # correct lng
                 self.cfg.correct_place_latlng_dict[place_guid_string][1])
         else:
+            # return original lat/lng
             lat = Decimal(lat)  # original lat
             lng = Decimal(lng)  # original lng
         return lat, lng
@@ -333,16 +487,18 @@ class LoadData():
     def get_tmax(self):
         """User Input to get number of tags to process"""
         if self.cfg.auto_mode:
-            return None
+            return
         if self.cfg.cluster_tags or self.cfg.cluster_emoji:
             inputtext = \
                 input(f'Files to process: {len(self.filelist)}. \nOptional: '
-                      f'Enter a Number for the variety of Tags to process '
-                      f'(Default is 1000)\nPress Enter to proceed.. \n')
-            if inputtext == "" or not inputtext.isdigit():
-                return None
+                      f'Enter a Number for the variety of tags to process '
+                      f'(default is 1000)\nPress Enter to proceed.. \n')
+            if inputtext is None \
+            or inputtext == "" \
+            or not inputtext.isdigit():
+                return
             else:
-                return int(inputtext)
+                self.cfg.tmax = int(inputtext)
 
     @staticmethod
     def read_local_files(config):
@@ -391,8 +547,8 @@ class AnalysisBounds():
 
     def get_bound_report(self):
         bound_report = f'Bounds are: ' \
-                 f'Min {float(self.lim_lng_min)} {float(self.lim_lat_min)} ' \
-                 f'Max {float(self.lim_lng_max)} {float(self.lim_lat_max)}'
+            f'Min {float(self.lim_lng_min)} {float(self.lim_lat_min)} ' \
+            f'Max {float(self.lim_lng_max)} {float(self.lim_lat_max)}'
         return bound_report
 
 

@@ -51,6 +51,7 @@ class BaseConfig:
         self.correct_places = False
         self.correct_place_latlng_dict = dict()
         self.shp_geom = None
+        self.tmax = 1000  # default value before user query
 
         # initialization
         self.pathname = Path.cwd()

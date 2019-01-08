@@ -49,8 +49,7 @@ import time
 from time import sleep
 import copy
 
-#needed for anonymization (Topic Clustering)
-import hashlib
+
 
 #enable for map display
 #from mpl_toolkits.basemap import Basemap
@@ -98,7 +97,7 @@ imgRatio = 0
 floaterX = 0
 floaterY = 0
 clusterTreeCuttingDist = 0
-topTagsList = []
+top_tags_list = []
 lastselectionList = []
 tnum = 0
 tkScalebar = None
@@ -119,147 +118,75 @@ def main():
 
     print('\n')
     log.info("########## STEP 1 of 6: Data Cleanup ##########")
-    lbsn_data.parse_input_records(cfg)
+    lbsn_data.parse_input_records()
     # get current time
     now = time.time()
+    # get cleaned data for use in clustering
+    cleaned_post_dict = lbsn_data.get_cleaned_post_dict()
     # status report
     total_distinct_locations = len(lbsn_data.distinct_locations_set)
-    log.info(f'\nTotal users: {len(lbsn_data.locations_per_userid_dict)} (UC)')
-    log.info(f'Total photos: {lbsn_data.stats.count_glob:02d} (PC)')
-    log.info(f'Total tags (PTC): {lbsn_data.statscount_tags_global}')
-    log.info(f'Total emojis (PEC): {lbsn_data.stats.count_emojis_global}')
-    log.info(f'Total user photo locations (UPL): '
-             f'{len(lbsn_data.distinct_user_locations_set)}')
+    log.info(f'\nTotal user count: {len(lbsn_data.locations_per_userid_dict)} (UC)')
+    log.info(f'Total post count: {lbsn_data.stats.count_glob:02d} (PC)')
+    log.info(f'Total tag count (PTC): {lbsn_data.stats.count_tags_global}')
+    log.info(f'Total emoji count (PEC): {lbsn_data.stats.count_emojis_global}')
+    log.info(f'Total user post locations (UPL): '
+             f'{len(lbsn_data.distinct_userlocations_set)}')
     log.info(lbsn_data.bounds.get_bound_report())
-
-    #create structure for tuple with naming for easy referencing
-    cleanedPhotoLocation_tuple = namedtuple('cleanedPhotoLocation_tuple', 'source lat lng photo_guid photo_owner userid photo_caption photo_dateTaken photo_uploadDate photo_views photo_tags photo_thumbnail photo_mTags photo_likes photo_comments photo_shortcode photo_mediatype photo_locName photo_locID')
-    cleanedPhotoDict = defaultdict(cleanedPhotoLocation_tuple)
-    with open("02_Output/Output_cleaned.txt", 'w', encoding='utf8') as csvfile:
-        csvfile.write("SOURCE,Latitude,Longitude,PhotoID,Owner,UserID,Name,DateTaken,UploadDate,Views,Tags,URL,MTags,Likes,Comments,Shortcode,Type,LocName,LocID," + '\n')
-        datawriter = csv.writer(csvfile, delimiter=',', lineterminator='\n', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
-        for user_key, locationhash in locations_per_userid_dict.items():
-            for location in locationhash:
-                locIDUserID = str(location) + '::' + str(user_key)
-                photo_latlng = location.split(':')
-                photo = userlocations_firstphoto_dict.get(locIDUserID,(" "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," "," "))
-                #create tuple with cleaned photo data
-                cleanedPhotoLocation = cleanedPhotoLocation_tuple(photo[0],#Source = 0
-                              float(photo_latlng[0]), #Lat = 1
-                              float(photo_latlng[1]), #Lng = 2
-                              photo[1],#photo_guid = 3
-                              photo[2],#photo_owner = 4
-                              user_key, #userid = 5
-                              userlocation_wordlist_dict.get(locIDUserID,("",)),#photo_caption = 6
-                              photo[6],#photo_dateTaken = 7
-                              photo[7],#photo_uploadDate = 8
-                              photo[8],#photo_views = 9
-                              userlocation_taglist_dict.get(locIDUserID,("",)),#photo_tags = 10
-                              photo[5],#photo_thumbnail = 11
-                              photo[10],#photo_mTags = 12
-                              photo[11],#photo_likes = 13
-                              photo[12],#photo_comments = 14
-                              photo[13],#photo_shortcode = 15
-                              photo[14],#photo_mediatype = 16
-                              photo[15],#photo_locName = 17
-                              photo[16]#photo_locID = 18
-                              )
-                if cfg.write_cleaned_data:
-                    ###optional Write Cleaned Data to CSV/TXT
-                    datawriter.writerow([cleanedPhotoLocation.source,#Source = 0
-                                  cleanedPhotoLocation.lat, #Lat = 1
-                                  cleanedPhotoLocation.lng, #Lng = 2
-                                  cleanedPhotoLocation.photo_guid,#photo_guid = 3
-                                  cleanedPhotoLocation.photo_owner,#photo_owner = 4
-                                  cleanedPhotoLocation.userid, #userid = 5
-                                  ";".join(cleanedPhotoLocation.photo_caption),#photo_caption = 6
-                                  cleanedPhotoLocation.photo_dateTaken,#photo_dateTaken = 7
-                                  cleanedPhotoLocation.photo_uploadDate,#photo_uploadDate = 8
-                                  cleanedPhotoLocation.photo_views,#photo_views = 9
-                                  ";".join(cleanedPhotoLocation.photo_tags),#photo_tags = 10
-                                  cleanedPhotoLocation.photo_thumbnail,#photo_thumbnail = 11
-                                  cleanedPhotoLocation.photo_mTags,#photo_mTags = 12
-                                  cleanedPhotoLocation.photo_likes,#photo_likes = 13
-                                  cleanedPhotoLocation.photo_comments,#photo_comments = 14
-                                  cleanedPhotoLocation.photo_shortcode,#photo_shortcode = 15
-                                  cleanedPhotoLocation.photo_mediatype,#photo_mediatype = 16
-                                  cleanedPhotoLocation.photo_locName,#photo_locName = 17
-                                  cleanedPhotoLocation.photo_locID]#photo_locID = 18
-                                  )
-                ##optional Write Cleaned Search Terms to CSV for Topic Modeling
-                #topics = cleanedPhotoLocation.photo_caption.union(cleanedPhotoLocation.photo_tags)
-                if cfg.topic_modeling:
-                    if not len(cleanedPhotoLocation.photo_tags) == 0:
-                        user_topiclist_dict[user_key] |= cleanedPhotoLocation.photo_tags
-                        user_topiclist_dict[user_key] |= cleanedPhotoLocation.photo_caption #also use descriptions for Topic Modeling
-                        user_post_ids_dict[user_key] |= {cleanedPhotoLocation.photo_guid} # Bit wise or and assignment in one step. -> assign PhotoGuid to UserDict list if not already contained
-                        #UserPhotoFirstThumb_dict[user_key] = photo[5]
-                cleanedPhotoDict[cleanedPhotoLocation.photo_guid] = cleanedPhotoLocation
-    if cfg.topic_modeling:
-        #export list of cleaned topics on a per user basis for LDA/TSNE etc.
-        with open("02_Output/Output_usertopics_anonymized.csv", 'w', encoding='utf8') as csvfile:
-            csvfile.write("TOPICS,PhotoIDs,UserID" + '\n')
-            datawriter = csv.writer(csvfile, delimiter=',', lineterminator='\n', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
-            for user_key, topics in user_topiclist_dict.items():
-                datawriter.writerow([" ".join(topics),"{" + ",".join([hashlib.sha3_256(photoid.encode("utf8")).hexdigest() for photoid in user_post_ids_dict.get(user_key,None)]) + "}",hashlib.sha3_256(user_key.encode("utf8")).hexdigest()])
-        with open("02_Output/Output_usertopics.csv", 'w', encoding='utf8') as csvfile:
-            csvfile.write("TOPICS,PhotoIDs,UserID" + '\n')
-            datawriter = csv.writer(csvfile, delimiter=',', lineterminator='\n', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
-            for user_key, topics in user_topiclist_dict.items():
-                datawriter.writerow([" ".join(topics),"{" + ",".join(user_post_ids_dict.get(user_key,None)) + "}",str(user_key)])
 
     if (cfg.cluster_tags or cfg.cluster_emoji):
         log.info("########## STEP 2 of 6: Tag Ranking ##########")
-        overallNumOfUsersPerTag_global = collections.Counter()
-        for user_key, taghash in userdict_tagcounters_global.items():
-            #taghash contains unique values (= strings) for each user, thus summing up these taghashes counts each user only once per tag
-            overallNumOfUsersPerTag_global.update(taghash)
+        overall_usercount_pertag = collections.Counter()
+        for taghash in lbsn_data.userdict_tagcounters_global.values():
+            # taghash contains unique values (= strings) for each user,
+            # thus summing up these taghashes counts each user only once per tag
+            overall_usercount_pertag.update(taghash)
 
-        global topTagsList
-        log.info(f"Total unique tags: {len(overallNumOfUsersPerTag_global)}")
+        global top_tags_list
+        log.info(f"Total unique tags: {len(overall_usercount_pertag)}")
 
-        topTagsList = overallNumOfUsersPerTag_global.most_common(tmax)
-        #remove all tags that are used by less than x {cfg.limit_bottom_user_count} photographers
+        top_tags_list = overall_usercount_pertag.most_common(cfg.tmax)
+        # remove all tags that are used by less than x
+        # {cfg.limit_bottom_user_count} photographers
         if cfg.remove_long_tail is True:
-            indexMin = next((i for i, (t1, t2) in enumerate(topTagsList) if t2 < cfg.limit_bottom_user_count), None)
+            indexMin = next((i for i, (t1, t2) in enumerate(top_tags_list) if t2 < cfg.limit_bottom_user_count), None)
             if indexMin:
-                lenBefore = len(topTagsList)
-                del topTagsList[indexMin:]
-                lenAfter = len(topTagsList)
-                tmax = lenAfter
-                if not lenBefore == lenAfter:
-                    log.info(f'Long tail removal: Filtered {lenBefore - lenAfter} Tags that were used by less than {cfg.limit_bottom_user_count} users.')
+                len_before = len(top_tags_list)
+                del top_tags_list[indexMin:]
+                len_after = len(top_tags_list)
+                cfg.tmax = len_after
+                if not len_before == len_after:
+                    log.info(f'Long tail removal: Filtered {len_before - len_after} Tags that were used by less than {cfg.limit_bottom_user_count} users.')
 
         # Calculate Total Tags for selected topTagsList (Long Tail Stat)
         totalTagCount = 0
-        for tag in topTagsList:
-            count = total_tag_counter_glob.get(tag[0])
+        for tag in top_tags_list:
+            count = lbsn_data.total_tag_counter_glob.get(tag[0])
             if count:
                 totalTagCount += count
         #print(TotalTagCount_Counter_global.most_common(3))
-        log.info(f'Total tags count for selected Tags List (Top {tmax}): {totalTagCount}.')
+        log.info(f'Total tags count for selected Tags List (Top {cfg.tmax}): {totalTagCount}.')
 
         #optional write topemojis to file
-        globalEmojiSet = {}
+        global_emoji_set = {}
         if cfg.cluster_emoji:
-            topEmojisList = total_emoji_counter.most_common()
-            globalEmojiSet =  {tuple[0] for tuple in topEmojisList}
-            if (not len(globalEmojiSet) == 0):
-                topemojis = ''.join("%s,%i" % v + '\n' for v in topEmojisList)
+            top_emoji_list = lbsn_data.total_emoji_counter.most_common()
+            global_emoji_set = {tuple[0] for tuple in top_emoji_list}
+            if (not len(global_emoji_set) == 0):
+                top_emoji = ''.join("%s,%i" % v + '\n' for v in top_emoji_list)
                 with open("02_Output/Output_topemojis.txt", 'w', encoding="utf8") as file: #overwrite
                     file.write("emoji,usercount\n")
-                    file.write(topemojis)
+                    file.write(top_emoji)
 
         if cfg.cluster_tags:
             #optional write toptags to file
-            toptags = ''.join("%s,%i" % v + '\n' for v in topTagsList if not v[0] in globalEmojiSet)
-            if (not len(topTagsList) == 0):
+            toptags = ''.join("%s,%i" % v + '\n' for v in top_tags_list if not v[0] in global_emoji_set)
+            if (not len(top_tags_list) == 0):
                 with open("02_Output/Output_toptags.txt", 'w', encoding="utf8") as file: #overwrite
                     file.write("tag,usercount\n")
                     file.write(toptags)
 
-        if cfg.statistics_only == False:
-            singleMostUsedtag = topTagsList[0]
+        if cfg.statistics_only is False:
+            single_mostused_tag = top_tags_list[0]
             now = time.time()
             log.info("########## STEP 3 of 6: Tag Location Clustering ##########")
             #prepare some variables
@@ -277,10 +204,10 @@ def main():
             #plt.gca().set_xlim([limXMin, limXMax])
             #plt.gca().set_ylim([limYMin, limYMax])
             global cleaned_photo_list
-            cleaned_photo_list = list(cleanedPhotoDict.values())
+            cleaned_photo_list = list(cleaned_post_dict.values())
             df = pd.DataFrame(cleaned_photo_list)
             points = df.as_matrix(['lng','lat'])
-            limYMin,limYMax,limXMin,limXMax = Utils.getRectangleBounds(points)
+            limYMin, limYMax, limXMin, limXMax = Utils.getRectangleBounds(points)
             bound_points_shapely = geometry.MultiPoint([(limXMin, limYMin), (limXMax, limYMax)])
             distYLat = limYMax - limYMin
             distXLng = limXMax - limXMin
@@ -433,17 +360,17 @@ def main():
                 selectedPhotoList_Guids, distinctLocalLocationCount = sel_photos(toptag[0],cleaned_photo_list)
                 percentageOfTotalLocations = distinctLocalLocationCount/(total_distinct_locations/100)
                 if silent:
-                    if toptag[0] in globalEmojiSet:
+                    if toptag[0] in global_emoji_set:
                         text = unicode_name(toptag[0])
                     else:
                         text = toptag[0]
-                    print(f'({tnum} of {tmax}) Found {len(selectedPhotoList_Guids)} photos (UPL) for tag \'{text}\' ({percentageOfTotalLocations:.0f}% of total distinct locations in area)', end=" ")
+                    print(f'({tnum} of {cfg.tmax}) Found {len(selectedPhotoList_Guids)} photos (UPL) for tag \'{text}\' ({percentageOfTotalLocations:.0f}% of total distinct locations in area)', end=" ")
 
 
                 #clustering
                 if len(selectedPhotoList_Guids) < 2:
                     return [], selectedPhotoList_Guids
-                selectedPhotoList = [cleanedPhotoDict[x] for x in selectedPhotoList_Guids]
+                selectedPhotoList = [cleaned_post_dict[x] for x in selectedPhotoList_Guids]
                 #only used for tag clustering, otherwise (photo location clusters), global vars are used (df, points)
                 df = pd.DataFrame(selectedPhotoList)
                 points = df.as_matrix(['lng','lat']) #converts pandas data to numpy array (limit by list of column-names)
@@ -663,21 +590,21 @@ def main():
                 value = w.get(index)
                 #tkinter.messagebox.showinfo("You selected ", value)
                 tnum = 1
-                cluster_tag(topTagsList[index],True) #generate only preview map
+                cluster_tag(top_tags_list[index],True) #generate only preview map
                 #plt.close('all')
             def cluster_currentDisplayTag():
                 if currentDisplayTag:
                     #tkinter.messagebox.showinfo("Clustertag: ", str(currentDisplayTag))
                     cluster_tag(currentDisplayTag)
                 else:
-                    cluster_tag(topTagsList[0])
+                    cluster_tag(top_tags_list[0])
             def scaletest_currentDisplayTag():
                 global tkScalebar
                 global fig1
                 if currentDisplayTag:
                     clustertag = currentDisplayTag
                 else:
-                    clustertag = topTagsList[0]
+                    clustertag = top_tags_list[0]
                 scalecalclist = []
                 dmax = int(clusterTreeCuttingDist*10)
                 dmin = int(clusterTreeCuttingDist/10)
@@ -709,14 +636,14 @@ def main():
                 plt.text(limXMax, limYMax,f'{number_of_clusters} Cluster (Noise: {noisyTxt})',fontsize=10,horizontalalignment='right',verticalalignment='top',fontweight='bold')
 
             def delete(listbox):
-                global topTagsList
+                global top_tags_list
                 global lastselectionList
                 lastselectionList = []
                 # Delete from Listbox
                 selection = listbox.curselection()
                 for index in selection[::-1]:
                     listbox.delete(index)
-                    del(topTagsList[index])
+                    del(top_tags_list[index])
             ######################################################################################################################################################
             ######################################################################################################################################################
             ######################################################################################################################################################
@@ -741,7 +668,7 @@ def main():
             scroll.pack(side="right", fill="y")
             listbox.pack()
             listbox.config(yscrollcommand=scroll.set)
-            for item in topTagsList: #only for first 500 entries: use topTagsList[:500]
+            for item in top_tags_list: #only for first 500 entries: use topTagsList[:500]
                 try:
                     listbox.insert(tk.END, f'{item[0]} ({item[1]} user)')
                 except tk.TclError:
@@ -790,7 +717,7 @@ def main():
                 #geom_proj = transform(project, alphaShapeAndMeta[0])
 
                 if cfg.local_saturation_check:
-                    clusters, selectedPhotoList_Guids = cluster_tag(singleMostUsedtag, None, True)
+                    clusters, selectedPhotoList_Guids = cluster_tag(single_mostused_tag, None, True)
                     numpy_selectedPhotoList_Guids = np.asarray(selectedPhotoList_Guids)
                     mask_noisy = (clusters == -1)
                     number_of_clusters = len(np.unique(clusters[~mask_noisy]))
@@ -799,14 +726,14 @@ def main():
                     for x in range(number_of_clusters):
                         currentClusterPhotoGuids = numpy_selectedPhotoList_Guids[clusters==x]
                         clusterPhotosGuidsList.append(currentClusterPhotoGuids)
-                    noClusterPhotos_perTag_DictOfLists[singleMostUsedtag[0]] = list(numpy_selectedPhotoList_Guids[clusters==-1])
+                    noClusterPhotos_perTag_DictOfLists[single_mostused_tag[0]] = list(numpy_selectedPhotoList_Guids[clusters==-1])
                     # Sort descending based on size of cluster: https://stackoverflow.com/questions/30346356/how-to-sort-list-of-lists-according-to-length-of-sublists
                     clusterPhotosGuidsList.sort(key=len, reverse=True)
                     if not len(clusterPhotosGuidsList) == 0:
-                        clustersPerTag[singleMostUsedtag[0]] = clusterPhotosGuidsList
+                        clustersPerTag[single_mostused_tag[0]] = clusterPhotosGuidsList
                 global tnum
                 tnum = 1
-                for toptag in topTagsList:
+                for toptag in top_tags_list:
                     if cfg.local_saturation_check and tnum == 1 and toptag[0] in clustersPerTag:
                         #skip toptag if already clustered due to local saturation
                         continue
@@ -880,17 +807,17 @@ def main():
                 if cfg.local_saturation_check:
                     #calculate total area of Top1-Tag for 80% saturation check for lower level tags
                     saturationExcludeCount = 0
-                    clusterPhotoGuidList = clustersPerTag.get(singleMostUsedtag[0], None)
+                    clusterPhotoGuidList = clustersPerTag.get(single_mostused_tag[0], None)
                     #print("Toptag: " + str(singleMostUsedtag[0]))
                     if clusterPhotoGuidList is None:
                         sys.exit(f'No Photos found for toptag: {singleMostUsedtag}')
-                    toptagArea = Utils.generateClusterShape(toptag,clusterPhotoGuidList,cleanedPhotoDict,crs_wgs,crs_proj,clusterTreeCuttingDist,cfg.local_saturation_check)[1]
-                for toptag in topTagsList:
+                    toptagArea = Utils.generateClusterShape(toptag,clusterPhotoGuidList,cleaned_post_dict,crs_wgs,crs_proj,clusterTreeCuttingDist,cfg.local_saturation_check)[1]
+                for toptag in top_tags_list:
                     tnum += 1
                     clusterPhotoGuidList = clustersPerTag.get(toptag[0], None)
                     #Generate tag Cluster Shapes
                     if clusterPhotoGuidList:
-                        listOfAlphashapesAndMeta_tmp,tagArea = Utils.generateClusterShape(toptag,clusterPhotoGuidList,cleanedPhotoDict,crs_wgs,crs_proj,clusterTreeCuttingDist,cfg.local_saturation_check)
+                        listOfAlphashapesAndMeta_tmp,tagArea = Utils.generateClusterShape(toptag,clusterPhotoGuidList,cleaned_post_dict,crs_wgs,crs_proj,clusterTreeCuttingDist,cfg.local_saturation_check)
                         if cfg.local_saturation_check and not tagArea == 0 and not tnum == 1:
                             localSaturation = tagArea/(toptagArea/100)
                             #print("Local Saturation for Tag " + toptag[0] + ": " + str(round(localSaturation,0)))
@@ -907,7 +834,7 @@ def main():
                     if singlePhotoGuidList:
                         shapetype = "Single cluster"
                         #print("Single: " + str(len(singlePhotoGuidList)))
-                        photos = [cleanedPhotoDict[x] for x in singlePhotoGuidList]
+                        photos = [cleaned_post_dict[x] for x in singlePhotoGuidList]
                         for single_photo in photos:
                             #project lat/lng to UTM
                             x, y = pyproj.transform(crs_wgs, crs_proj, single_photo.lng, single_photo.lat)
@@ -1000,7 +927,7 @@ def main():
                         #geom_proj = transform(project, alphaShapeAndMeta[0])
                         #c.write({
                         #    'geometry': geometry.mapping(geom_proj),
-                        if cfg.cluster_emoji and alphaShapeAndMeta[4] in globalEmojiSet:
+                        if cfg.cluster_emoji and alphaShapeAndMeta[4] in global_emoji_set:
                             emoji = 1
                             ImpTagText = ""
                         else:
@@ -1025,7 +952,7 @@ def main():
                         emojiTable.write("FID,Emoji\n")
                         idx = 0
                         for alphaShapeAndMeta in listOfAlphashapesAndMeta:
-                            if alphaShapeAndMeta[4] in globalEmojiSet:
+                            if alphaShapeAndMeta[4] in global_emoji_set:
                                 ImpTagText = f'{alphaShapeAndMeta[4]}'
                             else:
                                 ImpTagText = ""
@@ -1045,7 +972,7 @@ def main():
         #if not 'cleanedPhotoList' in locals():
         #global cleanedPhotoList
         if len(cleaned_photo_list) == 0:
-            cleaned_photo_list = list(cleanedPhotoDict.values())
+            cleaned_photo_list = list(cleaned_post_dict.values())
         for cleanedPhotoLocation in cleaned_photo_list:
             selectedPhotoList_Guids.append(cleanedPhotoLocation.photo_guid)
         selectedPhotoList = cleaned_photo_list
@@ -1085,7 +1012,7 @@ def main():
                 epsg_code = Utils.convert_wgs_to_utm(input_lon_center, input_lat_center)
                 crs_proj = pyproj.Proj(init=f'epsg:{epsg_code}')
         for photo_cluster in clusterPhotosGuidsList:
-            photos = [cleanedPhotoDict[x] for x in photo_cluster]
+            photos = [cleaned_post_dict[x] for x in photo_cluster]
             uniqueUserCount = len(set([photo.userid for photo in photos]))
             #get points and project coordinates to suitable UTM
             points = [geometry.Point(pyproj.transform(crs_wgs, crs_proj, photo.lng, photo.lat))
@@ -1098,7 +1025,7 @@ def main():
             #clusterPhotoGuidList = clustersPerTag.get(None, None)
         #noclusterphotos = [cleanedPhotoDict[x] for x in singlePhotoGuidList]
         for photoGuid_noCluster in noClusterPhotos:
-            photo = cleanedPhotoDict[photoGuid_noCluster]
+            photo = cleaned_post_dict[photoGuid_noCluster]
             x, y = pyproj.transform(crs_wgs, crs_proj, photo.lng, photo.lat)
             pcenter = geometry.Point(x, y)
             if pcenter is not None and not pcenter.is_empty:

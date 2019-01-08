@@ -15,6 +15,7 @@ import numpy as np
 import math
 from math import radians, cos, sin, asin, sqrt
 import re
+import hashlib
 import io
 import logging
 import fiona #Fiona needed for reading Shapefile
@@ -35,9 +36,17 @@ from tagmaps.config.config import BaseConfig
 
 class Utils():
     """Collection of various tools and helper functions
-    
+
     Primarily @classmethods and @staticmethods
     """
+    @staticmethod
+    def encode_string(s):
+        """Encode string in Sha256, produce hex
+
+        - returns a string of double length, containing only hexadecimal digits"""
+        encoded_string = hashlib.sha3_256(s.encode("utf8")).hexdigest()
+        return encoded_string
+
     @staticmethod
     def remove_special_chars(s):
         """Removes any special char from string"""
@@ -481,12 +490,14 @@ class Utils():
     def fit_cluster(clusterer, data):
         clusterer.fit(data)
         return clusterer
+        
     def getRectangleBounds(points):
         limYMin = np.min(points.T[1])
         limYMax = np.max(points.T[1])
         limXMin = np.min(points.T[0])
         limXMax = np.max(points.T[0])
-        return limYMin,limYMax,limXMin,limXMax
+        return limYMin, limYMax, limXMin, limXMax
+
     def filterTags(taglist,SortOutAlways_set,SortOutAlways_inStr_set):
         count_tags = 0
         count_skipped = 0
