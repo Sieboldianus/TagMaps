@@ -63,9 +63,6 @@ class LoadData():
         # PhotoLocDict = defaultdict(set)
         self.distinct_locations_set = set()
         self.distinct_userlocations_set = set()
-        
-        if cfg.tokenize_japanese:
-            from jNlp.jTokenize import jTokenize
 
     def parse_input_records(self):
         """Loops input csv records and adds to records_dict
@@ -322,17 +319,8 @@ class LoadData():
 
     def get_cleaned_wordlist(self, post_body_string):
         cleaned_post_body = Utils.remove_special_chars(post_body_string)
-        if self.cfg.tokenize_japanese:
-            cleaned_wordlist = LoadData.get_wordlist_jp(cleaned_post_body)
-        else:
-            cleaned_wordlist = LoadData.get_wordlist(cleaned_post_body)
+        cleaned_wordlist = LoadData.get_wordlist(cleaned_post_body)
         return cleaned_wordlist
-
-    @staticmethod
-    def get_wordlist_jp(cleaned_post_body):
-        wordlist = [word for word in jTokenize(
-            input_sentence) for input_sentence in cleaned_post_body.split(' ')]
-        return wordlist
 
     @staticmethod
     def get_wordlist(cleaned_post_body):
@@ -494,8 +482,8 @@ class LoadData():
                       f'Enter a Number for the variety of tags to process '
                       f'(default is 1000)\nPress Enter to proceed.. \n')
             if inputtext is None \
-            or inputtext == "" \
-            or not inputtext.isdigit():
+                    or inputtext == "" \
+                    or not inputtext.isdigit():
                 return
             else:
                 self.cfg.tmax = int(inputtext)
