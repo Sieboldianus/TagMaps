@@ -4,11 +4,15 @@
 Module for shared structural elements
 """
 
+from collections import namedtuple
+
 
 class PostStructure():
     """Shared structure for Post Attributes
 
     Contains attributes shared among PG DB and LBSN ProtoBuf spec.
+    - this could also be replaces by protobuf lbsnPost() from
+    lbsnstructure package
     """
 
     def __init__(self):
@@ -45,7 +49,18 @@ class PostStructure():
         self.loc_id = None
 
 
-class CleanedPost():
+"""This auto-class provides a structure for fast handling
+of essential post attributes for use in tag maps clustering
+"""
+CleanedPost = namedtuple(
+    'cleanedPostLocation_tuple',
+    'origin_id lat lng guid user_guid '
+    'post_create_date post_publish_date '
+    'post_body hashtags emoji '
+    'post_views_count loc_id')
+
+
+class CleanedPost_():
     """Shared structure for Post Attributes
 
     Contains only the attributes needed for tag maps.

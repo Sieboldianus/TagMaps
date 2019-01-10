@@ -290,11 +290,18 @@ class LoadData():
         - some information (e.g. hashtags) need merge with removing dupliates:
         use prepared dictionaries
         - some important information is type-checked (longitude, latitude)
+
+        Keyword arguments:
+        first_post      -- first post of a user_guid at a location
+        locid_userid    -- user_guid and loc_id in merged format
+                           (f'{location}::{user_key}')
+        post_latlng     -- tuple with lat/lng coordinates
+        user_key        -- user_guid
         """
-        cleaned_post = CleanedPost()
+        cleaned_post = CleanedPost()  # named tuple structure
         cleaned_post.origin_id = first_post.origin_id
-        cleaned_post.latitude = float(post_latlng[0])
-        cleaned_post.longitude = float(post_latlng[1])
+        cleaned_post.lat = float(post_latlng[0])
+        cleaned_post.long = float(post_latlng[1])
         cleaned_post.guid = first_post.guid
         cleaned_post.user_guid = user_key
         cleaned_post.post_body = \
