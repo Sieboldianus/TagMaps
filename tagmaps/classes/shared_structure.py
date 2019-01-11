@@ -49,11 +49,18 @@ class PostStructure():
         self.loc_id = None
 
 
-"""This auto-class provides a structure for fast handling
-of essential post attributes for use in tag maps clustering
+"""This auto-class generated from named structure
+
+provides access for fast handling
+of essential post attributes
+for use in tag maps clustering
+
+- namedtuple instances are just as memory
+efficient as regular tuples because they
+do not have per-instance dictionaries.
 """
 CleanedPost = namedtuple(
-    'cleanedPostLocation_tuple',
+    'CleanedPost',
     'origin_id lat lng guid user_guid '
     'post_create_date post_publish_date '
     'post_body hashtags emoji '

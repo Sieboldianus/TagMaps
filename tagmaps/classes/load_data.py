@@ -298,21 +298,20 @@ class LoadData():
         post_latlng     -- tuple with lat/lng coordinates
         user_key        -- user_guid
         """
-        cleaned_post = CleanedPost()  # named tuple structure
-        cleaned_post.origin_id = first_post.origin_id
-        cleaned_post.lat = float(post_latlng[0])
-        cleaned_post.long = float(post_latlng[1])
-        cleaned_post.guid = first_post.guid
-        cleaned_post.user_guid = user_key
-        cleaned_post.post_body = \
-            self.userlocation_wordlist_dict.get(
-                locid_userid, ("",))  # ("",) = substitute default
-        cleaned_post.post_create_date = first_post.post_create_date
-        cleaned_post.post_publish_date = first_post.post_publish_date
-        cleaned_post.post_views_count = first_post.post_views_count
-        cleaned_post.hashtags = \
-            self.userlocation_taglist_dict.get(locid_userid, ("",))
-        cleaned_post.loc_id = first_post.loc_id
+        cleaned_post = CleanedPost(
+            origin_id=first_post.origin_id,
+            lat=float(post_latlng[0]),
+            long=float(post_latlng[1]),
+            guid=first_post.guid,
+            user_guid=user_key,
+            post_body=self.userlocation_wordlist_dict.get(
+                locid_userid, ("",)),  # ("",)=substitute default
+            post_create_date=first_post.post_create_date,
+            post_publish_date=first_post.post_publish_date,
+            post_views_count=first_post.post_views_count,
+            hashtags=self.userlocation_taglist_dict.get(locid_userid, ("",)),
+            loc_id=first_post.loc_id
+        )  # named tuple structure
         return cleaned_post
 
     @staticmethod
