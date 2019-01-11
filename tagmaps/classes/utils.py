@@ -32,13 +32,25 @@ from descartes import PolygonPatch
 from scipy.spatial import Delaunay
 import argparse
 from tagmaps.config.config import BaseConfig
-
+from tagmaps.classes.shared_structure import CleanedPost
 
 class Utils():
     """Collection of various tools and helper functions
 
     Primarily @classmethods and @staticmethods
     """
+    @staticmethod
+    def default_empty_cstructure():
+        """Generates a tuple of parametric length with
+        empty strings:
+        (" "," "," "," "," "," "," "," "," "," "," "," ")
+        """
+        empty_string_list = list()
+        for _ in range(len(CleanedPost._fields)):
+            empty_string_list.append(" ")
+        empty_string_tuple = tuple(empty_string_list)
+        return empty_string_tuple
+
     @staticmethod
     def encode_string(s):
         """Encode string in Sha256, produce hex

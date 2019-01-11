@@ -97,7 +97,7 @@ imgRatio = 0
 floaterX = 0
 floaterY = 0
 clusterTreeCuttingDist = 0
-top_tags_list = []
+#top_tags_list = []
 lastselectionList = []
 tnum = 0
 tkScalebar = None
@@ -135,58 +135,21 @@ def main():
 
     if (cfg.cluster_tags or cfg.cluster_emoji):
         log.info("########## STEP 2 of 6: Tag Ranking ##########")
-        overall_usercount_pertag = collections.Counter()
-        for taghash in lbsn_data.userdict_tagcounters_global.values():
-            # taghash contains unique values (= strings) for each user,
-            # thus summing up these taghashes counts each user only once per tag
-            overall_usercount_pertag.update(taghash)
 
-        global top_tags_list
-        log.info(f"Total unique tags: {len(overall_usercount_pertag)}")
+        lbsn_data.prepare()
+        prepared_data = lbsn_data.prepared_data
 
-        top_tags_list = overall_usercount_pertag.most_common(cfg.tmax)
-        # remove all tags that are used by less than x
-        # {cfg.limit_bottom_user_count} photographers
-        if cfg.remove_long_tail is True:
-            indexMin = next((i for i, (t1, t2) in enumerate(top_tags_list) if t2 < cfg.limit_bottom_user_count), None)
-            if indexMin:
-                len_before = len(top_tags_list)
-                del top_tags_list[indexMin:]
-                len_after = len(top_tags_list)
-                cfg.tmax = len_after
-                if not len_before == len_after:
-                    log.info(f'Long tail removal: Filtered {len_before - len_after} Tags that were used by less than {cfg.limit_bottom_user_count} users.')
-
-        # Calculate Total Tags for selected topTagsList (Long Tail Stat)
-        totalTagCount = 0
-        for tag in top_tags_list:
-            count = lbsn_data.total_tag_counter_glob.get(tag[0])
-            if count:
-                totalTagCount += count
-        #print(TotalTagCount_Counter_global.most_common(3))
-        log.info(f'Total tags count for selected Tags List (Top {cfg.tmax}): {totalTagCount}.')
-
-        #optional write topemojis to file
-        global_emoji_set = {}
-        if cfg.cluster_emoji:
-            top_emoji_list = lbsn_data.total_emoji_counter.most_common()
-            global_emoji_set = {tuple[0] for tuple in top_emoji_list}
-            if (not len(global_emoji_set) == 0):
-                top_emoji = ''.join("%s,%i" % v + '\n' for v in top_emoji_list)
-                with open("02_Output/Output_topemojis.txt", 'w', encoding="utf8") as file: #overwrite
-                    file.write("emoji,usercount\n")
-                    file.write(top_emoji)
-
-        if cfg.cluster_tags:
-            #optional write toptags to file
-            toptags = ''.join("%s,%i" % v + '\n' for v in top_tags_list if not v[0] in global_emoji_set)
-            if (not len(top_tags_list) == 0):
-                with open("02_Output/Output_toptags.txt", 'w', encoding="utf8") as file: #overwrite
-                    file.write("tag,usercount\n")
-                    file.write(toptags)
+        log.info(f"Total unique tags: {prepared_data.total_unique_tags}")
+        log.info(f"Total unique emoji: {prepared_data.total_unique_emoji}")
+        log.info(
+            f'Total tags count for cleaned (tmax) tags list '
+            f'(Top {cfg.tmax}): {prepared_data.total_tag_count}.')
+        log.info(
+            f'Total emoji count for cleaned (tmax) emoji list '
+            f'(Top {cfg.tmax}): {prepared_data.total_emoji_count}.')
 
         if cfg.statistics_only is False:
-            single_mostused_tag = top_tags_list[0]
+            # restart time monitoring for actual cluster step
             now = time.time()
             log.info("########## STEP 3 of 6: Tag Location Clustering ##########")
             #prepare some variables
@@ -590,21 +553,21 @@ def main():
                 value = w.get(index)
                 #tkinter.messagebox.showinfo("You selected ", value)
                 tnum = 1
-                cluster_tag(top_tags_list[index],True) #generate only preview map
+                cluster_tag(prepared_data[index],True) #generate only preview map
                 #plt.close('all')
             def cluster_currentDisplayTag():
                 if currentDisplayTag:
                     #tkinter.messagebox.showinfo("Clustertag: ", str(currentDisplayTag))
                     cluster_tag(currentDisplayTag)
                 else:
-                    cluster_tag(top_tags_list[0])
+                    cluster_tag(prepared_data[0])
             def scaletest_currentDisplayTag():
                 global tkScalebar
                 global fig1
                 if currentDisplayTag:
                     clustertag = currentDisplayTag
                 else:
-                    clustertag = top_tags_list[0]
+                    clustertag = prepared_data[0]
                 scalecalclist = []
                 dmax = int(clusterTreeCuttingDist*10)
                 dmin = int(clusterTreeCuttingDist/10)
@@ -636,14 +599,14 @@ def main():
                 plt.text(limXMax, limYMax,f'{number_of_clusters} Cluster (Noise: {noisyTxt})',fontsize=10,horizontalalignment='right',verticalalignment='top',fontweight='bold')
 
             def delete(listbox):
-                global top_tags_list
+                #global prepared_data.top_tags_list
                 global lastselectionList
                 lastselectionList = []
                 # Delete from Listbox
                 selection = listbox.curselection()
                 for index in selection[::-1]:
                     listbox.delete(index)
-                    del(top_tags_list[index])
+                    del(prepared_data.top_tags_list[index])
             ######################################################################################################################################################
             ######################################################################################################################################################
             ######################################################################################################################################################
@@ -668,7 +631,7 @@ def main():
             scroll.pack(side="right", fill="y")
             listbox.pack()
             listbox.config(yscrollcommand=scroll.set)
-            for item in top_tags_list: #only for first 500 entries: use topTagsList[:500]
+            for item in prepared_data.top_tags_list: #only for first 500 entries: use topTagsList[:500]
                 try:
                     listbox.insert(tk.END, f'{item[0]} ({item[1]} user)')
                 except tk.TclError:
@@ -717,7 +680,7 @@ def main():
                 #geom_proj = transform(project, alphaShapeAndMeta[0])
 
                 if cfg.local_saturation_check:
-                    clusters, selectedPhotoList_Guids = cluster_tag(single_mostused_tag, None, True)
+                    clusters, selectedPhotoList_Guids = cluster_tag(prepared_data.single_mostused_tag, None, True)
                     numpy_selectedPhotoList_Guids = np.asarray(selectedPhotoList_Guids)
                     mask_noisy = (clusters == -1)
                     number_of_clusters = len(np.unique(clusters[~mask_noisy]))
@@ -726,14 +689,14 @@ def main():
                     for x in range(number_of_clusters):
                         currentClusterPhotoGuids = numpy_selectedPhotoList_Guids[clusters==x]
                         clusterPhotosGuidsList.append(currentClusterPhotoGuids)
-                    noClusterPhotos_perTag_DictOfLists[single_mostused_tag[0]] = list(numpy_selectedPhotoList_Guids[clusters==-1])
+                    noClusterPhotos_perTag_DictOfLists[prepared_data.single_mostused_tag[0]] = list(numpy_selectedPhotoList_Guids[clusters==-1])
                     # Sort descending based on size of cluster: https://stackoverflow.com/questions/30346356/how-to-sort-list-of-lists-according-to-length-of-sublists
                     clusterPhotosGuidsList.sort(key=len, reverse=True)
                     if not len(clusterPhotosGuidsList) == 0:
-                        clustersPerTag[single_mostused_tag[0]] = clusterPhotosGuidsList
+                        clustersPerTag[prepared_data.single_mostused_tag[0]] = clusterPhotosGuidsList
                 global tnum
                 tnum = 1
-                for toptag in top_tags_list:
+                for toptag in prepared_data.top_tags_list:
                     if cfg.local_saturation_check and tnum == 1 and toptag[0] in clustersPerTag:
                         #skip toptag if already clustered due to local saturation
                         continue
@@ -807,12 +770,12 @@ def main():
                 if cfg.local_saturation_check:
                     #calculate total area of Top1-Tag for 80% saturation check for lower level tags
                     saturationExcludeCount = 0
-                    clusterPhotoGuidList = clustersPerTag.get(single_mostused_tag[0], None)
+                    clusterPhotoGuidList = clustersPerTag.get(prepared_data.single_mostused_tag[0], None)
                     #print("Toptag: " + str(singleMostUsedtag[0]))
                     if clusterPhotoGuidList is None:
                         sys.exit(f'No Photos found for toptag: {singleMostUsedtag}')
                     toptagArea = Utils.generateClusterShape(toptag,clusterPhotoGuidList,cleaned_post_dict,crs_wgs,crs_proj,clusterTreeCuttingDist,cfg.local_saturation_check)[1]
-                for toptag in top_tags_list:
+                for toptag in prepared_data.top_tags_list:
                     tnum += 1
                     clusterPhotoGuidList = clustersPerTag.get(toptag[0], None)
                     #Generate tag Cluster Shapes
