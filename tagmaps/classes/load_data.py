@@ -170,7 +170,7 @@ class LoadData():
             with open(f'{self.cfg.output_folder}/Output_cleaned.csv', 'w',
                       encoding='utf8') as csvfile:
                 # get headerline from class structure
-                headerline = ','.join(CleanedPost().__dict__.keys())
+                headerline = ','.join(CleanedPost._fields)
                 csvfile.write(headerline)
                 # values will be written with CSV writer module
                 datawriter = csv.writer(
@@ -301,7 +301,7 @@ class LoadData():
         cleaned_post = CleanedPost(
             origin_id=first_post.origin_id,
             lat=float(post_latlng[0]),
-            long=float(post_latlng[1]),
+            lng=float(post_latlng[1]),
             guid=first_post.guid,
             user_guid=user_key,
             post_body=self.userlocation_wordlist_dict.get(
@@ -309,9 +309,11 @@ class LoadData():
             post_create_date=first_post.post_create_date,
             post_publish_date=first_post.post_publish_date,
             post_views_count=first_post.post_views_count,
-            hashtags=self.userlocation_taglist_dict.get(locid_userid, ("",)),
+            emoji=("",),  # empty for now
+            hashtags=self.userlocation_taglist_dict.get(
+                locid_userid, ("",)),
             loc_id=first_post.loc_id
-        )  # named tuple structure
+        )
         return cleaned_post
 
     @staticmethod
