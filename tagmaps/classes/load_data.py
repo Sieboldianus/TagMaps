@@ -729,13 +729,6 @@ class LoadData():
             return filelist
 
 
-
-        bound_report = f'Bounds are: ' \
-            f'Min {float(self.lim_lng_min)} {float(self.lim_lat_min)} ' \
-            f'Max {float(self.lim_lng_max)} {float(self.lim_lat_max)}'
-        return bound_report
-
-
 class DataStats():
     """Class storing analysis stats"""
 
