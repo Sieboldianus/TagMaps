@@ -1,15 +1,28 @@
 # -*- coding: utf-8 -*-
 
+from tagmaps.classes.shared_structure import CleanedPost
+from tagmaps.classes.utils import Utils, AnalysisBounds
 import shapely.geometry as geometry
 """
 Module for tag maps clustering functions
 """
 
+from typing import List, Set, Dict, Tuple, Optional, TextIO
 from multiprocessing.pool import ThreadPool
 pool = ThreadPool(processes=1)
 
 
 class ClusterGen():
+    """Cluster module for tags, emoji and post locations
+    """
+
+    def __init__(self, bounds: AnalysisBounds,
+                 cleaned_post_dict: Dict[CleanedPost],
+                 top_tags_list: List[Tuple[str, int]]):
+        self.tnum = 0
+        self.bounds = bounds
+        self.cleaned_post_list = list(cleaned_post_dict.values())
+        self.top_tags_list = top_tags_list
 
     def cluster_tag(self, toptag=None, preview=None, silent=None):
         if preview is None:
@@ -17,8 +30,7 @@ class ClusterGen():
         if silent is None:
             silent = False
         global currentDisplayTag
-        global tnum
-        global lim_y_min, lim_y_max, lim_x_min, lim_x_max, img_ratio, floater_x, floater_y
+        global img_ratio, floater_x, floater_y
         global fig1, fig2, fig3, fig4
         selectedPhotoList_Guids, distinctLocalLocationCount = sel_photos(
             toptag[0], cleaned_post_list)
@@ -29,7 +41,7 @@ class ClusterGen():
                 text = unicode_name(toptag[0])
             else:
                 text = toptag[0]
-            print(f'({tnum} of {prepared_data.tmax}) Found {len(selectedPhotoList_Guids)} photos (UPL) for tag \'{text}\' ({percentageOfTotalLocations:.0f}% of total distinct locations in area)', end=" ")
+            print(f'({self.tnum} of {prepared_data.tmax}) Found {len(selectedPhotoList_Guids)} photos (UPL) for tag \'{text}\' ({percentageOfTotalLocations:.0f}% of total distinct locations in area)', end=" ")
 
         # clustering
         if len(selectedPhotoList_Guids) < 2:
@@ -70,8 +82,10 @@ class ClusterGen():
                     # earth.bluemarble(alpha=0.42)
                     # earth.drawcoastlines(color='#555566', linewidth=1)
                     fig1.canvas.set_window_title('Preview Map')
-                plt.gca().set_xlim([lim_x_min, lim_x_max])
-                plt.gca().set_ylim([lim_y_min, lim_y_max])
+                plt.gca().set_xlim(
+                    [self.bounds.lim_lng_min, self.bounds.lim_lng_max])
+                plt.gca().set_ylim(
+                    [self.bounds.lim_lat_min, self.bounds.lim_lat_max])
                 plt.tick_params(labelsize=10)
                 currentDisplayTag = toptag
         else:
@@ -140,7 +154,7 @@ class ClusterGen():
                 #xmax = ax.get_xlim()[1]
                 #ymax = ax.get_ylim()[1]
                 noisyTxt = '{}/{}'.format(mask_noisy.sum(), len(mask_noisy))
-                plt.text(lim_x_max, lim_y_max, f'{number_of_clusters} Cluster (Noise: {noisyTxt})',
+                plt.text(self.bounds.lim_lng_max, self.bounds.lim_lat_max, f'{number_of_clusters} Cluster (Noise: {noisyTxt})',
                          fontsize=10, horizontalalignment='right', verticalalignment='top', fontweight='bold')
             else:
                 plt.scatter(points.T[0], points.T[1],
@@ -157,10 +171,12 @@ class ClusterGen():
                 #xmax = fig1.get_xlim()[1]
                 #ymax = fig1.get_ylim()[1]
                 noisyTxt = '{} / {}'.format(mask_noisy.sum(), len(mask_noisy))
-                plt.text(lim_x_max, lim_y_max, f'{number_of_clusters} Clusters (Noise: {noisyTxt})',
+                plt.text(self.bounds.lim_lng_max, self.bounds.lim_lat_max, f'{number_of_clusters} Clusters (Noise: {noisyTxt})',
                          fontsize=10, horizontalalignment='right', verticalalignment='top', fontweight='bold')
-            plt.gca().set_xlim([lim_x_min, lim_x_max])
-            plt.gca().set_ylim([lim_y_min, lim_y_max])
+            plt.gca().set_xlim(
+                [self.bounds.lim_lng_min, self.bounds.lim_lng_max])
+            plt.gca().set_ylim(
+                [self.bounds.lim_lat_min, self.bounds.lim_lat_max])
             plt.tick_params(labelsize=10)
             # if len(tagRadiansData) < 10000:
             if fig2:

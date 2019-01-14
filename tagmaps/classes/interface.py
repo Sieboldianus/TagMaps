@@ -27,41 +27,42 @@ from tagmaps.classes.cluster import ClusterGen
 
 
 class UserInterface():
-    def __init__(self, bounds: AnalysisBounds,
-                 cleaned_post_dict: Dict[CleanedPost],
-                 top_tags_list: List[Tuple[str, int]]):
+    def __init__(self,
+                 tag_cluster: ClusterGen,
+                 emoji_cluster: ClusterGen = None
+                 ):
         """Prepare user interface and start Tkinter mainloop()
         """
+        self._clst = tag_cluster
+        self._clst_e = emoji_cluster
         self.abort = False
-        self.bounds = bounds
         self.floater_x = 0
         self.floater_y = 0
         self.plot_kwds = {'alpha': 0.5, 's': 10, 'linewidths': 0}
-        self.cleaned_post_list = list(cleaned_post_dict.values())
-        self.top_tags_list = top_tags_list
         self.lastselection_list = list()
-        self.tnum = 0
         self._update_bounds()
         self.bound_points_shapely = (
             geometry.MultiPoint([
-                (self.bounds.lim_lng_min, self.bounds.lim_lat_min),
-                (self.bounds.lim_lng_max, self.bounds.lim_lat_max)
+                (self._clst.bounds.lim_lng_min, self._clst.bounds.lim_lat_min),
+                (self._clst.bounds.lim_lng_max, self._clst.bounds.lim_lat_max)
             ])
         )
-        self.distYLat = self.bounds.lim_lat_max - self.bounds.lim_lat_min
-        self.distXLng = self.bounds.lim_lng_max - self.bounds.lim_lng_min
+        self.distYLat = (
+            self._clst.bounds.lim_lat_max - self._clst.bounds.lim_lat_min)
+        self.distXLng = (
+            self._clst.bounds.lim_lng_max - self._clst.bounds.lim_lng_min)
         # distYLat = Utils.haversine(limXMin,limYMax,limXMin,limYMin)
         # distXLng = Utils.haversine(limXMax,limYMin,limXMin,limYMin)
         # imgRatio = distXLng/(distYLat*2)
         self.img_ratio = self.distXLng/(self.distYLat*2)
-        self.distY = Utils.haversine(self.bounds.lim_lng_min,
-                                     self.bounds.lim_lat_min,
-                                     self.bounds.lim_lng_min,
-                                     self.bounds.lim_lat_max)
-        self.distX = Utils.haversine(self.bounds.lim_lng_min,
-                                     self.bounds.lim_lat_min,
-                                     self.bounds.lim_lng_max,
-                                     self.bounds.lim_lat_min)
+        self.distY = Utils.haversine(self._clst.bounds.lim_lng_min,
+                                     self._clst.bounds.lim_lat_min,
+                                     self._clst.bounds.lim_lng_min,
+                                     self._clst.bounds.lim_lat_max)
+        self.distX = Utils.haversine(self._clst.bounds.lim_lng_min,
+                                     self._clst.bounds.lim_lat_min,
+                                     self._clst.bounds.lim_lng_max,
+                                     self._clst.bounds.lim_lat_min)
         # 7% of research area width/height (max) =
         # default value #223.245922725 #= 0.000035 radians dist
         self.cluster_distance = (min(self.distX, self.distY)/100)*7
@@ -115,7 +116,7 @@ class UserInterface():
         listbox.pack()
         listbox.config(yscrollcommand=scroll.set)
         # only for first 500 entries: use topTagsList[:500]
-        for item in self.top_tags_list:
+        for item in self._clst.top_tags_list:
             try:
                 listbox.insert(tk.END, f'{item[0]} ({item[1]} user)')
             except tk.TclError:
@@ -195,12 +196,12 @@ class UserInterface():
         """Update analysis rectangle boundary based on
 
         cleaned posts list."""
-        df = pd.DataFrame(self.cleaned_post_list)
+        df = pd.DataFrame(self._clst.cleaned_post_list)
         points = df.as_matrix(['lng', 'lat'])
-        (self.bounds.lim_lat_min,
-         self.bounds.lim_lat_max,
-         self.bounds.lim_lng_min,
-         self.bounds.lim_lng_max) = Utils.get_rectangle_bounds(points)
+        (self._clst.bounds.lim_lat_min,
+         self._clst.bounds.lim_lat_max,
+         self._clst.bounds.lim_lng_min,
+         self._clst.bounds.lim_lng_max) = Utils.get_rectangle_bounds(points)
 
     def report_callback_exception(self, exc, val, tb):
         """Override for error reporting during tkinter mode"""
@@ -310,9 +311,9 @@ class UserInterface():
         index = int(list(changed_selection)[0])
         # value = w.get(index)
         # tkinter.messagebox.showinfo("You selected ", value)
-        self.tnum = 1
+        self._clst.tnum = 1
         # generate only preview map
-        ClusterGen.cluster_tag(self.top_tags_list[index], True)
+        ClusterGen.cluster_tag(self._clst.top_tags_list[index], True)
         # plt.close('all')
 
     def cluster_current_display_tag(self):
@@ -321,13 +322,13 @@ class UserInterface():
             #                             str(currentDisplayTag))
             ClusterGen.cluster_tag(self.current_display_tag)
         else:
-            ClusterGen.cluster_tag(self.top_tags_list[0])
+            ClusterGen.cluster_tag(self._clst.top_tags_list[0])
 
     def scaletest_current_display_tag(self):
         if self.current_display_tag:
             clustertag = self.current_display_tag
         else:
-            clustertag = self.top_tags_list[0]
+            clustertag = self._clst.top_tags_list[0]
         scalecalclist = []
         dmax = int(self.cluster_distance*10)
         dmin = int(self.cluster_distance/10)
@@ -365,7 +366,7 @@ class UserInterface():
             dist_text = f'@ {self.cluster_distance}m'
         plt.title(f'Cluster Preview {dist_text}', fontsize=12, loc='center')
         noisy_txt = f'{mask_noisy.sum()}/{len(mask_noisy)}'
-        plt.text(self.bounds.lim_lng_max, self.bounds.lim_lat_max,
+        plt.text(self._clst.bounds.lim_lng_max, self._clst.bounds.lim_lat_max,
                  f'{number_of_clusters} Cluster (Noise: {noisy_txt})',
                  fontsize=10, horizontalalignment='right',
                  verticalalignment='top', fontweight='bold')
@@ -378,7 +379,7 @@ class UserInterface():
         selection = listbox.curselection()
         for index in selection[::-1]:
             listbox.delete(index)
-            del(self.top_tags_list[index])
+            del(self._clst.top_tags_list[index])
 
 
 class App(tk.Tk):

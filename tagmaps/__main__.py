@@ -27,6 +27,8 @@ import collections
 
 from tagmaps.classes.shared_structure \
     import PostStructure, CleanedPost
+from tagmaps.classes.cluster import ClusterGen
+from tagmaps.classes.interface import UserInterface
 
 #from .utils import *
 import datetime
@@ -136,15 +138,27 @@ def main():
         if cfg.statistics_only is False:
             # restart time monitoring for actual cluster step
             now = time.time()
-            log.info("########## STEP 3 of 6: Tag Location Clustering ##########")
+            log.info(
+                "########## STEP 3 of 6: Tag Location Clustering ##########")
             sys.stdout.flush()
-            UserInterface()
+
+            cluster_tag_data = ClusterGen(
+                lbsn_data.bounds,
+                cleaned_post_dict,
+                prepared_data.top_tags_list)
+            cluster_emoji_data = ClusterGen(
+                lbsn_data.bounds,
+                cleaned_post_dict,
+                prepared_data.top_emoji_list)
+            user_intf = UserInterface(cluster_tag_data,
+                                      cluster_emoji_data)
 
             noClusterPhotos_perTag_DictOfLists = defaultdict(list)
             clustersPerTag = defaultdict(list)
             if proceedClusting:
-                #Proceed with clustering all tags
-                crs_wgs = pyproj.Proj(init='epsg:4326') #data always in lat/lng WGS1984
+                # Proceed with clustering all tags
+                # data always in lat/lng WGS1984
+                crs_wgs = pyproj.Proj(init='epsg:4326')
                 if cfg.override_crs is None:
                     #Calculate best UTM Zone SRID/EPSG Code
                     input_lon_center = bound_points_shapely.centroid.coords[0][0] #True centroid (coords may be multipoint)
