@@ -17,6 +17,7 @@ import csv
 import os
 import sys
 import re
+from typing import List, Set, Dict, Tuple, Optional, TextIO
 from glob import glob
 from _csv import QUOTE_MINIMAL
 from collections import defaultdict
@@ -26,7 +27,8 @@ import collections
 import tkinter as tk
 from tkinter.messagebox import showerror
 import tkinter.messagebox
-
+from tagmaps.classes.shared_structure \
+    import PostStructure, CleanedPost
 
 #from .utils import *
 import datetime
@@ -93,11 +95,11 @@ fig3 = None
 fig4 = None
 proceedClusting = False
 currentDisplayTag = None
-imgRatio = 0
-floaterX = 0
-floaterY = 0
+img_ratio = 0
+floater_x = 0
+floater_y = 0
 clusterTreeCuttingDist = 0
-#top_tags_list = []
+top_tags_list = []
 lastselectionList = []
 tnum = 0
 tkScalebar = None
@@ -136,18 +138,19 @@ def main():
     if (cfg.cluster_tags or cfg.cluster_emoji):
         log.info("########## STEP 2 of 6: Tag Ranking ##########")
 
-        lbsn_data.prepare()
-        prepared_data = lbsn_data.prepared_data
+        prepared_data = lbsn_data.get_prepared_data()
 
         log.info(f"Total unique tags: {prepared_data.total_unique_tags}")
         log.info(f"Total unique emoji: {prepared_data.total_unique_emoji}")
         log.info(
             f'Total tags count for cleaned (tmax) tags list '
-            f'(Top {cfg.tmax}): {prepared_data.total_tag_count}.')
+            f'(Top {prepared_data.tmax}): {prepared_data.total_tag_count}.')
         log.info(
             f'Total emoji count for cleaned (tmax) emoji list '
-            f'(Top {cfg.tmax}): {prepared_data.total_emoji_count}.')
+            f'(Top {prepared_data.emax}): {prepared_data.total_emoji_count}.')
 
+        global top_tags_list
+        top_tags_list = prepared_data.top_tags_list
         if cfg.statistics_only is False:
             # restart time monitoring for actual cluster step
             now = time.time()
@@ -161,26 +164,26 @@ def main():
 
             distY = 0
             distX = 0
-            global limYMin, limYMax, limXMin, limXMax, imgRatio, floaterX, floaterY
+            global lim_y_min, lim_y_max, lim_x_min, lim_x_max, img_ratio, floater_x, floater_y
 
             #Optional: set global plotting bounds
             #plt.gca().set_xlim([limXMin, limXMax])
             #plt.gca().set_ylim([limYMin, limYMax])
-            global cleaned_photo_list
-            cleaned_photo_list = list(cleaned_post_dict.values())
-            df = pd.DataFrame(cleaned_photo_list)
+            global cleaned_post_list
+            cleaned_post_list = list(cleaned_post_dict.values())
+            df = pd.DataFrame(cleaned_post_list)
             points = df.as_matrix(['lng','lat'])
-            limYMin, limYMax, limXMin, limXMax = Utils.getRectangleBounds(points)
-            bound_points_shapely = geometry.MultiPoint([(limXMin, limYMin), (limXMax, limYMax)])
-            distYLat = limYMax - limYMin
-            distXLng = limXMax - limXMin
+            lim_y_min, lim_y_max, lim_x_min, lim_x_max = Utils.getRectangleBounds(points)
+            bound_points_shapely = geometry.MultiPoint([(lim_x_min, lim_y_min), (lim_x_max, lim_y_max)])
+            distYLat = lim_y_max - lim_y_min
+            distXLng = lim_x_max - lim_x_min
             #distYLat = Utils.haversine(limXMin,limYMax,limXMin,limYMin)
             #distXLng = Utils.haversine(limXMax,limYMin,limXMin,limYMin)
             #imgRatio = distXLng/(distYLat*2)
 
-            imgRatio = distXLng/(distYLat*2)
-            distY = Utils.haversine(limXMin, limYMin, limXMin, limYMax)
-            distX = Utils.haversine(limXMin, limYMin, limXMax, limYMin)
+            img_ratio = distXLng/(distYLat*2)
+            distY = Utils.haversine(lim_x_min, lim_y_min, lim_x_min, lim_y_max)
+            distX = Utils.haversine(lim_x_min, lim_y_min, lim_x_max, lim_y_min)
             global clusterTreeCuttingDist
             clusterTreeCuttingDist = (min(distX,distY)/100)*7 #4% of research area width/height (max) = default value #223.245922725 #= 0.000035 radians dist
 
@@ -301,15 +304,15 @@ def main():
                 app.destroy()
                 app.quit()
 
-            def sel_photos(tag,cleanedPhotoList):
+            def sel_photos(tag, cleaned_postlocs: List[CleanedPost]) -> Tuple[List[str], int]:
                 #select photos from list based on a specific tag
-                distinctLocalLocationCount = set()
-                selectedPhotoList_Guids = []
-                for cleanedPhotoLocation in cleanedPhotoList:
-                    if tag in (cleanedPhotoLocation.photo_tags) or (tag in cleanedPhotoLocation.photo_caption):
-                        selectedPhotoList_Guids.append(cleanedPhotoLocation.photo_guid)
-                        distinctLocalLocationCount.add(cleanedPhotoLocation.photo_locID)
-                return selectedPhotoList_Guids, len(distinctLocalLocationCount)
+                distinct_local_loc_ount = set()
+                selected_post_guids = list()
+                for cleaned_photo_location in cleaned_postlocs:
+                    if tag in (cleaned_photo_location.hashtags) or (tag in cleaned_photo_location.post_body):
+                        selected_post_guids.append(cleaned_photo_location.guid)
+                        distinct_local_loc_ount.add(cleaned_photo_location.loc_id)
+                return selected_post_guids, len(distinct_local_loc_ount)
 
             def cluster_tag(toptag=None,preview=None,silent=None):
                 if preview is None:
@@ -318,16 +321,16 @@ def main():
                     silent = False
                 global currentDisplayTag
                 global tnum
-                global limYMin, limYMax, limXMin, limXMax, imgRatio, floaterX, floaterY
+                global lim_y_min, lim_y_max, lim_x_min, lim_x_max, img_ratio, floater_x, floater_y
                 global fig1, fig2, fig3, fig4
-                selectedPhotoList_Guids, distinctLocalLocationCount = sel_photos(toptag[0],cleaned_photo_list)
+                selectedPhotoList_Guids, distinctLocalLocationCount = sel_photos(toptag[0],cleaned_post_list)
                 percentageOfTotalLocations = distinctLocalLocationCount/(total_distinct_locations/100)
                 if silent:
-                    if toptag[0] in global_emoji_set:
+                    if toptag[0] in prepared_data.top_emoji_list:
                         text = unicode_name(toptag[0])
                     else:
                         text = toptag[0]
-                    print(f'({tnum} of {cfg.tmax}) Found {len(selectedPhotoList_Guids)} photos (UPL) for tag \'{text}\' ({percentageOfTotalLocations:.0f}% of total distinct locations in area)', end=" ")
+                    print(f'({tnum} of {prepared_data.tmax}) Found {len(selectedPhotoList_Guids)} photos (UPL) for tag \'{text}\' ({percentageOfTotalLocations:.0f}% of total distinct locations in area)', end=" ")
 
 
                 #clustering
@@ -350,7 +353,7 @@ def main():
                             plt.suptitle(toptag[0].upper(), fontsize=18, fontweight='bold')
                             #reuse window of figure 1 for new figure
                             plt.scatter(points.T[0], points.T[1], color='red', **plot_kwds)
-                            fig1 = plt.figure(num=1,figsize=(11, int(11*imgRatio)), dpi=80)
+                            fig1 = plt.figure(num=1,figsize=(11, int(11*img_ratio)), dpi=80)
                             fig1.canvas.set_window_title('Preview Map')
                             #displayImgPath = pathname + '/Output/ClusterImg/00_displayImg.png'
                             #fig1.figure.savefig(displayImgPath)
@@ -358,13 +361,13 @@ def main():
 
                             plt.suptitle(toptag[0].upper(), fontsize=18, fontweight='bold')
                             plt.scatter(points.T[0], points.T[1], color='red', **plot_kwds)
-                            fig1 = plt.figure(num=1,figsize=(11, int(11*imgRatio)), dpi=80)
+                            fig1 = plt.figure(num=1,figsize=(11, int(11*img_ratio)), dpi=80)
                             #earth = Basemap()
                             #earth.bluemarble(alpha=0.42)
                             #earth.drawcoastlines(color='#555566', linewidth=1)
                             fig1.canvas.set_window_title('Preview Map')
-                        plt.gca().set_xlim([limXMin, limXMax])
-                        plt.gca().set_ylim([limYMin, limYMax])
+                        plt.gca().set_xlim([lim_x_min, lim_x_max])
+                        plt.gca().set_ylim([lim_y_min, lim_y_max])
                         plt.tick_params(labelsize=10)
                         currentDisplayTag = toptag
                 else:
@@ -418,7 +421,7 @@ def main():
                         plt.figure(1).clf()
                         plt.suptitle(toptag[0].upper(), fontsize=18, fontweight='bold') #plt references the last figure accessed
                         ax = plt.scatter(points.T[0], points.T[1], color=sel_colors, **plot_kwds)
-                        fig1 = plt.figure(num=1,figsize=(11, int(11*imgRatio)), dpi=80)
+                        fig1 = plt.figure(num=1,figsize=(11, int(11*img_ratio)), dpi=80)
                         fig1.canvas.set_window_title('Cluster Preview')
                         distText = ''
                         if autoselectClusters == False:
@@ -428,10 +431,10 @@ def main():
                         #xmax = ax.get_xlim()[1]
                         #ymax = ax.get_ylim()[1]
                         noisyTxt = '{}/{}'.format(mask_noisy.sum(), len(mask_noisy))
-                        plt.text(limXMax, limYMax,f'{number_of_clusters} Cluster (Noise: {noisyTxt})',fontsize=10,horizontalalignment='right',verticalalignment='top',fontweight='bold')
+                        plt.text(lim_x_max, lim_y_max,f'{number_of_clusters} Cluster (Noise: {noisyTxt})',fontsize=10,horizontalalignment='right',verticalalignment='top',fontweight='bold')
                     else:
                         plt.scatter(points.T[0], points.T[1], c=sel_colors, **plot_kwds)
-                        fig1 = plt.figure(num=1,figsize=(11, int(11*imgRatio)), dpi=80)
+                        fig1 = plt.figure(num=1,figsize=(11, int(11*img_ratio)), dpi=80)
                         fig1.canvas.set_window_title('Cluster Preview')
                         plt.suptitle(toptag[0].upper(), fontsize=18, fontweight='bold')
                         distText = ''
@@ -441,9 +444,9 @@ def main():
                         #xmax = fig1.get_xlim()[1]
                         #ymax = fig1.get_ylim()[1]
                         noisyTxt = '{} / {}'.format(mask_noisy.sum(), len(mask_noisy))
-                        plt.text(limXMax, limYMax,f'{number_of_clusters} Clusters (Noise: {noisyTxt})',fontsize=10,horizontalalignment='right',verticalalignment='top',fontweight='bold')
-                    plt.gca().set_xlim([limXMin, limXMax])
-                    plt.gca().set_ylim([limYMin, limYMax])
+                        plt.text(lim_x_max, lim_y_max,f'{number_of_clusters} Clusters (Noise: {noisyTxt})',fontsize=10,horizontalalignment='right',verticalalignment='top',fontweight='bold')
+                    plt.gca().set_xlim([lim_x_min, lim_x_max])
+                    plt.gca().set_ylim([lim_y_min, lim_y_max])
                     plt.tick_params(labelsize=10)
                     #if len(tagRadiansData) < 10000:
                     if fig2:
@@ -553,21 +556,21 @@ def main():
                 value = w.get(index)
                 #tkinter.messagebox.showinfo("You selected ", value)
                 tnum = 1
-                cluster_tag(prepared_data[index],True) #generate only preview map
+                cluster_tag(top_tags_list[index],True) #generate only preview map
                 #plt.close('all')
             def cluster_currentDisplayTag():
                 if currentDisplayTag:
                     #tkinter.messagebox.showinfo("Clustertag: ", str(currentDisplayTag))
                     cluster_tag(currentDisplayTag)
                 else:
-                    cluster_tag(prepared_data[0])
+                    cluster_tag(top_tags_list[0])
             def scaletest_currentDisplayTag():
                 global tkScalebar
                 global fig1
                 if currentDisplayTag:
                     clustertag = currentDisplayTag
                 else:
-                    clustertag = prepared_data[0]
+                    clustertag = top_tags_list[0]
                 scalecalclist = []
                 dmax = int(clusterTreeCuttingDist*10)
                 dmin = int(clusterTreeCuttingDist/10)
@@ -589,24 +592,24 @@ def main():
                         logfile_a.write(scalecalc)
                 plt.figure(1).clf()
                 plt.suptitle(clustertag[0].upper(), fontsize=18, fontweight='bold') #plt references the last figure accessed
-                fig1 = plt.figure(num=1,figsize=(11, int(11*imgRatio)), dpi=80)
+                fig1 = plt.figure(num=1,figsize=(11, int(11*img_ratio)), dpi=80)
                 fig1.canvas.set_window_title('Cluster Preview')
                 distText = ''
                 if autoselectClusters == False:
                     distText = f'@ {clusterTreeCuttingDist}m'
                 plt.title(f'Cluster Preview {distText}', fontsize=12,loc='center')
                 noisyTxt = f'{mask_noisy.sum()}/{len(mask_noisy)}'
-                plt.text(limXMax, limYMax,f'{number_of_clusters} Cluster (Noise: {noisyTxt})',fontsize=10,horizontalalignment='right',verticalalignment='top',fontweight='bold')
+                plt.text(lim_x_max, lim_y_max,f'{number_of_clusters} Cluster (Noise: {noisyTxt})',fontsize=10,horizontalalignment='right',verticalalignment='top',fontweight='bold')
 
             def delete(listbox):
-                #global prepared_data.top_tags_list
+                #global top_tags_list
                 global lastselectionList
                 lastselectionList = []
                 # Delete from Listbox
                 selection = listbox.curselection()
                 for index in selection[::-1]:
                     listbox.delete(index)
-                    del(prepared_data.top_tags_list[index])
+                    del(top_tags_list[index])
             ######################################################################################################################################################
             ######################################################################################################################################################
             ######################################################################################################################################################
@@ -631,7 +634,7 @@ def main():
             scroll.pack(side="right", fill="y")
             listbox.pack()
             listbox.config(yscrollcommand=scroll.set)
-            for item in prepared_data.top_tags_list: #only for first 500 entries: use topTagsList[:500]
+            for item in top_tags_list: #only for first 500 entries: use topTagsList[:500]
                 try:
                     listbox.insert(tk.END, f'{item[0]} ({item[1]} user)')
                 except tk.TclError:
@@ -680,8 +683,8 @@ def main():
                 #geom_proj = transform(project, alphaShapeAndMeta[0])
 
                 if cfg.local_saturation_check:
-                    clusters, selectedPhotoList_Guids = cluster_tag(prepared_data.single_mostused_tag, None, True)
-                    numpy_selectedPhotoList_Guids = np.asarray(selectedPhotoList_Guids)
+                    clusters, selected_post_guids = cluster_tag(prepared_data.single_mostused_tag, None, True)
+                    numpy_selectedPhotoList_Guids = np.asarray(selected_post_guids)
                     mask_noisy = (clusters == -1)
                     number_of_clusters = len(np.unique(clusters[~mask_noisy]))
                     print(f'--> {number_of_clusters} cluster.')
@@ -696,11 +699,11 @@ def main():
                         clustersPerTag[prepared_data.single_mostused_tag[0]] = clusterPhotosGuidsList
                 global tnum
                 tnum = 1
-                for toptag in prepared_data.top_tags_list:
+                for toptag in top_tags_list:
                     if cfg.local_saturation_check and tnum == 1 and toptag[0] in clustersPerTag:
                         #skip toptag if already clustered due to local saturation
                         continue
-                    clusters, selectedPhotoList_Guids = cluster_tag(toptag, None, True)
+                    clusters, selected_post_guids = cluster_tag(toptag, None, True)
                     #print("baseDataList: ")
                     #print(str(type(selectedPhotoList)))
                     #for s in selectedPhotoList[:2]:
@@ -713,9 +716,9 @@ def main():
                     #clusters contains the cluster values (-1 = no cluster, 0 maybe, >0 = cluster
                     # in the same order, selectedPhotoList contains all original photo data, thus clusters[10] and selectedPhotoList[10] refer to the same photo
 
-                    numpy_selectedPhotoList_Guids = np.asarray(selectedPhotoList_Guids)
+                    numpy_selectedPhotoList_Guids = np.asarray(selected_post_guids)
                     mask_noisy = (clusters == -1)
-                    if len(selectedPhotoList_Guids) == 1:
+                    if len(selected_post_guids) == 1:
                         number_of_clusters = 0
                     else:
                         number_of_clusters = len(np.unique(clusters[~mask_noisy])) #mit noisy (=0)
@@ -775,7 +778,7 @@ def main():
                     if clusterPhotoGuidList is None:
                         sys.exit(f'No Photos found for toptag: {singleMostUsedtag}')
                     toptagArea = Utils.generateClusterShape(toptag,clusterPhotoGuidList,cleaned_post_dict,crs_wgs,crs_proj,clusterTreeCuttingDist,cfg.local_saturation_check)[1]
-                for toptag in prepared_data.top_tags_list:
+                for toptag in top_tags_list:
                     tnum += 1
                     clusterPhotoGuidList = clustersPerTag.get(toptag[0], None)
                     #Generate tag Cluster Shapes
@@ -805,7 +808,7 @@ def main():
                             result_polygon = pcoordinate.buffer(clusterTreeCuttingDist/4,resolution=3) #single dots are presented as buffer with 0.5% of width-area
                             #result_polygon = pcoordinate.buffer(min(distXLng,distYLat)/100,resolution=3)
                             if result_polygon is not None and not result_polygon.is_empty:
-                                listOfAlphashapesAndMeta.append((result_polygon,1,max(single_photo.photo_views,single_photo.photo_likes),1,str(toptag[0]),toptag[1],1,1,1,shapetype))
+                                listOfAlphashapesAndMeta.append((result_polygon,1,max(single_photo.post_views_count,single_photo.post_like_count),1,str(toptag[0]),toptag[1],1,1,1,shapetype))
                 log.info(f'{len(listOfAlphashapesAndMeta)} Alpha Shapes. Done.')
                 if cfg.local_saturation_check and not saturationExcludeCount == 0:
                     log.info(f'Excluded {saturationExcludeCount} Tags on local saturation check.')
@@ -890,7 +893,7 @@ def main():
                         #geom_proj = transform(project, alphaShapeAndMeta[0])
                         #c.write({
                         #    'geometry': geometry.mapping(geom_proj),
-                        if cfg.cluster_emoji and alphaShapeAndMeta[4] in global_emoji_set:
+                        if cfg.cluster_emoji and alphaShapeAndMeta[4] in prepared_data.top_emoji_list:
                             emoji = 1
                             ImpTagText = ""
                         else:
@@ -915,7 +918,7 @@ def main():
                         emojiTable.write("FID,Emoji\n")
                         idx = 0
                         for alphaShapeAndMeta in listOfAlphashapesAndMeta:
-                            if alphaShapeAndMeta[4] in global_emoji_set:
+                            if alphaShapeAndMeta[4] in prepared_data.top_emoji_list:
                                 ImpTagText = f'{alphaShapeAndMeta[4]}'
                             else:
                                 ImpTagText = ""
@@ -931,14 +934,14 @@ def main():
         #global clusterTreeCuttingDist
         if clusterTreeCuttingDist == 0:
             clusterTreeCuttingDist = int(input("Specify Cluster (Cut) Distance:\n"))
-        selectedPhotoList_Guids = []
+        selected_post_guids = []
         #if not 'cleanedPhotoList' in locals():
         #global cleanedPhotoList
-        if len(cleaned_photo_list) == 0:
-            cleaned_photo_list = list(cleaned_post_dict.values())
-        for cleanedPhotoLocation in cleaned_photo_list:
-            selectedPhotoList_Guids.append(cleanedPhotoLocation.photo_guid)
-        selectedPhotoList = cleaned_photo_list
+        if len(cleaned_post_list) == 0:
+            cleaned_post_list = list(cleaned_post_dict.values())
+        for cleaned_photo_location in cleaned_post_list:
+            selected_post_guids.append(cleaned_photo_location.guid)
+        selectedPhotoList = cleaned_post_list
         df = pd.DataFrame(selectedPhotoList)
         points = df.as_matrix(['lng','lat'])
         tagRadiansData = np.radians(points)
@@ -951,7 +954,7 @@ def main():
             clusterer = async_result.get()
         clusters = clusterer.single_linkage_tree_.get_clusters(Utils.getRadiansFromMeters(clusterTreeCuttingDist/8), min_cluster_size=2)
         listOfPhotoClusters = []
-        numpy_selectedPhotoList_Guids = np.asarray(selectedPhotoList_Guids)
+        numpy_selectedPhotoList_Guids = np.asarray(selected_post_guids)
         mask_noisy = (clusters == -1)
         number_of_clusters = len(np.unique(clusters[~mask_noisy])) #mit noisy (=0)
         print(f'--> {number_of_clusters} Photo cluster.')
@@ -965,8 +968,8 @@ def main():
         clusterPhotosGuidsList.sort(key=len,reverse=True)
         if cfg.cluster_tags is False:
             #detect projection if not already
-            limYMin,limYMax,limXMin,limXMax = Utils.getRectangleBounds(points)
-            bound_points_shapely = geometry.MultiPoint([(limXMin, limYMin), (limXMax, limYMax)])
+            lim_y_min,lim_y_max,lim_x_min,lim_x_max = Utils.getRectangleBounds(points)
+            bound_points_shapely = geometry.MultiPoint([(lim_x_min, lim_y_min), (lim_x_max, lim_y_max)])
             crs_wgs = pyproj.Proj(init='epsg:4326') #data always in lat/lng WGS1984
             if cfg.override_crs is None:
                 #Calculate best UTM Zone SRID/EPSG Code
@@ -976,7 +979,7 @@ def main():
                 crs_proj = pyproj.Proj(init=f'epsg:{epsg_code}')
         for photo_cluster in clusterPhotosGuidsList:
             photos = [cleaned_post_dict[x] for x in photo_cluster]
-            uniqueUserCount = len(set([photo.userid for photo in photos]))
+            uniqueUserCount = len(set([photo.user_guid for photo in photos]))
             #get points and project coordinates to suitable UTM
             points = [geometry.Point(pyproj.transform(crs_wgs, crs_proj, photo.lng, photo.lat))
                       for photo in photos]

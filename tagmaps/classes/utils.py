@@ -325,8 +325,8 @@ class Utils():
             #for each cluster for this toptag
             photos = [cleanedPhotoDict[x] for x in photo_guids]
             photoCount = len(photo_guids)
-            uniqueUserCount = len(set([photo.userid for photo in photos]))
-            sumViews = sum([photo.photo_views for photo in photos])
+            uniqueUserCount = len(set([photo.user_guid for photo in photos]))
+            sumViews = sum([photo.post_views_count for photo in photos])
             #calculate different weighting formulas
             #weightsv1 = 1+ photoCount *(sqrt(1/( photoCount / uniqueUserCount )**3)) #-> Standard weighting formula (x**y means x raised to the power y); +1 to UserCount: prevent 1-2 Range from being misaligned
             #weightsv2 = 1+ photoCount *(sqrt(1/( photoCount / uniqueUserCount )**2))
@@ -336,7 +336,7 @@ class Utils():
             #points = [geometry.Point(photo.lng, photo.lat)
             #          for photo in photos]
             #instead of lat/lng for each photo, we use photo_locID to identify a list of distinct locations
-            distinctLocations = set([photo.photo_locID
+            distinctLocations = set([photo.loc_id
                       for photo in photos])
             #simple list comprehension without projection:
             #points = [geometry.Point(Decimal(location.split(':')[1]), Decimal(location.split(':')[0]))
