@@ -15,6 +15,8 @@ from pathlib import Path
 from shapely.geometry import Polygon
 from shapely.geometry import shape
 from shapely.geometry import Point
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 class BaseConfig:
@@ -413,3 +415,21 @@ class ConfigMap:
         }
         quoting = quote_switch.get(quote_string)
         return quoting
+
+    @staticmethod
+    def set_glob_options():
+        """Includes global options in other packages to be set
+        prior execution"""
+        # enable interactive mode for pyplot (not necessary?!)
+        plt.ion()
+        # label_size = 10
+        # plt.rcParams['xtick.labelsize'] = label_size
+        # plt.rcParams['ytick.labelsize'] = label_size
+        # Optional: set global plotting bounds
+        # plt.gca().set_xlim([limXMin, limXMax])
+        # plt.gca().set_ylim([limYMin, limYMax])
+        sns.set_context('poster')
+        sns.set_style('white')
+        # sns.set_color_codes()
+        # matplotlib.style.use('ggplot')
+        plt.style.use('ggplot')

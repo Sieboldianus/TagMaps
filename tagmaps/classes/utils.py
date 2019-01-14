@@ -502,8 +502,9 @@ class Utils():
     def fit_cluster(clusterer, data):
         clusterer.fit(data)
         return clusterer
-        
-    def getRectangleBounds(points):
+
+    @staticmethod
+    def get_rectangle_bounds(points):
         limYMin = np.min(points.T[1])
         limYMax = np.max(points.T[1])
         limXMin = np.min(points.T[0])
@@ -527,4 +528,39 @@ class Utils():
                     break
             else:
                 photo_tags_filtered.add(tag)
-        return photo_tags_filtered,count_tags,count_skipped
+        return photo_tags_filtered, count_tags,count_skipped
+
+
+class AnalysisBounds():
+    """Class stroing boundary (lim lat/lng)"""
+
+    def __init__(self):
+        """initialize global variables for analysis bounds
+
+        (lat, lng coordinates)
+        """
+        self.lim_lat_min = None
+        self.lim_lat_max = None
+        self.lim_lng_min = None
+        self.lim_lng_max = None
+
+    def _upd_latlng_bounds(self, lat, lng):
+        """Update lat/lng bounds based on coordinate pair."""
+        if self.lim_lat_min is None or \
+                (lat < self.lim_lat_min and not lat == 0):
+            self.lim_lat_min = lat
+        if self.lim_lat_max is None or \
+                (lat > self.lim_lat_max and not lat == 0):
+            self.lim_lat_max = lat
+        if self.lim_lng_min is None or \
+                (lng < self.lim_lng_min and not lng == 0):
+            self.lim_lng_min = lng
+        if self.lim_lng_max is None or \
+                (lng > self.lim_lng_max and not lng == 0):
+            self.lim_lng_max = lng
+
+    def get_bound_report(self):
+        bound_report = f'Bounds are: ' \
+            f'Min {float(self.lim_lng_min)} {float(self.lim_lat_min)} ' \
+            f'Max {float(self.lim_lng_max)} {float(self.lim_lat_max)}'
+        return bound_report

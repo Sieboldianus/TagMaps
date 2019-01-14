@@ -29,7 +29,7 @@ from collections import namedtuple
 from shapely.geometry import Polygon
 from shapely.geometry import shape
 from shapely.geometry import Point
-from tagmaps.classes.utils import Utils
+from tagmaps.classes.utils import Utils, AnalysisBounds
 from tagmaps.classes.shared_structure \
     import PostStructure, CleanedPost
 
@@ -182,7 +182,7 @@ class LoadData():
                 lbsn_post.emoji)
             self.total_emoji_counter.update(lbsn_post.emoji)
 
-    def get_cleaned_post_dict(self):
+    def get_cleaned_post_dict(self) -> Dict[CleanedPost]:
         """Output wrapper
 
         - calls loop user locations method
@@ -617,7 +617,7 @@ class LoadData():
             self.total_emoji_counter.update(emoji_filtered)
         return emoji_filtered
 
-    def _get_tags(self, tags_string):
+    def _get_tags(self, tags_string: str) -> Set[str]:
         # [1:-1] removes curly brackets, second [1:-1] removes quotes
         tags = set(filter(None, tags_string.lower().split(";")))
         # Filter tags based on two stoplists
@@ -636,7 +636,7 @@ class LoadData():
         return tags
 
     @staticmethod
-    def _get_count_frompost(count_string):
+    def _get_count_frompost(count_string: str) -> int:
         if count_string and not count_string == "":
             try:
                 photo_likes_int = int(count_string)
@@ -729,35 +729,7 @@ class LoadData():
             return filelist
 
 
-class AnalysisBounds():
-    """Class stroing boundary (lim lat/lng)"""
 
-    def __init__(self):
-        """initialize global variables for analysis bounds
-
-        (lat, lng coordinates)
-        """
-        self.lim_lat_min = None
-        self.lim_lat_max = None
-        self.lim_lng_min = None
-        self.lim_lng_max = None
-
-    def _upd_latlng_bounds(self, lat, lng):
-        """Update lat/lng bounds based on coordinate pair."""
-        if self.lim_lat_min is None or \
-                (lat < self.lim_lat_min and not lat == 0):
-            self.lim_lat_min = lat
-        if self.lim_lat_max is None or \
-                (lat > self.lim_lat_max and not lat == 0):
-            self.lim_lat_max = lat
-        if self.lim_lng_min is None or \
-                (lng < self.lim_lng_min and not lng == 0):
-            self.lim_lng_min = lng
-        if self.lim_lng_max is None or \
-                (lng > self.lim_lng_max and not lng == 0):
-            self.lim_lng_max = lng
-
-    def get_bound_report(self):
         bound_report = f'Bounds are: ' \
             f'Min {float(self.lim_lng_min)} {float(self.lim_lat_min)} ' \
             f'Max {float(self.lim_lng_max)} {float(self.lim_lat_max)}'
