@@ -182,7 +182,7 @@ class LoadData():
                 lbsn_post.emoji)
             self.total_emoji_counter.update(lbsn_post.emoji)
 
-    def get_cleaned_post_dict(self) -> Dict[CleanedPost]:
+    def get_cleaned_post_dict(self) -> Dict[str, CleanedPost]:
         """Output wrapper
 
         - calls loop user locations method

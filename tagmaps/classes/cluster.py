@@ -23,7 +23,7 @@ class ClusterGen():
     """
 
     def __init__(self, bounds: AnalysisBounds,
-                 cleaned_post_dict: Dict[CleanedPost],
+                 cleaned_post_dict: Dict[str, CleanedPost],
                  top_tags_list: List[Tuple[str, int]],
                  total_distinct_locations: int,
                  tmax: int):
