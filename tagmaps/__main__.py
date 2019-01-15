@@ -84,7 +84,7 @@ def main():
     log.info(lbsn_data.bounds.get_bound_report())
 
     if (cfg.cluster_tags or cfg.cluster_emoji):
-        log.info("########## STEP 2 of 6: Tag Ranking ##########")
+        log.info("\n########## STEP 2 of 6: Tag Ranking ##########")
 
         prepared_data = lbsn_data.get_prepared_data()
 
@@ -97,14 +97,12 @@ def main():
             f'Total emoji count for cleaned (tmax) emoji list '
             f'(Top {prepared_data.emax}): {prepared_data.total_emoji_count}.')
 
-        global top_tags_list
         top_tags_list = prepared_data.top_tags_list
         if cfg.statistics_only is False:
             # restart time monitoring for actual cluster step
             now = time.time()
             log.info(
-                "########## STEP 3 of 6: Tag Location Clustering ##########")
-            sys.stdout.flush()
+                "\n########## STEP 3 of 6: Tag Location Clustering ##########")
 
             cluster_tag_data = ClusterGen(
                 lbsn_data.bounds,

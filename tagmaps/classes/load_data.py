@@ -92,7 +92,7 @@ class LoadData():
 
         Output: produces a list of post that can be parsed
         """
-        post_list = []  # needed?
+        post_list = list()  # needed?
         if self.cfg.source_map.file_extension == "csv":
             post_list = csv.reader(
                 file_handle,
@@ -102,9 +102,9 @@ class LoadData():
             next(post_list, None)  # skip headerline
         elif self.cfg.source_map.file_extension == "json":
             post_list = post_list + json.loads(file_handle.read())
-        self._parse_postlist(post_list)
+        result_msg = self._parse_postlist(post_list)
 
-    def _parse_postlist(self, post_list):
+    def _parse_postlist(self, post_list: TextIO):
         """Process posts according to specifications"""
         for post in post_list:
             # skip duplicates and erroneous entries
@@ -119,15 +119,19 @@ class LoadData():
                 continue
             self._merge_posts(lbsn_post)
             # status report
-            msg = \
-                f'Cleaned output to {len(self.distinct_locations_set):02d} ' \
-                f'distinct locations from ' \
-                f'{self.stats.count_glob:02d} posts ' \
-                f'(File {self.stats.partcount} of {len(self.filelist)}) - ' \
-                f'Skipped posts: {self.stats.skipped_count} - skipped tags: ' \
-                f'{self.stats.count_tags_skipped} of ' \
-                f'{self.stats.count_tags_global}'
+            msg = (
+                f'Cleaned output to {len(self.distinct_locations_set):02d} '
+                f'distinct locations from '
+                f'{self.stats.count_glob:02d} posts '
+                f'(File {self.stats.partcount} of {len(self.filelist)}) - '
+                f'Skipped posts: {self.stats.skipped_count} - skipped tags: '
+                f'{self.stats.count_tags_skipped} of '
+                f'{self.stats.count_tags_global}')
             print(msg, end='\r')
+        # log last message to file, clean last stdout
+        print(" " * len(msg), end='\n')
+        sys.stdout.flush()
+        self.log.info(msg)
 
     def _merge_posts(self, lbsn_post):
         """Method will union all tags of a single user for each location

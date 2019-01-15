@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Module for tag maps clustering functions
+Module for tag maps clustering methods
 """
 
 import warnings
@@ -80,7 +80,7 @@ class ClusterGen():
                 distinct_localloc_count.add(cleaned_photo_location.loc_id)
         return selected_postguids_list, len(distinct_localloc_count)
 
-    def _getselect_postguids(self, tag: str, silent: bool = True):
+    def _getselect_postguids(self, tag: str, silent: bool = True) -> List[str]:
         """Get list of post guids with specific tag
 
         Args:
@@ -105,19 +105,26 @@ class ClusterGen():
               f'of total distinct locations in area)', end=" ")
         return selected_postguids_list
 
-    def _getselect_posts(self, selected_postguids_list):
+    def _getselect_posts(self,
+                         selected_postguids_list: List[str]
+                         ) -> List[CleanedPost]:
         selected_posts_list = [self.cleaned_post_dict[x]
                                for x in selected_postguids_list]
         return selected_posts_list
 
-    def _get_np_points(self, tag: str = None, silent: bool = None):
+    def _get_np_points(self,
+                       tag: str = None,
+                       silent: bool = None
+                       ) -> np.ndarray:
         """Gets numpy array of selected points from tags with latlng
 
-            toptag ([type], optional): Defaults to None. [description]
-            silent ([type], optional): Defaults to None. [description]
+        Args:
+            tag: tag to select posts
+            silent: if true, no console output (interface mode)
 
         Returns:
-            [type]: [description]
+            points: A list of lat/lng points to map
+            selected_postguids_list: List of selected post guids
         """
         # no log reporting for selected points
         if silent is None:
@@ -138,11 +145,12 @@ class ClusterGen():
         # (limit by list of column-names)
         points = df.as_matrix(['lng', 'lat'])
         # only return preview fig without clustering
-        return points, selected_postguids_list
+        return points
 
-    def cluster_points(self, points, cluster_distance,
-                       selected_postguids_list,
-                       min_span_tree, preview_mode):
+    def cluster_points(self, points,
+                       cluster_distance: float,
+                       min_span_tree: bool = False,
+                       preview_mode: bool = False):
         # cluster data
         # conversion to radians for HDBSCAN
         # (does not support decimal degrees)
@@ -151,7 +159,7 @@ class ClusterGen():
         # (descending), calculate HDBSCAN Clusters
         # min_cluster_size default - 5% optimum:
         min_cluster_size = max(
-            2, int(((len(selected_postguids_list))/100)*5))
+            2, int(((len(points))/100)*5))
         self.clusterer = hdbscan.HDBSCAN(
             min_cluster_size=min_cluster_size,
             gen_min_span_tree=min_span_tree,

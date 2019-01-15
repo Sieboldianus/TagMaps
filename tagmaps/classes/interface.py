@@ -22,7 +22,6 @@ from tagmaps.classes.utils import Utils, AnalysisBounds
 from tagmaps.classes.shared_structure import CleanedPost
 from tagmaps.classes.cluster import ClusterGen
 
-plt.ion()
 # enable interactive mode for pyplot (not necessary?!)
 plt.ion()
 # label_size = 10
@@ -202,12 +201,10 @@ class UserInterface():
         # tkinter.messagebox.showinfo("Num of clusters: ",
         # str(len(sel_colors)) + " " + str(sel_colors[1]))
         # output/update matplotlib figures
-        (points,
-         selected_postguids_list) = self._clst._get_np_points(
-            sel_tag[0], silent=True)
+        points = self._clst._get_np_points(tag=sel_tag[0], silent=True)
         self._clst.cluster_points(
-            points, self.cluster_distance,
-            selected_postguids_list, self.create_min_spanning_tree,
+            points=points,
+            cluster_distance=self.cluster_distance,
             preview_mode=True)
         mask_noisy = self._clst.mask_noisy
         number_of_clusters = self._clst.number_of_clusters
@@ -413,12 +410,12 @@ class UserInterface():
             from_=(self.cluster_distance/100),
             to=(self.cluster_distance*2))
 
-    def _selection_preview(self, sel_tag):
+    def _selection_preview(self, sel_tag: Tuple[str, int]):
         """Update preview map based on tag selection"""
         # tkinter.messagebox.showinfo("Proceed", f'{sel_tag}')
-        points, __ = self._clst._get_np_points(
-            sel_tag[0],
-            silent=False)
+        points = self._clst._get_np_points(
+            tag=sel_tag[0],
+            silent=True)
         if self.fig1:
             plt.figure(1).clf()  # clear figure 1
             # earth = Basemap()
@@ -556,6 +553,11 @@ class UserInterface():
             self._cluster_preview(self._clst.top_tags_list[0])
 
     def _scaletest_current_display_tag(self):
+        if self.create_min_spanning_tree is False:
+            tkinter.messagebox.showinfo(
+                "Skip: ",
+                f'Currently deactivated')
+            return
         if self.current_display_tag:
             sel_tag = self.current_display_tag
         else:
