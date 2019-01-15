@@ -178,7 +178,7 @@ class Utils():
         return m
 
     @staticmethod
-    def getRadiansFromMeters(dist):
+    def get_radians_from_meters(dist):
         dist = dist/1000
         degreesDist = dist/111.325
         radiansDist = degreesDist/57.2958
@@ -190,7 +190,7 @@ class Utils():
         #To convert this to meters, multiply by 1,000. So, 2 degrees is 222,65 meters.
 
     @staticmethod
-    def getMetersFromRadians(dist):
+    def get_meters_from_radians(dist):
         dist = dist * 57.2958
         dist = dist * 111.325
         metersDist = round(dist * 1000,1)

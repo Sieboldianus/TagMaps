@@ -11,14 +11,11 @@ import tkinter as tk
 from tkinter.messagebox import showerror
 import tkinter.messagebox
 from unicodedata import name as unicode_name
-import numpy as np
 import matplotlib
+import numpy as np
 import matplotlib.pyplot as plt
 from typing import List, Set, Dict, Tuple, Optional, TextIO
-import seaborn as sns
 import sklearn.datasets as data
-import pandas as pd
-import hdbscan
 import traceback
 import shapely.geometry as geometry
 from tagmaps.classes.utils import Utils, AnalysisBounds
@@ -36,11 +33,10 @@ class UserInterface():
         self._clst = tag_cluster
         self._clst_e = emoji_cluster
         self.abort = False
-        self.floater_x = 0
-        self.floater_y = 0
+        # self.floater_x = 0
+        # self.floater_y = 0
         self.plot_kwds = {'alpha': 0.5, 's': 10, 'linewidths': 0}
         self.lastselection_list = list()
-        self._update_bounds()
         self.bound_points_shapely = (
             geometry.MultiPoint([
                 (self._clst.bounds.lim_lng_min, self._clst.bounds.lim_lat_min),
@@ -66,11 +62,12 @@ class UserInterface():
         # 7% of research area width/height (max) =
         # default value #223.245922725 #= 0.000035 radians dist
         self.cluster_distance = (min(self.distX, self.distY)/100)*7
+        self.auto_select_clusters = False
         self.current_display_tag = None
         # Initialize TKinter Interface
         self.app = App()
         # allow error reporting from console backend
-        tk.Tk.report_callback_exception = self.report_callback_exception
+        tk.Tk.report_callback_exception = self._report_callback_exception
 
         # definition of global vars for interface and graph design
         self.canvas_width = 1320
@@ -108,7 +105,7 @@ class UserInterface():
         listbox = tk.Listbox(canvas,
                              selectmode=tk.MULTIPLE, bd=0, background="gray29",
                              fg="gray91", width=30, font=listbox_font)
-        listbox.bind('<<ListboxSelect>>', self.onselect)
+        listbox.bind('<<ListboxSelect>>', self._onselect)
         scroll = tk.Scrollbar(canvas, orient=tk.VERTICAL,
                               background="gray20", borderwidth=0)
         scroll.configure(command=listbox.yview)
@@ -130,7 +127,7 @@ class UserInterface():
         canvas = tk.Canvas(buttonsFrame, width=150, height=200,
                            highlightthickness=0, background="gray7")
         b = tk.Button(canvas, text="Remove Tag(s)",
-                      command=lambda: self.delete_tag(listbox),
+                      command=lambda: self._delete_tag(listbox),
                       background="gray20", fg="gray80", borderwidth=0,
                       font="Arial 10 bold")
         b.pack(padx=10, pady=10)
@@ -144,7 +141,7 @@ class UserInterface():
                                to=(self.cluster_distance*2),
                                orient=tk.HORIZONTAL,
                                resolution=0.1,
-                               command=self.change_cluster_dist,
+                               command=self._change_cluster_dist,
                                length=300,
                                label="Cluster Cut Distance (in Meters)",
                                background="gray20",
@@ -156,28 +153,28 @@ class UserInterface():
         tk_scalebar.set(self.cluster_distance)
         tk_scalebar.pack()
         b = tk.Button(canvas, text="Cluster Preview",
-                      command=self.cluster_current_display_tag,
+                      command=self._cluster_current_display_tag,
                       background="gray20",
                       fg="gray80",
                       borderwidth=0,
                       font="Arial 10 bold")
         b.pack(padx=10, pady=10, side="left")
         b = tk.Button(canvas, text="Scale Test",
-                      command=self.scaletest_current_display_tag,
+                      command=self._scaletest_current_display_tag,
                       background="gray20",
                       fg="gray80",
                       borderwidth=0,
                       font="Arial 10 bold")
         b.pack(padx=10, pady=10, side="left")
         b = tk.Button(canvas, text="Proceed..",
-                      command=self.proceed_with_cluster,
+                      command=self._proceed_with_cluster,
                       background="gray20",
                       fg="gray80",
                       borderwidth=0,
                       font="Arial 10 bold")
         b.pack(padx=10, pady=10, side="left")
         b = tk.Button(canvas, text="Quit",
-                      command=self.quit_tkinter,
+                      command=self._quit_tkinter,
                       background="gray20",
                       fg="gray80",
                       borderwidth=0,
@@ -186,24 +183,267 @@ class UserInterface():
         canvas.pack(fill='both', padx=0, pady=0)
         buttonsFrame.pack(fill='both', padx=0, pady=0)
 
+    def start(self):
         # this is the mainloop for the interface
         # once it is destroyed, the regular process will continue
         self.app.mainloop()
         # end of tkinter loop, welcome back to command line interface
         plt.close("all")
 
-    def _update_bounds(self):
-        """Update analysis rectangle boundary based on
+    def _cluster_preview(self, sel_tag):
+        """Cluster preview map based on tag selection"""
+        # tkinter.messagebox.showinfo("Num of clusters: ",
+        # str(len(sel_colors)) + " " + str(sel_colors[1]))
+        # output/update matplotlib figures
+        (points,
+         selected_postguids_list) = self._clst._get_np_points(
+            sel_tag)
+        __, cluster_attr = self._clst.cluster_points(
+            points, self.cluster_distance,
+            selected_postguids_list, self.create_min_spanning_tree,
+            silent=False)
+        mask_noisy = cluster_attr[0]
+        sel_colors = cluster_attr[1]
+        number_of_clusters = cluster_attr[2]
+        if self.fig1:
+            plt.figure(1).clf()
+            # plt references the last figure accessed
+            plt.suptitle(sel_tag[0].upper(),
+                         fontsize=18, fontweight='bold')
+            ax = plt.scatter(
+                points.T[0], points.T[1], color=self._clst.sel_colors,
+                **self.plot_kwds)
+            self.fig1 = plt.figure(num=1, figsize=(
+                11, int(11*self.img_ratio)), dpi=80)
+            self.fig1.canvas.set_window_title('Cluster Preview')
+            distText = ''
+            if self.auto_select_clusters is False:
+                distText = '@ ' + str(self.cluster_distance) + 'm'
+            plt.title(f'Cluster Preview {distText}',
+                      fontsize=12, loc='center')
+            # plt.title('Cluster Preview')
+            # xmax = ax.get_xlim()[1]
+            # ymax = ax.get_ylim()[1]
+            noisy_txt = '{}/{}'.format(mask_noisy.sum(), len(mask_noisy))
+            plt.text(self._clst.bounds.lim_lng_max,
+                     self._clst.bounds.lim_lat_max,
+                     f'{number_of_clusters} Cluster (Noise: {noisy_txt})',
+                     fontsize=10, horizontalalignment='right',
+                     verticalalignment='top', fontweight='bold')
+        else:
+            plt.scatter(points.T[0], points.T[1],
+                        c=self._clst.sel_colors, **self.plot_kwds)
+            self.fig1 = plt.figure(num=1, figsize=(
+                11, int(11*self.img_ratio)), dpi=80)
+            self.fig1.canvas.set_window_title('Cluster Preview')
+            plt.suptitle(sel_tag[0].upper(), fontsize=18, fontweight='bold')
+            distText = ''
+            if self.auto_select_clusters is False:
+                distText = '@ ' + str(self.cluster_distance) + 'm'
+            plt.title(f'Cluster Preview {distText}',
+                      fontsize=12, loc='center')
+            # xmax = fig1.get_xlim()[1]
+            # ymax = fig1.get_ylim()[1]
+            noisy_txt = '{} / {}'.format(mask_noisy.sum(), len(mask_noisy))
+            plt.text(self._clst.bounds.lim_lng_max,
+                     self._clst.bounds.lim_lat_max,
+                     f'{number_of_clusters} Clusters (Noise: {noisy_txt})',
+                     fontsize=10, horizontalalignment='right',
+                     verticalalignment='top', fontweight='bold')
+        plt.gca().set_xlim(
+            [self._clst.bounds.lim_lng_min, self._clst.bounds.lim_lng_max])
+        plt.gca().set_ylim(
+            [self._clst.bounds.lim_lat_min, self._clst.bounds.lim_lat_max])
+        plt.tick_params(labelsize=10)
+        # if len(tagRadiansData) < 10000:
+        if self.fig2:
+            plt.figure(2).clf()
+            plt.suptitle(sel_tag[0].upper(), fontsize=18, fontweight='bold')
+            # plt.title('Condensed Tree', fontsize=12,loc='center')
+            self._clst.clusterer.condensed_tree_.plot(
+                select_clusters=False, selection_palette=sel_colors
+            )
+            # ,label_clusters=False
+            # tkinter.messagebox.showinfo(
+            #   "Num of clusters: ",
+            #   str(len(sel_colors)) + " " + str(sel_colors[0])
+            #   )
+        else:
+            plt.figure(2).canvas.set_window_title('Condensed Tree')
+            self.fig2 = self._clst.clusterer.condensed_tree_.plot(
+                select_clusters=False,
+                selection_palette=self._clst.sel_colors
+            )
+            # ,label_clusters=False
+            # tkinter.messagebox.showinfo(
+            #   "Num of clusters: ",
+            #   str(len(self._clst.sel_colors)) + " "
+            #   "str(sel_colors[1]))
+            # fig2 = clusterer.condensed_tree_.plot(
+            #   select_clusters=False,
+            #   selection_palette=self._clst.sel_colors,
+            #   label_clusters=True)
+            # plt.title('Condensed Tree', fontsize=12,loc='center')
+            plt.suptitle(sel_tag[0].upper(), fontsize=18,
+                         fontweight='bold')
+        plt.tick_params(labelsize=10)
+        if self.fig3:
+            plt.figure(3).clf()
+            plt.suptitle(sel_tag[0].upper(), fontsize=18,
+                         fontweight='bold')
+            plt.title('Single Linkage Tree', fontsize=12,
+                      loc='center')
+            # clusterer.single_linkage_tree_.plot(
+            #   truncate_mode='lastp',p=50)
+            # p is the number of max count of leafs in the tree,
+            # this should at least be the number of clusters*10,
+            # not lower than 50 [but max 500 to not crash]
+            ax = self._clst.clusterer.single_linkage_tree_.plot(
+                truncate_mode='lastp',
+                p=max(50, min(number_of_clusters*10, 256)))
+            # tkinter.messagebox.showinfo("messagr", str(type(ax)))
+            # plot cutting distance
+            y = Utils.get_radians_from_meters(
+                self.cluster_distance)
+            xmin = ax.get_xlim()[0]
+            xmax = ax.get_xlim()[1]
+            line, = ax.plot(
+                [xmin, xmax], [y, y], color='k',
+                label=f'Cluster (Cut) Distance {self.cluster_distance}m'
+            )
+            line.set_label(
+                f'Cluster (Cut) Distance {self.cluster_distance}m')
+            ax.legend(fontsize=10)
+            vals = ax.get_yticks()
+            ax.set_yticklabels(
+                ['{:3.1f}m'.format(
+                    Utils.get_meters_from_radians(x)
+                ) for x in vals])
+        else:
+            plt.figure(3).canvas.set_window_title(
+                'Single Linkage Tree')
+            self.fig3 = self._clst.clusterer.single_linkage_tree_.plot(
+                truncate_mode='lastp',
+                p=max(50, min(number_of_clusters*10, 256)))
+            plt.suptitle(sel_tag[0].upper(), fontsize=18,
+                         fontweight='bold')
+            plt.title('Single Linkage Tree',
+                      fontsize=12, loc='center')
+            # tkinter.messagebox.showinfo("messagr", str(type(fig3)))
+            # plot cutting distance
+            y = Utils.get_radians_from_meters(self.cluster_distance)
+            xmin = self.fig3.get_xlim()[0]
+            xmax = self.fig3.get_xlim()[1]
+            line, = self.fig3.plot(
+                [xmin, xmax], [y, y],
+                color='k',
+                label=f'Cluster (Cut) Distance {self.cluster_distance}m')
+            line.set_label(
+                f'Cluster (Cut) Distance {self.cluster_distance}m')
+            self.fig3.legend(fontsize=10)
+            vals = self.fig3.get_yticks()
+            self.fig3.set_yticklabels(
+                [f'{Utils.get_meters_from_radians(x):3.1f}m' for x in vals])
+        plt.tick_params(labelsize=10)
+        if self.create_min_spanning_tree:
+            if self.fig4:
+                plt.figure(4).clf()
+                plt.suptitle(sel_tag[0].upper(),
+                             fontsize=18, fontweight='bold')
+                # plt.title('Single Linkage Tree', fontsize=12,loc='center')
+                # clusterer.single_linkage_tree_.plot(truncate_mode='lastp',p=50)
+                ax = self._clst.clusterer.minimum_spanning_tree_.plot(
+                    edge_cmap='viridis', edge_alpha=0.6,
+                    node_size=10, edge_linewidth=1)
+                # tkinter.messagebox.showinfo("messagr", str(type(ax)))
+                self.fig4.canvas.set_window_title('Minimum Spanning Tree')
+                plt.title(
+                    f'Minimum Spanning Tree @ {self.cluster_distance}m',
+                    fontsize=12, loc='center')
+                ax.legend(fontsize=10)
+                # ax=plt.gca()
+                # #plt.gca() for current axis, otherwise set appropriately.
+                # im=ax.images
+                # #this is a list of all images that have been plotted
+                # cb=im[0].colorbar
+                # ##in this case I assume to be interested to the last one
+                # plotted, otherwise use the appropriate index
+                # cb.ax.tick_params(labelsize=10)
+                # vals = cb.ax.get_yticks()
+                # cb.ax.set_yticklabels(
+                #   ['{:3.1f}m'.format(getMetersFromRadians(x)) for x in vals])
+            else:
+                plt.figure(4).canvas.set_window_title(
+                    'Minimum Spanning Tree')
+                self.fig4 = self._clst.clusterer.minimum_spanning_tree_.plot(
+                    edge_cmap='viridis',
+                    edge_alpha=0.6,
+                    node_size=10,
+                    edge_linewidth=1)
+                # tkinter.messagebox.showinfo("messagr", str(type(ax)))
+                plt.suptitle(sel_tag[0].upper(),
+                             fontsize=18, fontweight='bold')
+                plt.title(
+                    f'Minimum Spanning Tree @ {self.cluster_distance}m',
+                    fontsize=12, loc='center')
+                self.fig4.legend(fontsize=10)
+                # ax=plt.gca()        #plt.gca() for current axis,
+                #   otherwise set appropriately.
+                # im=ax.images        #this is a list of all
+                #   images that have been plotted
+                # cb=im[0].colorbar
+                # ##in this case I assume to be interested
+                #   to the last one plotted,
+                #   otherwise use the appropriate index
+                # cb.ax.tick_params(labelsize=10)
+                # vals = cb.ax.get_yticks()
+                # cb.ax.set_yticklabels(
+                #   ['{:3.1f}m'.format(getMetersFromRadians(x)) for x in vals]
+                # )
+        plt.tick_params(labelsize=10)
+        # adjust scalebar limits
+        self.tk_scalebar.configure(
+            from_=(self.cluster_distance/100),
+            to=(self.cluster_distance*2))
 
-        cleaned posts list."""
-        df = pd.DataFrame(self._clst.cleaned_post_list)
-        points = df.as_matrix(['lng', 'lat'])
-        (self._clst.bounds.lim_lat_min,
-         self._clst.bounds.lim_lat_max,
-         self._clst.bounds.lim_lng_min,
-         self._clst.bounds.lim_lng_max) = Utils.get_rectangle_bounds(points)
+    def _selection_preview(self, sel_tag):
+        """Update preview map based on tag selection"""
+        points, __ = self._clst._get_np_points(sel_tag)
+        if self.fig1:
+            plt.figure(1).clf()  # clear figure 1
+            # earth = Basemap()
+            # earth.bluemarble(alpha=0.42)
+            # earth.drawcoastlines(color='#555566', linewidth=1)
+            plt.suptitle(sel_tag[0].upper(),
+                         fontsize=18, fontweight='bold')
+            # reuse window of figure 1 for new figure
+            plt.scatter(points.T[0], points.T[1],
+                        color='red', **self.plot_kwds)
+            self.fig1 = plt.figure(num=1, figsize=(
+                11, int(11*self.img_ratio)), dpi=80)
+            self.fig1.canvas.set_window_title('Preview Map')
+            # displayImgPath = pathname +
+            # '/Output/ClusterImg/00_displayImg.png'
+            # fig1.figure.savefig(displayImgPath)
+        else:
+            plt.suptitle(sel_tag[0].upper(),
+                         fontsize=18, fontweight='bold')
+            plt.scatter(points.T[0], points.T[1],
+                        color='red', **self.plot_kwds)
+            self.fig1 = plt.figure(num=1, figsize=(
+                11, int(11*self.img_ratio)), dpi=80)
+            # earth = Basemap()
+            # earth.bluemarble(alpha=0.42)
+            # earth.drawcoastlines(color='#555566', linewidth=1)
+            self.fig1.canvas.set_window_title('Preview Map')
+        plt.gca().set_xlim(
+            [self._clst.bounds.lim_lng_min, self._clst.bounds.lim_lng_max])
+        plt.gca().set_ylim(
+            [self._clst.bounds.lim_lat_min, self._clst.bounds.lim_lat_max])
+        plt.tick_params(labelsize=10)
+        self.current_display_tag = sel_tag
 
-    def report_callback_exception(self, exc, val, tb):
+    def _report_callback_exception(self, exc, val, tb):
         """Override for error reporting during tkinter mode"""
         showerror("Error", message=str(val))
         exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -227,7 +467,7 @@ class UserInterface():
         print(repr(traceback.format_tb(exc_traceback)))
         print("*** tb_lineno:", exc_traceback.tb_lineno)
 
-    def quit_tkinter(self):
+    def _quit_tkinter(self):
         """exits Tkinter gui
 
         ..to continue with code execution after mainloop()
@@ -248,7 +488,7 @@ class UserInterface():
         self.app.destroy()
         self.app.quit()
 
-    def proceed_with_cluster(self):
+    def _proceed_with_cluster(self):
         self.proceed_clusting = True
     # def vis_tag(tag):
         # tkinter.messagebox.showinfo("Proceed", "Proceed")
@@ -258,29 +498,7 @@ class UserInterface():
         self.app.destroy()
         self.app.quit()
 
-    @staticmethod
-    def sel_photos(tag, cleaned_postlocs: List[CleanedPost]
-                   ) -> Tuple[List[str], int]:
-        """select photos from list based on a specific tag
-
-        Args:
-            tag: tag for selecting posts
-            cleaned_postlocs (List[CleanedPost]): list of all posts
-
-        Returns:
-            Tuple[List[str], int]: list of post_guids and
-                                   number of distinct locations
-        """
-        distinct_local_loc_ount = set()
-        selected_post_guids = list()
-        for cleaned_photo_location in cleaned_postlocs:
-            if (tag in (cleaned_photo_location.hashtags) or
-                    (tag in cleaned_photo_location.post_body)):
-                selected_post_guids.append(cleaned_photo_location.guid)
-                distinct_local_loc_ount.add(cleaned_photo_location.loc_id)
-        return selected_post_guids, len(distinct_local_loc_ount)
-
-    def change_cluster_dist(self, val):
+    def _change_cluster_dist(self, val):
         """Changes cluster distance based on user input
 
         Args:
@@ -291,7 +509,7 @@ class UserInterface():
         # global tkScalebar
         self.cluster_distance = float(val)  # tkScalebar.get()
 
-    def onselect(self, evt):
+    def _onselect(self, evt):
         """On user select tag from list
 
         Args:
@@ -308,39 +526,42 @@ class UserInterface():
         else:
             self.lastselection_list = w.curselection()
             changed_selection = w.curselection()
-        index = int(list(changed_selection)[0])
+        sel_index = int(list(changed_selection)[0])
         # value = w.get(index)
         # tkinter.messagebox.showinfo("You selected ", value)
         self._clst.tnum = 1
-        # generate only preview map
-        ClusterGen.cluster_tag(self._clst.top_tags_list[index], True)
-        # plt.close('all')
+        if self.gen_preview_map.get() == 1:
+            # generate only preview map
+            # only if selection box is checked
+            self._selection_preview(
+                self._clst.top_tags_list[sel_index])
+            # plt.close('all')
 
-    def cluster_current_display_tag(self):
+    def _cluster_current_display_tag(self):
         if self.current_display_tag:
             # tkinter.messagebox.showinfo("Clustertag: ",
             #                             str(currentDisplayTag))
-            ClusterGen.cluster_tag(self.current_display_tag)
+            self._cluster_preview(self.current_display_tag)
         else:
-            ClusterGen.cluster_tag(self._clst.top_tags_list[0])
+            self._cluster_preview(self._clst.top_tags_list[0])
 
-    def scaletest_current_display_tag(self):
+    def _scaletest_current_display_tag(self):
         if self.current_display_tag:
-            clustertag = self.current_display_tag
+            sel_tag = self.current_display_tag
         else:
-            clustertag = self._clst.top_tags_list[0]
+            sel_tag = self._clst.top_tags_list[0]
         scalecalclist = []
         dmax = int(self.cluster_distance*10)
         dmin = int(self.cluster_distance/10)
         dstep = int(((self.cluster_distance*10) -
                      (self.cluster_distance/10))/100)
         for i in range(dmin, dmax, dstep):
-            self.change_cluster_dist(i)
+            self._change_cluster_dist(i)
             self.tk_scalebar.set(i)
             self.app.update()
             # self.cluster_distance = i
             clusters, self.selected_postlist_guids = (
-                ClusterGen.cluster_tag(clustertag, None, True)
+                self._clst.cluster_tag(sel_tag, None, True)
             )
             mask_noisy = (clusters == -1)
             # with noisy (=0)
@@ -350,13 +571,13 @@ class UserInterface():
             form_string = f'{i},{number_of_clusters},'
             f'{mask_noisy.sum()},{len(mask_noisy)},\n'
             scalecalclist.append(form_string)
-        with open(f'02_Output/scaletest_{clustertag[0]}.txt',
+        with open(f'02_Output/scaletest_{sel_tag[0]}.txt',
                   "w", encoding='utf-8') as logfile_a:
             for scalecalc in scalecalclist:
                 logfile_a.write(scalecalc)
         plt.figure(1).clf()
         # plt references the last figure accessed
-        plt.suptitle(clustertag[0].upper(
+        plt.suptitle(sel_tag[0].upper(
         ), fontsize=18, fontweight='bold')
         self.fig1 = plt.figure(num=1, figsize=(
             11, int(11*self.img_ratio)), dpi=80)
@@ -371,7 +592,7 @@ class UserInterface():
                  fontsize=10, horizontalalignment='right',
                  verticalalignment='top', fontweight='bold')
 
-    def delete_tag(self, listbox):
+    def _delete_tag(self, listbox):
         # global top_tags_list
         global lastselectionList
         lastselectionList = []
@@ -414,9 +635,9 @@ class FloatingWindow(tk.Toplevel):
         self.grip = tk.Label(self, bitmap="gray25")
         self.grip.pack(side="left", fill="y")
         # self.label.pack(side="right", fill="both", expand=True)
-        self.grip.bind("<ButtonPress-1>", self.StartMove)
-        self.grip.bind("<ButtonRelease-1>", self.StopMove)
-        self.grip.bind("<B1-Motion>", self.OnMotion)
+        self.grip.bind("<ButtonPress-1>", self._start_move)
+        self.grip.bind("<ButtonRelease-1>", self._stop_move)
+        self.grip.bind("<B1-Motion>", self._on_motion)
         # center Floating Window
         w = self.winfo_reqwidth()
         h = self.winfo_reqheight()
@@ -426,15 +647,15 @@ class FloatingWindow(tk.Toplevel):
         y = (hs/2) - (h/2)
         self.geometry('+%d+%d' % (x, y))
 
-    def StartMove(self, event):
+    def _start_move(self, event):
         self.x = event.x
         self.y = event.y
 
-    def StopMove(self, event):
+    def _stop_move(self, event):
         self.x = None
         self.y = None
 
-    def OnMotion(self, event):
+    def _on_motion(self, event):
         deltax = event.x - self.x
         deltay = event.y - self.y
         x = self.winfo_x() + deltax

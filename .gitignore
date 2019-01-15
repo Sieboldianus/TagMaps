@@ -9,6 +9,7 @@ delauney_versus_alphaShapes.png
 foo.png
 graph.png
 scripts/
+pytest-env
 .vs/
 .vscode/
 emojifile.txt
