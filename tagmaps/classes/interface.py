@@ -37,12 +37,6 @@ class UserInterface():
         # self.floater_y = 0
         self.plot_kwds = {'alpha': 0.5, 's': 10, 'linewidths': 0}
         self.lastselection_list = list()
-        self.bound_points_shapely = (
-            geometry.MultiPoint([
-                (self._clst.bounds.lim_lng_min, self._clst.bounds.lim_lat_min),
-                (self._clst.bounds.lim_lng_max, self._clst.bounds.lim_lat_max)
-            ])
-        )
         self.distYLat = (
             self._clst.bounds.lim_lat_max - self._clst.bounds.lim_lat_min)
         self.distXLng = (
@@ -408,7 +402,10 @@ class UserInterface():
 
     def _selection_preview(self, sel_tag):
         """Update preview map based on tag selection"""
-        points, __ = self._clst._get_np_points(sel_tag)
+        # tkinter.messagebox.showinfo("Proceed", f'{sel_tag}')
+        points, __ = self._clst._get_np_points(
+            sel_tag[0],
+            silent=False)
         if self.fig1:
             plt.figure(1).clf()  # clear figure 1
             # earth = Basemap()

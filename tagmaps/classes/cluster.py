@@ -37,6 +37,14 @@ class ClusterGen():
         self.autoselect_clusters = False
         self.sel_colors = None
         self.clusterer = None
+        # set initial analysis bounds
+        self._update_bounds()
+        self.bound_points_shapely = (
+            geometry.MultiPoint([
+                (self.bounds.lim_lng_min, self.bounds.lim_lat_min),
+                (self.bounds.lim_lng_max, self.bounds.lim_lat_max)
+            ])
+        )
 
     def _update_bounds(self):
         """Update analysis rectangle boundary based on
@@ -49,7 +57,7 @@ class ClusterGen():
          self.bounds.lim_lng_min,
          self.bounds.lim_lng_max) = Utils.get_rectangle_bounds(points)
 
-    def _select_postguids(self, tag) -> Tuple[List[str], int]:
+    def _select_postguids(self, tag: str) -> Tuple[List[str], int]:
         """Select all posts that have a specific tag (or emoji)
 
         Args:
@@ -68,7 +76,7 @@ class ClusterGen():
                 distinct_localloc_count.add(cleaned_photo_location.loc_id)
         return selected_postguids_list, len(distinct_localloc_count)
 
-    def _getselect_postguids(self, tag):
+    def _getselect_postguids(self, tag: str, silent: bool = True):
         """Get list of post guids with specific tag
 
         Args:
@@ -85,8 +93,10 @@ class ClusterGen():
         #         text = unicode_name(toptag[0])
         # else:
         text = tag
+        if silent:
+            return selected_postguids_list
         print(f'({self.tnum} of {self.tmax}) '
-              f'Found {len(selected_postguids_list)} photos (UPL) '
+              f'Found {len(selected_postguids_list)} posts (UPL) '
               f'for tag \'{text}\' ({perc_oftotal_locations:.0f}% '
               f'of total distinct locations in area)', end=" ")
         return selected_postguids_list
@@ -96,23 +106,21 @@ class ClusterGen():
                                for x in selected_postguids_list]
         return selected_posts_list
 
-    def _get_np_points(self, tag=None, preview=None, silent=None):
+    def _get_np_points(self, tag: str = None, silent: bool = None):
         """Gets numpy array of selected points from tags with latlng
 
             toptag ([type], optional): Defaults to None. [description]
-            preview ([type], optional): Defaults to None. [description]
             silent ([type], optional): Defaults to None. [description]
 
         Returns:
             [type]: [description]
         """
-
-        if preview is None:
-            preview = False
+        # no log reporting for selected points
         if silent is None:
-            silent = False
+            silent = True
 
-        selected_postguids_list = self._getselect_postguids(tag)
+        selected_postguids_list = self._getselect_postguids(
+            tag, silent=silent)
         # clustering
         if len(selected_postguids_list) < 2:
             return [], selected_postguids_list
