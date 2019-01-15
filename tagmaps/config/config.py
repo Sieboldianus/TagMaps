@@ -420,16 +420,4 @@ class ConfigMap:
     def set_glob_options():
         """Includes global options in other packages to be set
         prior execution"""
-        # enable interactive mode for pyplot (not necessary?!)
-        plt.ion()
-        # label_size = 10
-        # plt.rcParams['xtick.labelsize'] = label_size
-        # plt.rcParams['ytick.labelsize'] = label_size
-        # Optional: set global plotting bounds
-        # plt.gca().set_xlim([limXMin, limXMax])
-        # plt.gca().set_ylim([limYMin, limYMax])
-        sns.set_context('poster')
-        sns.set_style('white')
-        # sns.set_color_codes()
-        # matplotlib.style.use('ggplot')
-        plt.style.use('ggplot')
+        # empty so far

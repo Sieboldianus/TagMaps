@@ -22,6 +22,19 @@ from tagmaps.classes.utils import Utils, AnalysisBounds
 from tagmaps.classes.shared_structure import CleanedPost
 from tagmaps.classes.cluster import ClusterGen
 
+plt.ion()
+# enable interactive mode for pyplot (not necessary?!)
+plt.ion()
+# label_size = 10
+# plt.rcParams['xtick.labelsize'] = label_size
+# plt.rcParams['ytick.labelsize'] = label_size
+# Optional: set global plotting bounds
+# plt.gca().set_xlim([limXMin, limXMax])
+# plt.gca().set_ylim([limYMin, limYMax])
+# sns.set_color_codes()
+# matplotlib.style.use('ggplot')
+plt.style.use('ggplot')
+
 
 class UserInterface():
     def __init__(self,
@@ -130,22 +143,22 @@ class UserInterface():
                            background="gray7", fg="gray80",
                            borderwidth=0, font="Arial 10 bold")
         c.pack(padx=10, pady=10)
-        tk_scalebar = tk.Scale(canvas,
-                               from_=(self.cluster_distance/100),
-                               to=(self.cluster_distance*2),
-                               orient=tk.HORIZONTAL,
-                               resolution=0.1,
-                               command=self._change_cluster_dist,
-                               length=300,
-                               label="Cluster Cut Distance (in Meters)",
-                               background="gray20",
-                               borderwidth=0,
-                               fg="gray80",
-                               font="Arial 10 bold")
+        self.tk_scalebar = tk.Scale(canvas,
+                                    from_=(self.cluster_distance/100),
+                                    to=(self.cluster_distance*2),
+                                    orient=tk.HORIZONTAL,
+                                    resolution=0.1,
+                                    command=self._change_cluster_dist,
+                                    length=300,
+                                    label="Cluster Cut Distance (in Meters)",
+                                    background="gray20",
+                                    borderwidth=0,
+                                    fg="gray80",
+                                    font="Arial 10 bold")
         # set position of slider to center
         # (clusterTreeCuttingDist*10) - (clusterTreeCuttingDist/10)/2)
-        tk_scalebar.set(self.cluster_distance)
-        tk_scalebar.pack()
+        self.tk_scalebar.set(self.cluster_distance)
+        self.tk_scalebar.pack()
         b = tk.Button(canvas, text="Cluster Preview",
                       command=self._cluster_current_display_tag,
                       background="gray20",
@@ -184,28 +197,28 @@ class UserInterface():
         # end of tkinter loop, welcome back to command line interface
         plt.close("all")
 
-    def _cluster_preview(self, sel_tag):
+    def _cluster_preview(self, sel_tag: Tuple[str, int]):
         """Cluster preview map based on tag selection"""
         # tkinter.messagebox.showinfo("Num of clusters: ",
         # str(len(sel_colors)) + " " + str(sel_colors[1]))
         # output/update matplotlib figures
         (points,
          selected_postguids_list) = self._clst._get_np_points(
-            sel_tag)
-        __, cluster_attr = self._clst.cluster_points(
+            sel_tag[0], silent=True)
+        self._clst.cluster_points(
             points, self.cluster_distance,
             selected_postguids_list, self.create_min_spanning_tree,
-            silent=False)
-        mask_noisy = cluster_attr[0]
-        sel_colors = cluster_attr[1]
-        number_of_clusters = cluster_attr[2]
+            preview_mode=True)
+        mask_noisy = self._clst.mask_noisy
+        number_of_clusters = self._clst.number_of_clusters
+        sel_colors = self._clst.sel_colors
         if self.fig1:
             plt.figure(1).clf()
             # plt references the last figure accessed
             plt.suptitle(sel_tag[0].upper(),
                          fontsize=18, fontweight='bold')
             ax = plt.scatter(
-                points.T[0], points.T[1], color=self._clst.sel_colors,
+                points.T[0], points.T[1], color=sel_colors,
                 **self.plot_kwds)
             self.fig1 = plt.figure(num=1, figsize=(
                 11, int(11*self.img_ratio)), dpi=80)
@@ -226,7 +239,7 @@ class UserInterface():
                      verticalalignment='top', fontweight='bold')
         else:
             plt.scatter(points.T[0], points.T[1],
-                        c=self._clst.sel_colors, **self.plot_kwds)
+                        c=sel_colors, **self.plot_kwds)
             self.fig1 = plt.figure(num=1, figsize=(
                 11, int(11*self.img_ratio)), dpi=80)
             self.fig1.canvas.set_window_title('Cluster Preview')
@@ -266,7 +279,7 @@ class UserInterface():
             plt.figure(2).canvas.set_window_title('Condensed Tree')
             self.fig2 = self._clst.clusterer.condensed_tree_.plot(
                 select_clusters=False,
-                selection_palette=self._clst.sel_colors
+                selection_palette=sel_colors
             )
             # ,label_clusters=False
             # tkinter.messagebox.showinfo(
@@ -537,7 +550,7 @@ class UserInterface():
     def _cluster_current_display_tag(self):
         if self.current_display_tag:
             # tkinter.messagebox.showinfo("Clustertag: ",
-            #                             str(currentDisplayTag))
+            #                             f'{self.current_display_tag}')
             self._cluster_preview(self.current_display_tag)
         else:
             self._cluster_preview(self._clst.top_tags_list[0])

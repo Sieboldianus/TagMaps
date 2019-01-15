@@ -16,6 +16,8 @@ from tagmaps.classes.utils import Utils, AnalysisBounds
 from tagmaps.classes.shared_structure import CleanedPost
 
 pool = ThreadPool(processes=1)
+sns.set_context('poster')
+sns.set_style('white')
 
 
 class ClusterGen():
@@ -36,6 +38,8 @@ class ClusterGen():
         self.total_distinct_locations = total_distinct_locations
         self.autoselect_clusters = False
         self.sel_colors = None
+        self.number_of_clusters = None
+        self.mask_noisy = None
         self.clusterer = None
         # set initial analysis bounds
         self._update_bounds()
@@ -117,7 +121,7 @@ class ClusterGen():
         """
         # no log reporting for selected points
         if silent is None:
-            silent = True
+            silent = False
 
         selected_postguids_list = self._getselect_postguids(
             tag, silent=silent)
@@ -138,7 +142,7 @@ class ClusterGen():
 
     def cluster_points(self, points, cluster_distance,
                        selected_postguids_list,
-                       min_span_tree, silent):
+                       min_span_tree, preview_mode):
         # cluster data
         # conversion to radians for HDBSCAN
         # (does not support decimal degrees)
@@ -168,8 +172,8 @@ class ClusterGen():
         # to prevent GUI from freezing, see:
         # http://stupidpythonideas.blogspot.de/2013/10/why-your-gui-app-freezes.html
         # https://stackoverflow.com/questions/6893968/how-to-get-the-return-value-from-a-thread-in-python
-        # if silent:
-        #    #on silent command line operation,
+        # if preview_mode:
+        #    #on preview_mode command line operation,
         #    #don't use multiprocessing
         #    clusterer = fit_cluster(clusterer,tagRadiansData)
         # else:
@@ -182,28 +186,31 @@ class ClusterGen():
             # clusterer.fit(tagRadiansData)
             # updateNeeded = False
         if self.autoselect_clusters:
-            sel_labels = self.clusterer.labels_  # auto selected clusters
+            cluster_labels = self.clusterer.labels_  # auto selected clusters
         else:
             # min_cluster_size:
             # 0.000035 without haversine: 223 m (or 95 m for 0.000015)
-            sel_labels = self.clusterer.single_linkage_tree_.get_clusters(
+            cluster_labels = self.clusterer.single_linkage_tree_.get_clusters(
                 Utils.get_radians_from_meters(
                     cluster_distance), min_cluster_size=2)
         # exit function in case final processing loop (no figure generating)
-        if silent:
-            return sel_labels, None
+        if not preview_mode:
+            return cluster_labels
 
-        mask_noisy = (sel_labels == -1)
+        self.mask_noisy = (cluster_labels == -1)
         # len(sel_labels)
-        number_of_clusters = len(
-            np.unique(sel_labels[~mask_noisy]))
+        self.number_of_clusters = len(
+            np.unique(cluster_labels[~self.mask_noisy]))  # nopep8 false positive? pylint: disable=E1130
         # palette = sns.color_palette("hls", )
         # palette = sns.color_palette(None, len(sel_labels))
         # #sns.color_palette("hls", ) #sns.color_palette(None, 100)
-        palette = sns.color_palette("husl", number_of_clusters+1)
+        palette = sns.color_palette("husl", self.number_of_clusters+1)
         # clusterer.labels_ (best selection) or sel_labels (cut distance)
-        sel_colors = [palette[x] if x >= 0
-                      else (0.5, 0.5, 0.5)
-                      # for x in clusterer.labels_ ]
-                      for x in sel_labels]
-        return sel_labels, (mask_noisy, sel_colors, number_of_clusters)
+        self.sel_colors = [palette[x] if x >= 0
+                           else (0.5, 0.5, 0.5)
+                           # for x in clusterer.labels_ ]
+                           for x in cluster_labels]
+        # no need to return actual clusters if in manual mode
+        # self.mask_noisy, self.number_of_clusters and
+        # self.sel_colors will be used to gen preview map
+        return None
