@@ -28,7 +28,7 @@ class ClusterGen():
 
     def __init__(self, bounds: AnalysisBounds,
                  cleaned_post_dict: Dict[str, CleanedPost],
-                 top_tags_list: List[Tuple[str, int]],
+                 top_list: List[Tuple[str, int]],
                  total_distinct_locations: int,
                  tmax: int):
         self.tnum = 0
@@ -36,7 +36,7 @@ class ClusterGen():
         self.bounds = bounds
         self.cleaned_post_dict = cleaned_post_dict
         self.cleaned_post_list = list(cleaned_post_dict.values())
-        self.top_tags_list = top_tags_list
+        self.top_list = top_list
         self.total_distinct_locations = total_distinct_locations
         self.autoselect_clusters = False
         self.sel_colors = None

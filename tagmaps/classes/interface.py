@@ -38,17 +38,23 @@ plt.style.use('ggplot')
 class UserInterface():
     def __init__(self,
                  tag_cluster: ClusterGen,
-                 emoji_cluster: ClusterGen = None
+                 emoji_cluster: ClusterGen = None,
+                 locaton_cluster: ClusterGen = None
                  ):
         """Prepare user interface and start Tkinter mainloop()
         """
-        self._clst = tag_cluster
-        self._clst_e = emoji_cluster
+        self._clst_list = list()
+        # append clusters to list
+        self._clst_list.append(tag_cluster)
+        self._clst_list.append(emoji_cluster)
+        self._clst_list.append(locaton_cluster)
+        # set current cluster index to 0 (first)
+        self._clst_index = 0
+        self._clst = self._clst_list[self._clst_index]
         self.abort = False
         # self.floater_x = 0
         # self.floater_y = 0
         self.plot_kwds = {'alpha': 0.5, 's': 10, 'linewidths': 0}
-        self.lastselection_list = list()
         self.distYLat = (
             self._clst.bounds.lim_lat_max - self._clst.bounds.lim_lat_min)
         self.distXLng = (
@@ -109,7 +115,7 @@ class UserInterface():
         # else:
         listbox_font = None
         listbox = tk.Listbox(canvas,
-                             selectmode=tk.MULTIPLE, bd=0, background="gray29",
+                             selectmode=tk.EXTENDED, bd=0, background="gray29",
                              fg="gray91", width=30, font=listbox_font)
         listbox.bind('<<ListboxSelect>>', self._onselect)
         scroll = tk.Scrollbar(canvas, orient=tk.VERTICAL,
@@ -119,7 +125,7 @@ class UserInterface():
         listbox.pack()
         listbox.config(yscrollcommand=scroll.set)
         # only for first 500 entries: use topTagsList[:500]
-        for item in self._clst.top_tags_list:
+        for item in self._clst.top_list:
             try:
                 listbox.insert(tk.END, f'{item[0]} ({item[1]} user)')
             except tk.TclError:
@@ -133,7 +139,7 @@ class UserInterface():
         canvas = tk.Canvas(buttonsFrame, width=150, height=200,
                            highlightthickness=0, background="gray7")
         b = tk.Button(canvas, text="Remove Tag(s)",
-                      command=lambda: self._delete_tag(listbox),
+                      command=lambda: self._delete_fromtoplist(listbox),
                       background="gray20", fg="gray80", borderwidth=0,
                       font="Arial 10 bold")
         b.pack(padx=10, pady=10)
@@ -522,25 +528,18 @@ class UserInterface():
             evt (event object): event object for selected tag
         """
         w = evt.widget
-        if self.lastselection_list:
-            # if not empty
-            changed_selection = (
-                set(self.lastselection_list).symmetric_difference(
-                    set(w.curselection()))
-            )
-            self.lastselection_list = w.curselection()
-        else:
-            self.lastselection_list = w.curselection()
-            changed_selection = w.curselection()
-        sel_index = int(list(changed_selection)[0])
+        self.lastselection = w.index(tk.ACTIVE)
+        sel_index = w.curselection()[0]
         # value = w.get(index)
         # tkinter.messagebox.showinfo("You selected ", value)
         self._clst.tnum = 1
-        if self.gen_preview_map.get() == 1:
+        if (self.gen_preview_map.get() == 1 and
+                len(w.curselection()) == 1):
             # generate only preview map
             # only if selection box is checked
+            # and only if one item is checked
             self._selection_preview(
-                self._clst.top_tags_list[sel_index])
+                self._clst.top_list[sel_index])
             # plt.close('all')
 
     def _cluster_current_display_tag(self):
@@ -549,7 +548,7 @@ class UserInterface():
             #                             f'{self.current_display_tag}')
             self._cluster_preview(self.current_display_tag)
         else:
-            self._cluster_preview(self._clst.top_tags_list[0])
+            self._cluster_preview(self._clst.top_list[0])
 
     def _scaletest_current_display_tag(self):
         if self.create_min_spanning_tree is False:
@@ -560,7 +559,7 @@ class UserInterface():
         if self.current_display_tag:
             sel_tag = self.current_display_tag
         else:
-            sel_tag = self._clst.top_tags_list[0]
+            sel_tag = self._clst.top_list[0]
         scalecalclist = []
         dmax = int(self.cluster_distance*10)
         dmin = int(self.cluster_distance/10)
@@ -603,15 +602,13 @@ class UserInterface():
                  fontsize=10, horizontalalignment='right',
                  verticalalignment='top', fontweight='bold')
 
-    def _delete_tag(self, listbox):
-        # global top_tags_list
-        global lastselectionList
-        lastselectionList = []
+    def _delete_fromtoplist(self, listbox):
+        """Remove entry from top_list"""
         # Delete from Listbox
         selection = listbox.curselection()
         for index in selection[::-1]:
             listbox.delete(index)
-            del(self._clst.top_tags_list[index])
+            del(self._clst.top_list[index])
 
 
 class App(tk.Tk):
