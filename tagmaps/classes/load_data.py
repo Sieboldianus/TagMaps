@@ -61,6 +61,7 @@ class LoadData():
         self.locations_per_userid_dict = defaultdict(set)
         self.userlocation_taglist_dict = defaultdict(set)
         self.userlocation_emojilist_dict = defaultdict(set)
+        self.locid_locname_dict: Dict[str, str] = dict()  # nopep8
         if cfg.topic_modeling:
             self.user_topiclist_dict = defaultdict(set)
             self.user_post_ids_dict = defaultdict(set)
@@ -83,7 +84,7 @@ class LoadData():
         # get user input for max tags to process
         self._get_tmax()
         for file_name in self.filelist:
-            with open(file_name, newline='', encoding='utf8') as f:
+            with open(file_name, 'r', newline='', encoding='utf8') as f:
                 self.stats.partcount += 1
                 self._process_inputfile(f)
 
@@ -92,28 +93,20 @@ class LoadData():
 
         Output: produces a list of post that can be parsed
         """
-        post_list = list()  # needed?
         if self.cfg.source_map.file_extension == "csv":
-            post_list = csv.reader(
+            post_reader = csv.DictReader(
                 file_handle,
                 delimiter=self.cfg.source_map.delimiter,
                 quotechar=self.cfg.source_map.quote_char,
                 quoting=self.cfg.source_map.quoting)
-            next(post_list, None)  # skip headerline
+            # next(post_list, None)  # skip headerline
         elif self.cfg.source_map.file_extension == "json":
-            post_list = post_list + json.loads(file_handle.read())
-        result_msg = self._parse_postlist(post_list)
+            post_reader = post_reader + json.loads(file_handle.read())
+        self._parse_postlist(post_reader)
 
-    def _parse_postlist(self, post_list: TextIO):
+    def _parse_postlist(self, post_reader: TextIO):
         """Process posts according to specifications"""
-        for post in post_list:
-            # skip duplicates and erroneous entries
-            if post[self.cfg.source_map.post_guid_col] in self.guid_hash \
-                    or len(post) < 15:
-                self.stats.skipped_count += 1
-                continue
-            else:
-                self.guid_hash.add(post[self.cfg.source_map.post_guid_col])
+        for post in post_reader:
             lbsn_post = self._parse_post(post)
             if lbsn_post is None:
                 continue
@@ -133,7 +126,7 @@ class LoadData():
         sys.stdout.flush()
         self.log.info(msg)
 
-    def _merge_posts(self, lbsn_post):
+    def _merge_posts(self, lbsn_post: PostStructure):
         """Method will union all tags of a single user for each location
 
         - further information is derived from the first
@@ -149,6 +142,9 @@ class LoadData():
         self.distinct_userlocations_set.add(post_locid_userid)
         # print(f'Added: {post_locid_userid} to distinct_userlocations_set '
         #       f'(len: {len(distinct_userlocations_set)})')
+        if lbsn_post.loc_name and lbsn_post.loc_id not in self.locid_locname_dict:
+            # add locname to dict
+            self.locid_locname_dict[lbsn_post.loc_id] = lbsn_post.loc_name
         if lbsn_post.user_guid not in \
                 self.locations_per_userid_dict or \
                 lbsn_post.loc_id not in \
@@ -556,61 +552,67 @@ class LoadData():
             ' ') if len(word) > 2]
         return wordlist
 
-    def _parse_post(self, post):
+    def _parse_post(self, post: Dict[str, str]) -> PostStructure:
         """Process single post and attach to common structure"""
+        # skip duplicates and erroneous entries
+        post_guid = post.get(self.cfg.source_map.post_guid_col)
+        if post_guid in self.guid_hash or len(post) < 15:
+            self.stats.skipped_count += 1
+            return None
+        else:
+            self.guid_hash.add(post_guid)
+        # Continue Parse Post
         lbsn_post = PostStructure()
-        # photo_source
-        lbsn_post.origin_id = post[self.cfg.source_map.originid_col]
-        lbsn_post.guid = post[self.cfg.source_map.post_guid_col]  # guid
-        # user guid
-        lbsn_post.user_guid = post[self.cfg.source_map.user_guid_col]
-        # user guid
-        lbsn_post.post_url = post[self.cfg.source_map.post_url_col]
-        # user guid
+        lbsn_post.guid = post_guid  # guid
+        lbsn_post.origin_id = post.get(self.cfg.source_map.originid_col)
+        lbsn_post.user_guid = post.get(self.cfg.source_map.user_guid_col)
+        lbsn_post.post_url = post.get(self.cfg.source_map.post_url_col)
         lbsn_post.post_publish_date = \
-            post[self.cfg.source_map.post_publish_date_col]
+            post.get(self.cfg.source_map.post_publish_date_col)
         # Process Spatial Query first (if skipping necessary)
         if self.cfg.sort_out_places and \
                 self._is_sortout_place(post):
-            return
+            return None
         if self._is_empty_latlng(post):
-            return
+            return None
         else:
             # assign lat/lng coordinates from dict
             lat, lng = self._correct_placelatlng(
-                post[self.cfg.source_map.place_guid_col],
-                post[self.cfg.source_map.latitude_col],
-                post[self.cfg.source_map.longitude_col])
+                post.get(self.cfg.source_map.place_guid_col),
+                post.get(self.cfg.source_map.latitude_col),
+                post.get(self.cfg.source_map.longitude_col)
+            )
             # update boundary
             self.bounds._upd_latlng_bounds(lat, lng)
         lbsn_post.latitude = lat
         lbsn_post.longitude = lng
         lbsn_post.loc_id = str(lat) + ':' + \
             str(lng)  # create loc_id from lat/lng
+        lbsn_post.loc_name = post.get(self.cfg.source_map.place_name_col)
         # exclude posts outside boundary
         if self.cfg.shapefile_intersect and \
                 self._is_outside_shapebounds(post):
-            return
+            return None
         if self.cfg.cluster_tags or \
                 self.cfg.cluster_emoji or \
                 self.cfg.topic_modeling:
-            lbsn_post.post_body = post[self.cfg.source_map.post_body_col]
+            lbsn_post.post_body = post.get(self.cfg.source_map.post_body_col)
         else:
             lbsn_post.post_body = ""
         lbsn_post.post_like_count = self._get_count_frompost(
-            post[self.cfg.source_map.post_like_count_col])
+            post.get(self.cfg.source_map.post_like_count_col))
         lbsn_post.hashtags = set()
         if self.cfg.cluster_tags or self.cfg.topic_modeling:
             lbsn_post.hashtags = self._get_tags(
-                post[self.cfg.source_map.tags_col])
+                post.get(self.cfg.source_map.tags_col))
         if self.cfg.cluster_emoji:
             lbsn_post.emoji = self._get_emoji(lbsn_post.post_body)
             # no merge anymore:
             # lbsn_post.hashtags = set.union(post_emoji)
         lbsn_post.post_create_date = \
-            post[self.cfg.source_map.post_create_date_col]
+            post.get(self.cfg.source_map.post_create_date_col)
         lbsn_post.post_views_count = self._get_count_frompost(
-            post[self.cfg.source_map.post_views_count_col])
+            post.get(self.cfg.source_map.post_views_count_col))
         # return parsed post object
         return lbsn_post
 
@@ -653,10 +655,8 @@ class LoadData():
         """If place corrections available, update lat/lng coordinates
         Needs test: not place_guid_string
         """
-        if self.cfg.correct_places \
-                and not place_guid_string \
-                and place_guid_string \
-                in self.cfg.correct_place_latlng_dict:
+        if (self.cfg.correct_places and not place_guid_string and
+                place_guid_string in self.cfg.correct_place_latlng_dict):
             lat = Decimal(
                 # correct lat
                 self.cfg.correct_place_latlng_dict[place_guid_string][0])
@@ -686,16 +686,18 @@ class LoadData():
         return False
 
     def _is_empty_latlng(self, post):
-        if post[self.cfg.source_map.latitude_col] == "" \
-                or post[self.cfg.source_map.longitude_col] == "":
+        """ skip non-geotagged medias"""
+        latitude = post.get(self.cfg.source_map.latitude_col)
+        longitude = post.get(self.cfg.source_map.longitude_col)
+        if not latitude or not longitude:
             self.stats.count_non_geotagged += 1
-            return True  # skip non-geotagged medias
+            return True
         return False
 
     def _is_sortout_place(self, post):
-        if not post[self.cfg.source_map.place_guid_col] == "":
-            if post[self.cfg.source_map.place_guid_col] \
-                    in self.cfg.sort_out_places_set:
+        place_guid = post.get(self.cfg.source_map.place_guid_col)
+        if place_guid:
+            if place_guid in self.cfg.sort_out_places_set:
                 self.stats.skipped_count += 1
                 return True
         return False

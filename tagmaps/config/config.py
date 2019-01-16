@@ -383,27 +383,28 @@ class ConfigMap:
         self.quote_char = source_config["Main"]["quote_char"].strip('\'')
         self.date_time_format = source_config["Main"]["file_extension"]
         # [Columns]
-        self.originid_col = int(source_config["Columns"]["originid_col"])
-        self.post_guid_col = int(source_config["Columns"]["post_guid_col"])
-        self.latitude_col = int(source_config["Columns"]["latitude_col"])
-        self.longitude_col = int(source_config["Columns"]["longitude_col"])
-        self.user_guid_col = int(source_config["Columns"]["user_guid_col"])
-        self.post_create_date_col = int(
-            source_config["Columns"]["post_create_date_col"])
-        self.post_publish_date_col = int(
-            source_config["Columns"]["post_publish_date_col"])
-        self.post_views_count_col = int(
-            source_config["Columns"]["post_views_count_col"])
-        self.post_like_count_col = int(
-            source_config["Columns"]["post_like_count_col"])
-        self.post_url_col = int(source_config["Columns"]["post_url_col"])
-        self.tags_col = int(source_config["Columns"]["tags_col"])
-        self.emoji_col = int(source_config["Columns"]["emoji_col"])
-        self.post_title_col = int(source_config["Columns"]["post_title_col"])
-        self.post_body_col = int(source_config["Columns"]["post_body_col"])
-        self.post_geoaccuracy_col = int(
-            source_config["Columns"]["post_geoaccuracy_col"])
-        self.place_guid_col = int(source_config["Columns"]["place_guid_col"])
+        self.originid_col = source_config["Columns"]["originid_col"]
+        self.post_guid_col = source_config["Columns"]["post_guid_col"]
+        self.latitude_col = source_config["Columns"]["latitude_col"]
+        self.longitude_col = source_config["Columns"]["longitude_col"]
+        self.user_guid_col = source_config["Columns"]["user_guid_col"]
+        self.post_create_date_col = \
+            source_config["Columns"]["post_create_date_col"]
+        self.post_publish_date_col = \
+            source_config["Columns"]["post_publish_date_col"]
+        self.post_views_count_col = \
+            source_config["Columns"]["post_views_count_col"]
+        self.post_like_count_col = \
+            source_config["Columns"]["post_like_count_col"]
+        self.post_url_col = source_config["Columns"]["post_url_col"]
+        self.tags_col = source_config["Columns"]["tags_col"]
+        self.emoji_col = source_config["Columns"]["emoji_col"]
+        self.post_title_col = source_config["Columns"]["post_title_col"]
+        self.post_body_col = source_config["Columns"]["post_body_col"]
+        self.post_geoaccuracy_col = \
+            source_config["Columns"]["post_geoaccuracy_col"]
+        self.place_guid_col = source_config["Columns"]["place_guid_col"]
+        self.place_name_col = source_config["Columns"]["place_name_col"]
 
     @staticmethod
     def _quote_selector(quote_string):

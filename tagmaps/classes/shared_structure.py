@@ -70,3 +70,4 @@ class PostStructure():
         self.latitude = None
         self.longitude = None
         self.loc_id = None
+        self.loc_name = None

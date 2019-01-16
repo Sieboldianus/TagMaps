@@ -496,11 +496,10 @@ class UserInterface():
         self.app.quit()
 
     def _proceed_with_cluster(self):
-        self.proceed_clusting = True
-    # def vis_tag(tag):
-        # tkinter.messagebox.showinfo("Proceed", "Proceed")
-        # if plt.figure(1):
-        #    plt.figure(1).clf()
+        # def vis_tag(tag):
+            # tkinter.messagebox.showinfo("Proceed", "Proceed")
+            # if plt.figure(1):
+            #    plt.figure(1).clf()
         self.app.update()
         self.app.destroy()
         self.app.quit()
