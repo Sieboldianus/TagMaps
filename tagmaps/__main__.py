@@ -97,10 +97,10 @@ def main():
         log.info(f"Total unique tags: {prepared_data.total_unique_tags}")
         log.info(f"Total unique emoji: {prepared_data.total_unique_emoji}")
         log.info(
-            f'Total tags count for cleaned (tmax) tags list '
+            f'Total tags count for cleaned tags list '
             f'(Top {prepared_data.tmax}): {prepared_data.total_tag_count}.')
         log.info(
-            f'Total emoji count for cleaned (tmax) emoji list '
+            f'Total emoji count for cleaned emoji list '
             f'(Top {prepared_data.emax}): {prepared_data.total_emoji_count}.')
 
         if cfg.statistics_only is False:

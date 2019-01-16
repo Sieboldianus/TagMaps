@@ -226,23 +226,23 @@ class LoadData():
             self.userdict_tagcounters_global, "tags")
         top_tags_list = tag_stats[0]
         total_unique_tags = tag_stats[1]
-        tags_without_longtail = tag_stats[2]
+        tagscount_without_longtail = tag_stats[2]
 
         emoji_stats = self._get_top_list(
             self.userdict_emojicounters_global, "emoji")
         top_emoji_list = emoji_stats[0]
         total_unique_emoji = emoji_stats[1]
-        emoji_without_longtail = emoji_stats[2]
+        emojicount_without_longtail = emoji_stats[2]
 
         # update tmax and emax from optionally long tail removal
-        if tags_without_longtail:
-            self.prepared_data.tmax = tags_without_longtail
+        if tagscount_without_longtail:
+            self.prepared_data.tmax = tagscount_without_longtail
         else:
             self.prepared_data.tmax = self.cfg.tmax
-        if emoji_without_longtail:
-            self.prepared_data.emax = emoji_without_longtail
+        if emojicount_without_longtail:
+            self.prepared_data.emax = emojicount_without_longtail
         else:
-            self.prepared_data.tmax = self.cfg.tmax
+            self.prepared_data.emax = self.cfg.tmax
 
         # top counts
         total_tag_count = LoadData._get_total_count(
@@ -294,7 +294,8 @@ class LoadData():
         # return global_emoji_set
         return top_emoji_list
 
-    def _get_top_list(self, userdict_tagemoji_counters, listname: str = "Tags"):
+    def _get_top_list(self, userdict_tagemoji_counters,
+                      listname: str = "tags"):
         """Get Top Tags on a per user basis, i.e.
 
         - the global number of distinct users who used each distinct tag
@@ -366,6 +367,7 @@ class LoadData():
             f'Long tail removal: Filtered {len_before - len_after} '
             f'{listname} that were used by less than '
             f'{bottomuser_count} users.')
+        return len_after
 
     def _loop_loc_per_userid(self, datawriter=None):
         """Will produce final cleaned list
