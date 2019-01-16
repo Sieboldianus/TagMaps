@@ -88,6 +88,12 @@ def main():
 
         prepared_data = lbsn_data.get_prepared_data()
 
+        location_name_count = len(prepared_data.locid_locname_dict)
+        if location_name_count > 0:
+            log.info(
+                f"Number of locations with names: "
+                f"{location_name_count}")
+
         log.info(f"Total unique tags: {prepared_data.total_unique_tags}")
         log.info(f"Total unique emoji: {prepared_data.total_unique_emoji}")
         log.info(

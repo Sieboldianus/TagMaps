@@ -20,6 +20,7 @@ from glob import glob
 from _csv import QUOTE_MINIMAL
 from decimal import Decimal
 import json
+import math
 import collections
 from typing import List, Set, Dict, Tuple, Optional, TextIO
 from collections import Counter
@@ -142,7 +143,8 @@ class LoadData():
         self.distinct_userlocations_set.add(post_locid_userid)
         # print(f'Added: {post_locid_userid} to distinct_userlocations_set '
         #       f'(len: {len(distinct_userlocations_set)})')
-        if lbsn_post.loc_name and lbsn_post.loc_id not in self.locid_locname_dict:
+        if (lbsn_post.loc_name and
+                lbsn_post.loc_id not in self.locid_locname_dict):
             # add locname to dict
             self.locid_locname_dict[lbsn_post.loc_id] = lbsn_post.loc_name
         if lbsn_post.user_guid not in \
@@ -221,18 +223,16 @@ class LoadData():
         """
         # top lists and unique
         tag_stats = self._get_top_list(
-            self.userdict_tagcounters_global)
+            self.userdict_tagcounters_global, "tags")
         top_tags_list = tag_stats[0]
         total_unique_tags = tag_stats[1]
         tags_without_longtail = tag_stats[2]
-        self._write_toplist(top_tags_list, 'tags')
 
         emoji_stats = self._get_top_list(
-            self.userdict_emojicounters_global)
+            self.userdict_emojicounters_global, "emoji")
         top_emoji_list = emoji_stats[0]
         total_unique_emoji = emoji_stats[1]
         emoji_without_longtail = emoji_stats[2]
-        self._write_toplist(top_emoji_list, 'emoji')
 
         # update tmax and emax from optionally long tail removal
         if tags_without_longtail:
@@ -258,6 +258,7 @@ class LoadData():
         self.prepared_data.total_unique_emoji = total_unique_emoji
         self.prepared_data.total_tag_count = total_tag_count
         self.prepared_data.total_emoji_count = total_emoji_count
+        self.prepared_data.locid_locname_dict = self.locid_locname_dict
 
     def _write_toplist(self, top_list, list_name):
         """Write toplists to file
@@ -293,7 +294,7 @@ class LoadData():
         # return global_emoji_set
         return top_emoji_list
 
-    def _get_top_list(self, userdict_tagemoji_counters):
+    def _get_top_list(self, userdict_tagemoji_counters, listname: str = "Tags"):
         """Get Top Tags on a per user basis, i.e.
 
         - the global number of distinct users who used each distinct tag
@@ -313,7 +314,8 @@ class LoadData():
         total_unique = len(overall_usercount_perte)
         top_list = overall_usercount_perte.most_common(self.cfg.tmax)
         if self.cfg.remove_long_tail is True:
-            total_without_longtail = self._remove_long_tail(top_list)
+            total_without_longtail = self._remove_long_tail(top_list, listname)
+        self._write_toplist(top_list, listname)
         return top_list, total_unique, total_without_longtail
 
     @staticmethod
@@ -332,7 +334,8 @@ class LoadData():
         return total_count
 
     def _remove_long_tail(self,
-                          top_tagsemoji_list: List[Tuple[str, int]]
+                          top_tagsemoji_list: List[Tuple[str, int]],
+                          listname: str
                           ) -> int:
         """Removes all tags from list that are used by less
 
@@ -341,8 +344,14 @@ class LoadData():
             Note: since list is a mutable object, method
             will modify top_tags_list
         """
+        if listname == 'emoji':
+            # emoji use a smaller area than tags on the map
+            # therefore we can keep more emoji (i.e.: use 2 instead of 5)
+            bottomuser_count = math.trunc(self.cfg.limit_bottom_user_count/2)
+        else:
+            bottomuser_count = self.cfg.limit_bottom_user_count
         indexMin = next((i for i, (t1, t2) in enumerate(
-            top_tagsemoji_list) if t2 < self.cfg.limit_bottom_user_count
+            top_tagsemoji_list) if t2 < bottomuser_count
         ), None)
         if not indexMin:
             return
@@ -355,8 +364,8 @@ class LoadData():
             return len_after
         self.log.info(
             f'Long tail removal: Filtered {len_before - len_after} '
-            f'Tags that were used by less than '
-            f'{self.cfg.limit_bottom_user_count} users.')
+            f'{listname} that were used by less than '
+            f'{bottomuser_count} users.')
 
     def _loop_loc_per_userid(self, datawriter=None):
         """Will produce final cleaned list
@@ -766,3 +775,4 @@ class PreparedData():
         self.single_mostused_emoji = None
         self.tmax = 0
         self.emax = 0
+        self.locid_locname_dict = None
