@@ -53,6 +53,7 @@ class LoadData():
         self.shape_included_locid_hash = set()
         self.total_tag_counter = collections.Counter()
         self.total_emoji_counter = collections.Counter()
+        self.total_location_counter = collections.Counter()
         self.bounds = AnalysisBounds()
         self.stats = DataStats()
         self.prepared_data = PreparedData()
@@ -72,6 +73,7 @@ class LoadData():
         # UserDict_TagCounters = defaultdict(set)
         self.userdict_tagcounters_global = defaultdict(set)
         self.userdict_emojicounters_global = defaultdict(set)
+        self.userdict_locationcounters_global = defaultdict(set)
         # UserIDsPerLocation_dict = defaultdict(set)
         # PhotoLocDict = defaultdict(set)
         self.distinct_locations_set = set()
@@ -183,6 +185,12 @@ class LoadData():
             self.userdict_emojicounters_global[lbsn_post.user_guid].update(
                 lbsn_post.emoji)
             self.total_emoji_counter.update(lbsn_post.emoji)
+        if lbsn_post.loc_id:
+            # update single item hack
+            # there're more elegant ways to do this
+            self.userdict_locationcounters_global[lbsn_post.user_guid].update(
+                (lbsn_post.loc_id,))
+            self.total_location_counter.update((lbsn_post.loc_id,))
 
     def get_cleaned_post_dict(self) -> Dict[str, CleanedPost]:
         """Output wrapper
@@ -234,6 +242,11 @@ class LoadData():
         total_unique_emoji = emoji_stats[1]
         emojicount_without_longtail = emoji_stats[2]
 
+        location_stats = self._get_top_list(
+            self.userdict_locationcounters_global, "locations")
+        top_location_list = location_stats[0]
+        total_unique_locations = location_stats[1]
+
         # update tmax and emax from optionally long tail removal
         if tagscount_without_longtail:
             self.prepared_data.tmax = tagscount_without_longtail
@@ -249,15 +262,21 @@ class LoadData():
             top_tags_list, self.total_tag_counter)
         total_emoji_count = LoadData._get_total_count(
             top_emoji_list, self.total_emoji_counter)
+        total_location_count = LoadData._get_total_count(
+            top_location_list, self.total_location_counter)
         # collect stats in prepared_data
         self.prepared_data.top_tags_list = top_tags_list
         self.prepared_data.top_emoji_list = top_emoji_list
+        self.prepared_data.top_location_list = top_location_list
         self.prepared_data.single_mostused_tag = top_tags_list[0]
-        self.prepared_data.single_mostused_emoji = top_tags_list[0]
+        self.prepared_data.single_mostused_emoji = top_emoji_list[0]
+        self.prepared_data.single_mostused_location = top_location_list[0]
         self.prepared_data.total_unique_tags = total_unique_tags
         self.prepared_data.total_unique_emoji = total_unique_emoji
+        self.prepared_data.total_unique_locations = total_unique_locations
         self.prepared_data.total_tag_count = total_tag_count
         self.prepared_data.total_emoji_count = total_emoji_count
+        self.prepared_data.total_location_count = total_location_count
         self.prepared_data.locid_locname_dict = self.locid_locname_dict
 
     def _write_toplist(self, top_list, list_name):
@@ -279,20 +298,6 @@ class LoadData():
                   encoding='utf8') as out_file:
             out_file.write(f'{list_name}, usercount\n')
             out_file.write(top_list_store)
-
-    def _get_top_emoji(self):
-        """Get list of top get_emoji
-
-        optional write top emoji to file
-        """
-        # e.g. (topemoji1, 1203)
-        top_emoji_list = self.total_emoji_counter.most_common()
-        # e.g. (topemoji1)
-        # global_emoji_set = set(
-        #    emoji_tuple[0] for emoji_tuple in top_emoji_list)
-        self._write_toplist(top_emoji_list, 'emoji')
-        # return global_emoji_set
-        return top_emoji_list
 
     def _get_top_list(self, userdict_tagemoji_counters,
                       listname: str = "tags"):
@@ -335,31 +340,36 @@ class LoadData():
         return total_count
 
     def _remove_long_tail(self,
-                          top_tagsemoji_list: List[Tuple[str, int]],
+                          top_list: List[Tuple[str, int]],
                           listname: str
                           ) -> int:
-        """Removes all tags from list that are used by less
+        """Removes all items from list that are used by less
 
         than x number of users,
         where x is given as input arg limit_bottom_user_count
             Note: since list is a mutable object, method
             will modify top_tags_list
         """
-        if listname == 'emoji':
+        if listname == 'locations':
+            # keep all locations
+            return len(top_list)
+        elif listname == 'emoji':
             # emoji use a smaller area than tags on the map
-            # therefore we can keep more emoji (i.e.: use 2 instead of 5)
-            bottomuser_count = math.trunc(self.cfg.limit_bottom_user_count/2)
+            # therefore we can keep more emoji
+            # (e.g..: use 2 instead of 5)
+            bottomuser_count = math.trunc(
+                self.cfg.limit_bottom_user_count/2)
         else:
             bottomuser_count = self.cfg.limit_bottom_user_count
         indexMin = next((i for i, (t1, t2) in enumerate(
-            top_tagsemoji_list) if t2 < bottomuser_count
+            top_list) if t2 < bottomuser_count
         ), None)
         if not indexMin:
             return
-        len_before = len(top_tagsemoji_list)
+        len_before = len(top_list)
         # delete based on slicing
-        del top_tagsemoji_list[indexMin:]
-        len_after = len(top_tagsemoji_list)
+        del top_list[indexMin:]
+        len_after = len(top_list)
         if len_before == len_after:
             # if no change, return
             return len_after
@@ -631,7 +641,7 @@ class LoadData():
         emoji_filtered = set(Utils.extract_emoji(post_body))
         if not len(emoji_filtered) == 0:
             self.stats.count_emojis_global += len(emoji_filtered)
-            self.total_emoji_counter.update(emoji_filtered)
+            # self.total_emoji_counter.update(emoji_filtered)
         return emoji_filtered
 
     def _get_tags(self, tags_string: str) -> Set[str]:
@@ -769,12 +779,16 @@ class PreparedData():
         """Initialize structure."""
         self.top_tags_list = None
         self.top_emoji_list = None
+        self.top_location_list = None
         self.total_unique_tags = 0
         self.total_unique_emoji = 0
+        self.total_unique_locations = 0
         self.total_tag_count = 0
         self.total_emoji_count = 0
+        self.total_location_count = 0
         self.single_mostused_tag = None
         self.single_mostused_emoji = None
+        self.single_mostused_location = None
         self.tmax = 0
         self.emax = 0
         self.locid_locname_dict = None

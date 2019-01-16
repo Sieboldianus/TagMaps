@@ -97,6 +97,8 @@ def main():
         log.info(f"Total unique tags: {prepared_data.total_unique_tags}")
         log.info(f"Total unique emoji: {prepared_data.total_unique_emoji}")
         log.info(
+            f"Total unique locations: {prepared_data.total_unique_locations}")
+        log.info(
             f'Total tags count for the {prepared_data.tmax} '
             f'most used tags: {prepared_data.total_tag_count}.')
         log.info(
@@ -114,17 +116,28 @@ def main():
                 cleaned_post_dict,
                 prepared_data.top_tags_list,
                 total_distinct_locations,
-                prepared_data.tmax)
+                prepared_data.tmax,
+                name='tags')
             cluster_emoji_data = ClusterGen(
                 lbsn_data.bounds,
                 cleaned_post_dict,
                 prepared_data.top_emoji_list,
                 total_distinct_locations,
-                prepared_data.emax)
+                prepared_data.emax,
+                name='emoji')
+            cluster_location_data = ClusterGen(
+                lbsn_data.bounds,
+                cleaned_post_dict,
+                prepared_data.top_location_list,
+                total_distinct_locations,
+                prepared_data.emax,
+                name='locations')
             # get user input for cluster distance and taglist
             if not cfg.auto_mode:
                 user_intf = UserInterface(cluster_tag_data,
-                                          cluster_emoji_data)
+                                          cluster_emoji_data,
+                                          cluster_location_data,
+                                          prepared_data.locid_locname_dict)
                 user_intf.start()
 
             if cfg.auto_mode or user_intf.abort is False:
