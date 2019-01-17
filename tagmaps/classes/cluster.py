@@ -45,6 +45,7 @@ class ClusterGen():
         self.tnum = 0
         self.tmax = tmax
         self.bounds = bounds
+        self.cluster_distance = ClusterGen._init_cluster_dist(self.bounds)
         self.cleaned_post_dict = cleaned_post_dict
         self.cleaned_post_list = list(cleaned_post_dict.values())
         self.top_list = top_list
@@ -62,6 +63,24 @@ class ClusterGen():
                 (self.bounds.lim_lng_max, self.bounds.lim_lat_max)
             ])
         )
+
+    @staticmethod
+    def _init_cluster_dist(bounds: AnalysisBounds) -> float:
+        """Get initial cluster distance from analysis bounds.
+        
+        - 7% of research area width/height (max) = optimal
+        - default value #223.245922725 #= 0.000035 radians dist
+        """
+        dist_y = Utils.haversine(bounds.lim_lng_min,
+                                 bounds.lim_lat_min,
+                                 bounds.lim_lng_min,
+                                 bounds.lim_lat_max)
+        dist_x = Utils.haversine(bounds.lim_lng_min,
+                                 bounds.lim_lat_min,
+                                 bounds.lim_lng_max,
+                                 bounds.lim_lat_min)
+        cluster_distance = (min(dist_x, dist_y)/100)*7
+        return cluster_distance
 
     def _update_bounds(self):
         """Update analysis rectangle boundary based on
@@ -216,7 +235,6 @@ class ClusterGen():
         return points
 
     def cluster_points(self, points,
-                       cluster_distance: float,
                        min_span_tree: bool = False,
                        preview_mode: bool = False):
         # cluster data
@@ -268,7 +286,7 @@ class ClusterGen():
             # 0.000035 without haversine: 223 m (or 95 m for 0.000015)
             cluster_labels = self.clusterer.single_linkage_tree_.get_clusters(
                 Utils.get_radians_from_meters(
-                    cluster_distance), min_cluster_size=2)
+                    self.cluster_distance), min_cluster_size=2)
         # exit function in case final processing loop (no figure generating)
         if not preview_mode:
             return cluster_labels
