@@ -99,6 +99,8 @@ def main():
         log.info(
             f"Total unique locations: {prepared_data.total_unique_locations}")
         log.info(
+            f"Total distinct locations: {total_distinct_locations}")
+        log.info(
             f'Total tags count for the {prepared_data.tmax} '
             f'most used tags: {prepared_data.total_tag_count}.')
         log.info(
@@ -110,28 +112,29 @@ def main():
             now = time.time()
             log.info(
                 "\n########## STEP 3 of 6: Tag Location Clustering ##########")
-
+            # initialize clusterers
             cluster_tag_data = ClusterGen(
-                lbsn_data.bounds,
-                cleaned_post_dict,
-                prepared_data.top_tags_list,
-                total_distinct_locations,
-                prepared_data.tmax,
-                name='tags')
+                bounds=lbsn_data.bounds,
+                cleaned_post_dict=cleaned_post_dict,
+                top_list=prepared_data.top_tags_list,
+                total_distinct_locations=total_distinct_locations,
+                tmax=prepared_data.tmax,
+                cluster_type=ClusterGen.TAGS)
             cluster_emoji_data = ClusterGen(
-                lbsn_data.bounds,
-                cleaned_post_dict,
-                prepared_data.top_emoji_list,
-                total_distinct_locations,
-                prepared_data.emax,
-                name='emoji')
+                bounds=lbsn_data.bounds,
+                cleaned_post_dict=cleaned_post_dict,
+                top_list=prepared_data.top_emoji_list,
+                total_distinct_locations=total_distinct_locations,
+                tmax=prepared_data.emax,
+                cluster_type=ClusterGen.EMOJI)
             cluster_location_data = ClusterGen(
-                lbsn_data.bounds,
-                cleaned_post_dict,
-                prepared_data.top_location_list,
-                total_distinct_locations,
-                prepared_data.emax,
-                name='locations')
+                bounds=lbsn_data.bounds,
+                cleaned_post_dict=cleaned_post_dict,
+                top_list=prepared_data.top_location_list,
+                total_distinct_locations=total_distinct_locations,
+                tmax=prepared_data.emax,
+                cluster_type=ClusterGen.LOCATIONS)
+
             # get user input for cluster distance and taglist
             if not cfg.auto_mode:
                 user_intf = UserInterface(cluster_tag_data,

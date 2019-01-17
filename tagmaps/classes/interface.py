@@ -40,27 +40,22 @@ class UserInterface():
     def __init__(self,
                  tag_cluster: ClusterGen,
                  emoji_cluster: ClusterGen = None,
-                 locaton_cluster: ClusterGen = None,
+                 location_cluster: ClusterGen = None,
                  location_names_dict: Dict[str, str] = None
                  ):
         """Prepare user interface and start Tkinter mainloop()
         """
         self._clst_list = list()
-        self._clst = None
-        self.location_names_dict = location_names_dict
         # append clusters to list
         if tag_cluster:
             self._clst_list.append(tag_cluster)
         if emoji_cluster:
             self._clst_list.append(emoji_cluster)
-        if locaton_cluster:
-            self._clst_list.append(locaton_cluster)
-        # set current cluster index to 0 (first)
-        if self._clst_list:
-            self._clst = self._clst_list[0]
-        else:
-            logging.getLogger("tagmaps").warning("No clusterer selected.")
-            return
+        if location_cluster:
+            self._clst_list.append(location_cluster)
+        # select initial cluster
+        self._clst = self._clst_list[0]
+        self.location_names_dict = location_names_dict
         self.abort = False
         # self.floater_x = 0
         # self.floater_y = 0
@@ -110,18 +105,20 @@ class UserInterface():
         header_frame = tk.Frame(self.app.floater)
         canvas = tk.Canvas(header_frame, width=150, height=220,
                            highlightthickness=0, background="gray7")
-        l = tk.Label(canvas,
-                     text="Optional: Exclude tags, emoji and locations.",
-                     background="gray7", fg="gray80", font="Arial 10 bold")
-        l.pack(padx=10, pady=10)
+        header_label = tk.Label(canvas,
+                                text="Optional: Exclude tags, "
+                                "emoji and locations.",
+                                background="gray7", fg="gray80",
+                                font="Arial 10 bold")
+        header_label.pack(padx=10, pady=10)
 
         self._clst_index = tk.IntVar()
         self._clst_index.set(0)
         # Radiobuttons for selecting list
         idx = 0
-        for clusterer in self._clst_list:
+        for clst in self._clst_list:
             r = tk.Radiobutton(canvas,
-                               text=f'{clusterer.name}',
+                               text=f'{clst.cls_type}',
                                variable=self._clst_index,
                                value=idx,
                                indicatoron=0,
@@ -138,12 +135,12 @@ class UserInterface():
         listbox_frame = tk.Frame(self.app.floater)
         canvas = tk.Canvas(listbox_frame, width=150, height=220,
                            highlightthickness=0, background="gray7")
-        l = tk.Label(canvas,
-                     text=f'Select all items you wish to exclude '
-                     f'from analysis \n '
-                     f'and click on remove. Proceed if ready.',
-                     background="gray7", fg="gray80")
-        l.pack(padx=10, pady=10)
+        guide_label = tk.Label(canvas,
+                               text=f'Select all items you wish to exclude '
+                               f'from analysis \n '
+                               f'and click on remove. Proceed if ready.',
+                               background="gray7", fg="gray80")
+        guide_label.pack(padx=10, pady=10)
         # if cfg.data_source == "fromInstagram_PGlbsnEmoji":
         #    listbox_font = ("twitter Color Emoji", 12, "bold")
         #    #listbox_font = ("Symbola", 12, "bold")
@@ -591,7 +588,7 @@ class UserInterface():
         self._clst = self._clst_list[
             self._clst_index.get()]  # tkScalebar.get()
         loc_name_dict = None
-        if self._clst.name == 'locations':
+        if self._clst.cls_type == ClusterGen.LOCATIONS:
             # only pass ref to names dict
             # if current clusterer is locations
             loc_name_dict = self.location_names_dict

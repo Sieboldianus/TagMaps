@@ -26,14 +26,22 @@ sns.set_style('white')
 class ClusterGen():
     """Cluster module for tags, emoji and post locations
     """
+    LOCATIONS = 'Locations'
+    TAGS = 'Tags'
+    EMOJI = 'Emoji'
+    ClusterType = (
+        (LOCATIONS, 1),
+        (TAGS, 2),
+        (EMOJI, 3),
+    )
 
     def __init__(self, bounds: AnalysisBounds,
                  cleaned_post_dict: Dict[str, CleanedPost],
                  top_list: List[Tuple[str, int]],
                  total_distinct_locations: int,
                  tmax: int,
-                 name: str = 'tags'):
-        self.name = name
+                 cluster_type: ClusterType = TAGS):
+        self.cls_type = cluster_type
         self.tnum = 0
         self.tmax = tmax
         self.bounds = bounds
@@ -79,20 +87,23 @@ class ClusterGen():
         distinct_localloc_count = set()
         selected_postguids_list = list()
         for cleaned_photo_location in self.cleaned_post_list:
-            if self.name == 'tags':
+            if self.cls_type == self.TAGS:
                 self._filter_tags(
                     item, cleaned_photo_location,
-                    selected_postguids_list, distinct_localloc_count)
-            elif self.name == 'emoji':
+                    selected_postguids_list,
+                    distinct_localloc_count)
+            elif self.cls_type == self.EMOJI:
                 self._filter_emoji(
                     item, cleaned_photo_location,
-                    selected_postguids_list, distinct_localloc_count)
-            elif self.name == 'locations':
+                    selected_postguids_list,
+                    distinct_localloc_count)
+            elif self.cls_type == self.LOCATIONS:
                 self._filter_locations(
                     item, cleaned_photo_location,
-                    selected_postguids_list, distinct_localloc_count)
+                    selected_postguids_list,
+                    distinct_localloc_count)
             else:
-                sys.exit(f"Clusterer {self.name} unknown.")
+                sys.exit(f"Clusterer {self.clusterer} unknown.")
         return selected_postguids_list, len(distinct_localloc_count)
 
     @staticmethod
@@ -103,8 +114,10 @@ class ClusterGen():
             distinct_localloc_count: Set[str]):
         if (item in (cleaned_photo_location.hashtags) or
                 (item in cleaned_photo_location.post_body)):
-            selected_postguids_list.append(cleaned_photo_location.guid)
-            distinct_localloc_count.add(cleaned_photo_location.loc_id)
+            selected_postguids_list.append(
+                cleaned_photo_location.guid)
+            distinct_localloc_count.add(
+                cleaned_photo_location.loc_id)
 
     @staticmethod
     def _filter_emoji(
@@ -113,8 +126,10 @@ class ClusterGen():
             selected_postguids_list: List[str],
             distinct_localloc_count: Set[str]):
         if item in cleaned_photo_location.emoji:
-            selected_postguids_list.append(cleaned_photo_location.guid)
-            distinct_localloc_count.add(cleaned_photo_location.loc_id)
+            selected_postguids_list.append(
+                cleaned_photo_location.guid)
+            distinct_localloc_count.add(
+                cleaned_photo_location.loc_id)
 
     @staticmethod
     def _filter_locations(
@@ -123,10 +138,13 @@ class ClusterGen():
             selected_postguids_list: List[str],
             distinct_localloc_count: Set[str]):
         if item == cleaned_photo_location.loc_id:
-            selected_postguids_list.append(cleaned_photo_location.guid)
-            distinct_localloc_count.add(cleaned_photo_location.loc_id)
+            selected_postguids_list.append(
+                cleaned_photo_location.guid)
+            distinct_localloc_count.add(
+                cleaned_photo_location.loc_id)
 
-    def _getselect_postguids(self, item: str, silent: bool = True) -> List[str]:
+    def _getselect_postguids(self, item: str,
+                             silent: bool = True) -> List[str]:
         """Get list of post guids with specific item
 
         Args:
@@ -144,13 +162,14 @@ class ClusterGen():
         #     if tag in prepared_data.top_emoji_list:
         #         text = unicode_name(toptag[0])
         # else:
-        type_text = self.name.rstrip('s')
+        type_text = self.cls_type.rstrip('s')
         item_text = item
         if silent:
             return selected_postguids_list
         print(f'({self.tnum} of {self.tmax}) '
               f'Found {len(selected_postguids_list)} posts (UPL) '
-              f'for {type_text} \'{item_text}\' ({perc_oftotal_locations:.0f}% '
+              f'for {type_text} \'{item_text}\' '
+              f'({perc_oftotal_locations:.0f}% '
               f'of total distinct locations in area)', end=" ")
         return selected_postguids_list
 
