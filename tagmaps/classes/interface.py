@@ -684,12 +684,53 @@ class UserInterface():
                  verticalalignment='top', fontweight='bold')
 
     def _delete_fromtoplist(self, listbox):
-        """Remove entry from top_list"""
+        """Remove entry from top_list
+
+        - if location removed, clean post list too
+        """
         # Delete from Listbox
         selection = listbox.curselection()
+        id_list_selected = list()
         for index in selection[::-1]:
             listbox.delete(index)
+            id_list_selected.append(self._clst.top_list[index][0])
             del(self._clst.top_list[index])
+        # remove all cleaned posts from processing list if
+        # location is removed
+        if self._clst.cls_type == ClusterGen.LOCATIONS:
+            cleaned_post_list_updated = UserInterface._delete_post_locations(
+                self._clst.cleaned_post_dict, id_list_selected)
+            self._clst.cleaned_post_list = cleaned_post_list_updated
+
+    @staticmethod
+    def _delete_post_locations(
+            cleaned_post_dict: Dict[str, CleanedPost],
+            post_locids: List[str]) -> List[CleanedPost]:
+        """Remove all posts with post_locid from list
+
+        Returns updated list oif Cleaned Posts
+
+        To-do:
+            - update toplists (remove tags/emoji from
+            posts that are removed)
+        """
+        tkinter.messagebox.showinfo("Len before: ", len(cleaned_post_dict))
+        # first get post guids to be removed
+        # this is quite expensive,
+        # perhaps there's a better way
+        tkinter.messagebox.showinfo("post_locids: ", f'{post_locids}')
+        postguids_to_remove = [post_record.guid for post_record
+                               in cleaned_post_dict.values()
+                               if post_record.loc_id in post_locids]
+        tkinter.messagebox.showinfo(
+            "Len postguids_to_remove: ", len(postguids_to_remove))
+        for post_guid in postguids_to_remove:
+            del cleaned_post_dict[post_guid]
+        tkinter.messagebox.showinfo("Len after: ", len(cleaned_post_dict))
+        # return a list of values for fast lookup
+        # the dict itself is modified in place across clusters
+        # because dicts are mutable
+        return list(cleaned_post_dict.values())
 
 
 class App(tk.Tk):

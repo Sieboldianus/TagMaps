@@ -73,7 +73,6 @@ def main():
     # get cleaned data for use in clustering
     cleaned_post_dict = lbsn_data.get_cleaned_post_dict()
     # status report
-    total_distinct_locations = len(lbsn_data.distinct_locations_set)
     log.info(
         f'\nTotal user count: {len(lbsn_data.locations_per_userid_dict)} (UC)')
     log.info(f'Total post count: {lbsn_data.stats.count_glob:02d} (PC)')
@@ -99,8 +98,6 @@ def main():
         log.info(
             f"Total unique locations: {prepared_data.total_unique_locations}")
         log.info(
-            f"Total distinct locations: {total_distinct_locations}")
-        log.info(
             f'Total tags count for the {prepared_data.tmax} '
             f'most used tags: {prepared_data.total_tag_count}.')
         log.info(
@@ -117,21 +114,21 @@ def main():
                 bounds=lbsn_data.bounds,
                 cleaned_post_dict=cleaned_post_dict,
                 top_list=prepared_data.top_tags_list,
-                total_distinct_locations=total_distinct_locations,
+                total_distinct_locations=prepared_data.total_unique_locations,
                 tmax=prepared_data.tmax,
                 cluster_type=ClusterGen.TAGS)
             cluster_emoji_data = ClusterGen(
                 bounds=lbsn_data.bounds,
                 cleaned_post_dict=cleaned_post_dict,
                 top_list=prepared_data.top_emoji_list,
-                total_distinct_locations=total_distinct_locations,
+                total_distinct_locations=prepared_data.total_unique_locations,
                 tmax=prepared_data.emax,
                 cluster_type=ClusterGen.EMOJI)
             cluster_location_data = ClusterGen(
                 bounds=lbsn_data.bounds,
                 cleaned_post_dict=cleaned_post_dict,
                 top_list=prepared_data.top_location_list,
-                total_distinct_locations=total_distinct_locations,
+                total_distinct_locations=prepared_data.total_unique_locations,
                 tmax=prepared_data.emax,
                 cluster_type=ClusterGen.LOCATIONS)
 
