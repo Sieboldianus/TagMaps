@@ -81,7 +81,6 @@ class UserInterface():
         self.graph_frame = None
         self.gen_preview_map = tk.IntVar(value=0)
         self.create_min_spanning_tree = False
-        self.autoselect_clusters = False
         self.tk_scalebar = None
         # definition of global figure for reusing windows
         self.fig1 = None
@@ -151,11 +150,10 @@ class UserInterface():
         buttonsFrame = tk.Frame(self.app.floater)
         canvas = tk.Canvas(buttonsFrame, width=150, height=200,
                            highlightthickness=0, background="gray7")
-        b = tk.Button(canvas, text="Remove Tag(s)",
-                      command=lambda: self._delete_fromtoplist(self.listbox),
-                      background="gray20", fg="gray80", borderwidth=0,
-                      font="Arial 10 bold")
-        b.pack(padx=10, pady=10)
+        UserInterface._create_button(
+            canvas, "Remove Tag(s)", lambda: self._delete_fromtoplist(
+                self.listbox),
+            left=False)
         c = tk.Checkbutton(canvas, text="Map Tags",
                            variable=self.gen_preview_map,
                            background="gray7", fg="gray80",
@@ -177,36 +175,34 @@ class UserInterface():
         # (clusterTreeCuttingDist*10) - (clusterTreeCuttingDist/10)/2)
         self.tk_scalebar.set(self._clst.cluster_distance)
         self.tk_scalebar.pack()
-        b = tk.Button(canvas, text="Cluster Preview",
-                      command=self._cluster_current_display_item,
-                      background="gray20",
-                      fg="gray80",
-                      borderwidth=0,
-                      font="Arial 10 bold")
-        b.pack(padx=10, pady=10, side="left")
-        b = tk.Button(canvas, text="Scale Test",
-                      command=self._scaletest_current_display_item,
-                      background="gray20",
-                      fg="gray80",
-                      borderwidth=0,
-                      font="Arial 10 bold")
-        b.pack(padx=10, pady=10, side="left")
-        b = tk.Button(canvas, text="Proceed..",
-                      command=self._proceed_with_cluster,
-                      background="gray20",
-                      fg="gray80",
-                      borderwidth=0,
-                      font="Arial 10 bold")
-        b.pack(padx=10, pady=10, side="left")
-        b = tk.Button(canvas, text="Quit",
-                      command=self._quit_tkinter,
-                      background="gray20",
-                      fg="gray80",
-                      borderwidth=0,
-                      font="Arial 10 bold")
-        b.pack(padx=10, pady=10, side="left")
+        UserInterface._create_button(
+            canvas, "Cluster Preview",
+            self._cluster_current_display_item)
+        UserInterface._create_button(
+            canvas, "Scale Test",
+            self._scaletest_current_display_item)
+        UserInterface._create_button(
+            canvas, "Proceed..", self._proceed_with_cluster)
+        UserInterface._create_button(
+            canvas, "Quit", self._quit_tkinter)
         canvas.pack(fill='both', padx=0, pady=0)
         buttonsFrame.pack(fill='both', padx=0, pady=0)
+
+    @staticmethod
+    def _create_button(canvas, text: str, command, left: bool = True):
+        """Create button with text and command
+
+        and pack to canvas."""
+        b = tk.Button(canvas, text=text,
+                      command=command,
+                      background="gray20",
+                      fg="gray80",
+                      borderwidth=0,
+                      font="Arial 10 bold")
+        if left:
+            b.pack(padx=10, pady=10, side="left")
+        else:
+            b.pack(padx=10, pady=10)
 
     def _populate_listbox(self):
         """Populate tkinter listbox with records
@@ -678,7 +674,7 @@ class UserInterface():
             11, int(11*self.img_ratio)), dpi=80)
         self.fig1.canvas.set_window_title('Cluster Preview')
         dist_text = ''
-        if self.autoselect_clusters is False:
+        if self.auto_select_clusters is False:
             dist_text = f'@ {self._clst.cluster_distance}m'
         plt.title(f'Cluster Preview {dist_text}', fontsize=12, loc='center')
         noisy_txt = f'{mask_noisy.sum()}/{len(mask_noisy)}'
