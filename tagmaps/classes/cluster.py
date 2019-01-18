@@ -7,10 +7,13 @@ Module for tag maps clustering methods
 import sys
 import warnings
 import numpy as np
+import logging
 import pandas as pd
 import seaborn as sns
 import hdbscan
 import pyproj
+import fiona
+from fiona.crs import from_epsg
 from collections import defaultdict
 from typing import List, Set, Dict, Tuple, Optional, TextIO
 import shapely.geometry as geometry
@@ -121,7 +124,7 @@ class ClusterGen():
     @staticmethod
     def _init_cluster_dist(bounds: AnalysisBounds) -> float:
         """Get initial cluster distance from analysis bounds.
-        
+
         - 7% of research area width/height (max) = optimal
         - default value #223.245922725 #= 0.000035 radians dist
         """
@@ -253,10 +256,10 @@ class ClusterGen():
                                for x in selected_postguids_list]
         return selected_posts_list
 
-    def _get_np_points(self,
-                       item: str = None,
-                       silent: bool = None
-                       ) -> np.ndarray:
+    def _get_np_points_guids(self,
+                             item: str = None,
+                             silent: bool = None
+                             ) -> np.ndarray:
         """Gets numpy array of selected points with latlng containing _item
 
         Args:
@@ -286,6 +289,14 @@ class ClusterGen():
         # (limit by list of column-names)
         points = df.as_matrix(['lng', 'lat'])
         # only return preview fig without clustering
+        return points, selected_postguids_list
+
+    def _get_np_points(self,
+                       item: str = None,
+                       silent: bool = None
+                       ) -> np.ndarray:
+        """Wrapper that only returns points for _get_np_points_guids"""
+        points, __ = self._get_np_points_guids(item, silent)
         return points
 
     def cluster_points(self, points,
@@ -366,9 +377,11 @@ class ClusterGen():
     def _cluster_item(self, sel_item: Tuple[str, int]):
         """Cluster specific item"""
 
-        points = self._get_np_points(item=sel_item[0], silent=False)
+        result = self._get_np_points_guids(item=sel_item[0], silent=False)
+        points = result[0]
+        selected_post_guids = result[1]
         clusters = self.cluster_points(points=points, preview_mode=False)
-        return clusters, points
+        return clusters, selected_post_guids
 
     @staticmethod
     def _get_cluster_guids(clusters, selected_post_guids):
@@ -401,7 +414,8 @@ class ClusterGen():
         clusters, selected_post_guids = self._cluster_item(item)
         result = self._get_cluster_guids(clusters, selected_post_guids)
         clustered_guids = result[0]
-        non_clustered_guids = result[0]
+        # sys.exit(clustered_guids)
+        non_clustered_guids = result[1]
         single_items_dict[item[0]] = non_clustered_guids
         if not len(clustered_guids) == 0:
             cluster_items_dict[item[0]] = clustered_guids
@@ -446,7 +460,7 @@ class ClusterGen():
         saturation_exclude_count = 0
         # data always in lat/lng WGS1984
         crs_wgs = pyproj.Proj(init='epsg:4326')
-        crs_proj = AlphaShapes._get_best_utmzone(
+        crs_proj, __ = AlphaShapes._get_best_utmzone(
             self.bound_points_shapely)
 
         alphashapes_and_meta = self.alphashapes_and_meta
@@ -461,14 +475,15 @@ class ClusterGen():
             if clustered_post_guids is None:
                 sys.exit(f'Something went wrong: '
                          f'No posts found for toptag: '
-                         f'{topitem[0]}')
+                         f'{self.topitem[0]}')
             __, topitem_area = AlphaShapes.get_cluster_shape(
-                self.top_item, clustered_post_guids, self.cleaned_post_dict,
+                self.topitem, clustered_post_guids, self.cleaned_post_dict,
                 crs_wgs, crs_proj, self.cluster_distance,
                 self.local_saturation_check)
-        for item in self.top_tags_list:
+        for item in self.top_list:
             self.tnum += 1
-            clustered_post_guids = self.clustered_items.get(item[0], None)
+            clustered_post_guids = self.clustered_items.get(
+                item[0], None)
             # Generate tag Cluster Shapes
             if clustered_post_guids:
                 result = AlphaShapes.get_cluster_shape(
@@ -494,7 +509,7 @@ class ClusterGen():
                         continue  # next item
 
                 if len(alphashapes_and_meta_tmp) > 0:
-                    alphashapes_and_meta = list().extend(
+                    alphashapes_and_meta.extend(
                         alphashapes_and_meta_tmp)
 
             non_clustered_guids = self.single_items.get(item[0], None)
@@ -527,25 +542,19 @@ class ClusterGen():
                             single_post.post_like_count),
                         1, str(item[0]),
                         item[1], 1, 1, 1, shapetype))
-        self.log.info(f'{len(alphashapes_and_meta)} '
-                      f'Alpha Shapes. Done.')
+        logging.getLogger("tagmaps").info(
+            f'{len(alphashapes_and_meta)} '
+            f'Alpha Shapes. Done.')
         if saturation_exclude_count > 0:
-            self.log.info(f'Excluded {saturationExcludeCount} '
-                          f'Tags on local saturation check.')
+            logging.getLogger("tagmaps").info(
+                f'Excluded {saturation_exclude_count} '
+                f'Tags on local saturation check.')
 
     def write_results(self):
         """Write all results to output
         """
-                          
-        ## Output Boundary Shapes in merged Shapefile ##
-        log.info("########## STEP 5 of 6: Writing Results to Shapefile ##########")
-
-        #Calculate best UTM Zone SRID/EPSG Code
-        input_lon_center = bound_points_shapely.centroid.coords[0][0] #True centroid (coords may be multipoint)
-        input_lat_center = bound_points_shapely.centroid.coords[0][1]
-        epsg_code = Utils.convert_wgs_to_utm(input_lon_center, input_lat_center)
-        project = lambda x, y: pyproj.transform(pyproj.Proj(init='epsg:4326'), pyproj.Proj(init='epsg:{0}'.format(epsg_code)), x, y)
-
+        __, epsg_code = AlphaShapes._get_best_utmzone(
+            self.bound_points_shapely)
         # Define polygon feature geometry
         schema = {
             'geometry': 'Polygon',
@@ -558,94 +567,103 @@ class ClusterGen():
                            'Weights': 'float',
                            'WeightsV2': 'float',
                            'WeightsV3': 'float',
-                           #'shapetype': 'str',
+                           # 'shapetype': 'str',
                            'emoji': 'int'},
         }
 
-        #Normalization of Values (1-1000 Range), precalc Step:
-        #######################################
-        weightsv1_range = [x[6] for x in alphashapes_and_meta = list()] #get the n'th column out for calculating the max/min
-        weightsv2_range = [x[7] for x in alpha_shapes_meta = list()]
-        weightsv3_range = [x[8] for x in alpha_shapes_meta = list()]
+        # Normalization of Values (1-1000 Range),
+        # precalc Step:
+        # get the n'th column out for calculating the max/min
+        weightsv1_range = [x[6] for x in self.alphashapes_and_meta]
+        weightsv2_range = [x[7] for x in self.alphashapes_and_meta]
+        weightsv3_range = [x[8] for x in self.alphashapes_and_meta]
         weightsv1_min = min(weightsv1_range)
         weightsv1_max = max(weightsv1_range)
         weightsv2_min = min(weightsv2_range)
         weightsv2_max = max(weightsv2_range)
         weightsv3_min = min(weightsv3_range)
         weightsv3_max = max(weightsv3_range)
-        #precalc
-        #https://stats.stackexchange.com/questions/70801/how-to-normalize-data-to-0-1-range
-        weightsv1_mod_a = (1000-1)/(weightsv1_max-weightsv1_min)
+        # precalc, see
+        # https://stats.stackexchange.com/questions/70801/how-to-normalize-data-to-0-1-range
+        weightsv1_mod_a = (1000-1)/(
+            weightsv1_max-weightsv1_min)
         weightsv1_mod_b = 1000 - weightsv1_mod_a * weightsv1_max
-        weightsv2_mod_a = (1000-1)/(weightsv2_max-weightsv2_min)
+        weightsv2_mod_a = (1000-1)/(
+            weightsv2_max-weightsv2_min)
         weightsv2_mod_b = 1000 - weightsv2_mod_a * weightsv2_max
-        weightsv3_mod_a = (1000-1)/(weightsv3_max-weightsv3_min)
+        weightsv3_mod_a = (1000-1)/(
+            weightsv3_max-weightsv3_min)
         weightsv3_mod_b = 1000 - weightsv3_mod_a * weightsv3_max
-        #######################################
         # Write a new Shapefile
         # WGS1984
-        if (cfg.cluster_tags == False and cfg.cluster_emoji == True):
-            shapefileName = "allEmojiCluster"
+        if self.cls_type == ClusterGen.EMOJI:
+            shapefile_name = "allEmojiCluster"
         else:
-            shapefileName = "allTagCluster"
-        with fiona.open(f'02_Output/{shapefileName}.shp', mode='w', encoding='UTF-8', driver='ESRI Shapefile', schema=schema,crs=from_epsg(epsg_code)) as c:
+            shapefile_name = "allTagCluster"
+        with fiona.open(
+            f'02_Output/{shapefile_name}.shp', mode='w',
+            encoding='UTF-8', driver='ESRI Shapefile',
+                schema=schema, crs=from_epsg(epsg_code)) as c:
             # Normalize Weights to 0-1000 Range
             idx = 0
-            for alphaShapeAndMeta in alphashapes_and_meta = list():
-                if idx == 0:
-                    HImP = 1
+            for alphashape_and_meta in self.alphashapes_and_meta:
+                if (idx == 0 or
+                        self.alphashapes_and_meta[idx][4] != self.alphashapes_and_meta[idx-1][4]):
+                    h_imp = 1
                 else:
-                    if alpha_shapes_meta = list()[idx][4] != alpha_shapes_meta = list()[idx-1][4]:
-                        HImP = 1
-                    else:
-                        HImP = 0
-                #emoName = unicode_name(alphaShapeAndMeta[4])
-                #Calculate Normalized Weights Values based on precalc Step
-                if not alphaShapeAndMeta[6] == 1:
-                    weight1_normalized = weightsv1_mod_a * alphaShapeAndMeta[6] + weightsv1_mod_b
+                    h_imp = 0
+                # emoName = unicode_name(alphaShapeAndMeta[4])
+                # Calculate Normalized Weights Values based on precalc Step
+                if not alphashape_and_meta[6] == 1:
+                    weight1_normalized = weightsv1_mod_a * \
+                        alphashape_and_meta[6] + weightsv1_mod_b
                 else:
                     weight1_normalized = 1
-                if not alphaShapeAndMeta[7] == 1:
-                    weight2_normalized = weightsv2_mod_a * alphaShapeAndMeta[7] + weightsv2_mod_b
+                if not alphashape_and_meta[7] == 1:
+                    weight2_normalized = weightsv2_mod_a * \
+                        alphashape_and_meta[7] + weightsv2_mod_b
                 else:
                     weight2_normalized = 1
-                if not alphaShapeAndMeta[8] == 1:
-                    weight3_normalized = weightsv3_mod_a * alphaShapeAndMeta[8] + weightsv3_mod_b
+                if not alphashape_and_meta[8] == 1:
+                    weight3_normalized = weightsv3_mod_a * \
+                        alphashape_and_meta[8] + weightsv3_mod_b
                 else:
                     weight3_normalized = 1
                 idx += 1
-                #project data
-                #geom_proj = transform(project, alphaShapeAndMeta[0])
-                #c.write({
+                # project data
+                # geom_proj = transform(project, alphaShapeAndMeta[0])
+                # c.write({
                 #    'geometry': geometry.mapping(geom_proj),
-                if cfg.cluster_emoji and alphaShapeAndMeta[4] in prepared_data.top_emoji_list:
+                if self.cls_type == ClusterGen.EMOJI:
                     emoji = 1
-                    ImpTagText = ""
+                    imp_tag_text = ""
                 else:
                     emoji = 0
-                    ImpTagText = f'{alphaShapeAndMeta[4]}'
+                    imp_tag_text = f'{alphashape_and_meta[4]}'
                 c.write({
-                    'geometry': geometry.mapping(alphaShapeAndMeta[0]),
-                    'properties': {'Join_Count': alphaShapeAndMeta[1],
-                                   'Views': alphaShapeAndMeta[2],
-                                   'COUNT_User': alphaShapeAndMeta[3],
-                                   'ImpTag': ImpTagText,
-                                   'TagCountG': alphaShapeAndMeta[5],
-                                   'HImpTag': HImP,
+                    'geometry': geometry.mapping(alphashape_and_meta[0]),
+                    'properties': {'Join_Count': alphashape_and_meta[1],
+                                   'Views': alphashape_and_meta[2],
+                                   'COUNT_User': alphashape_and_meta[3],
+                                   'ImpTag': imp_tag_text,
+                                   'TagCountG': alphashape_and_meta[5],
+                                   'HImpTag': h_imp,
                                    'Weights': weight1_normalized,
                                    'WeightsV2': weight2_normalized,
                                    'WeightsV3': weight3_normalized,
-                                   #'shapetype': alphaShapeAndMeta[9],
+                                   # 'shapetype': alphaShapeAndMeta[9],
                                    'emoji': emoji},
                 })
-        if cfg.cluster_emoji:
-            with open("02_Output/emojiTable.csv", "w", encoding='utf-8') as emojiTable:
-                emojiTable.write("FID,Emoji\n")
+        if self.cls_type == ClusterGen.EMOJI:
+            with open("02_Output/emojiTable.csv",
+                      "w", encoding='utf-8') as emoji_table:
+                emoji_table.write("FID,Emoji\n")
                 idx = 0
-                for alphaShapeAndMeta in alpha_shapes_meta = list():
-                    if alphaShapeAndMeta[4] in prepared_data.top_emoji_list:
-                        ImpTagText = f'{alphaShapeAndMeta[4]}'
+                for alphashape_and_meta in self.alphashapes_and_meta:
+                    if alphashape_and_meta[4] in self.top_list:
+                        imp_tag_text = f'{alphashape_and_meta[4]}'
                     else:
-                        ImpTagText = ""
-                    emojiTable.write(f'{idx},{ImpTagText}\n')
+                        imp_tag_text = ""
+                    emoji_table.write(
+                        f'{idx},{imp_tag_text}\n')
                     idx += 1

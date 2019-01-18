@@ -126,7 +126,7 @@ class LoadData():
                 f'{self.stats.count_tags_skipped} of '
                 f'{self.stats.count_tags_global}')
             # if (row_num % 10 == 0):
-                # modulo: print only once every 10 iterations
+            # modulo: print only once every 10 iterations
             print(msg, end='\r')
         # log last message to file, clean stdout
         print(" " * len(msg), end='\n')

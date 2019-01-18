@@ -138,17 +138,25 @@ def main():
 
         if cfg.auto_mode or user_intf.abort is False:
             for clusterer in clusterer_list:
-                if clusterer.ClusterType == ClusterGen.LOCATIONS:
+                if clusterer.cls_type == ClusterGen.LOCATIONS:
                     # skip location clustering for now
                     continue
-                if clusterer.ClusterType == ClusterGen.TAGS:
+                if clusterer.cls_type == ClusterGen.TAGS:
                     log.info("Tag clustering: \n")
                 else:
                     log.info("Emoji clustering: \n")
                 clusterer.cluster_all()
+            for clusterer in clusterer_list:
+                if clusterer.cls_type == ClusterGen.LOCATIONS:
+                    # skip location clustering for now
+                    continue
                 log.info(
                     "########## STEP 4 of 6: Generating Alpha Shapes ##########")
                 clusterer.alpha_shapes()
+            for clusterer in clusterer_list:
+                if clusterer.cls_type == ClusterGen.LOCATIONS:
+                    # skip location clustering for now
+                    continue
                 log.info(
                     "########## STEP 5 of 6: Writing Results to Shapefile ##########")
                 clusterer.write_results()
