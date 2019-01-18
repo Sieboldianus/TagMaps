@@ -202,13 +202,14 @@ class UserInterface():
     def _populate_listbox(self):
         """Populate tkinter listbox with records
 
-        Optional: only for first 500 entries: use top_list[:500]
+        - only for first 1000 entries: top_list[:1000]
         """
         listbox = self.listbox
         top_list: List[Tuple[str, int]] = self._clst.top_list
         loc_name_dict: Dict[str, str] = self.location_names_dict
         # clear first
         listbox.delete(0, tk.END)
+        # tkinter.messagebox.showinfo(f"length of list:", f"{len(top_list)}")
         # maximum of 1000 entries shown
         for item in top_list[:1000]:
             if self._clst.cls_type == ClusterGen.LOCATIONS:
