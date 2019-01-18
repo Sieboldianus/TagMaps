@@ -109,7 +109,9 @@ class LoadData():
 
     def _parse_postlist(self, post_reader: TextIO):
         """Process posts according to specifications"""
+        # row_num = 0
         for post in post_reader:
+            # row_num += 1
             lbsn_post = self._parse_post(post)
             if lbsn_post is None:
                 continue
@@ -123,8 +125,10 @@ class LoadData():
                 f'Skipped posts: {self.stats.skipped_count} - skipped tags: '
                 f'{self.stats.count_tags_skipped} of '
                 f'{self.stats.count_tags_global}')
+            # if (row_num % 10 == 0):
+                # modulo: print only once every 10 iterations
             print(msg, end='\r')
-        # log last message to file, clean last stdout
+        # log last message to file, clean stdout
         print(" " * len(msg), end='\n')
         sys.stdout.flush()
         self.log.info(msg)

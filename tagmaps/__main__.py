@@ -124,7 +124,8 @@ def main():
                 clusterer_type=cls_type,
                 bounds=lbsn_data.bounds,
                 cleaned_post_dict=cleaned_post_dict,
-                prepared_data=prepared_data
+                prepared_data=prepared_data,
+                local_saturation_check=cfg.local_saturation_check
             )
             clusterer_list.append(clusterer)
 
@@ -137,18 +138,20 @@ def main():
 
         if cfg.auto_mode or user_intf.abort is False:
             for clusterer in clusterer_list:
-                if not clusterer.ClusterType == ClusterGen.LOCATIONS:
-                    if clusterer.ClusterType == ClusterGen.TAGS:
-                        log.info("Tag clustering: \n")
-                    else:
-                        log.info("Emoji clustering: \n")
-                    clusterer.cluster_all()
-                    log.info(
-                        "########## STEP 4 of 6: Generating Alpha Shapes ##########")
-                    clusterer.alpha_shapes()
-                    log.info(
-                        "########## STEP 5 of 6: Writing Results to Shapefile ##########")
-                    clusterer.write_results()
+                if clusterer.ClusterType == ClusterGen.LOCATIONS:
+                    # skip location clustering for now
+                    continue
+                if clusterer.ClusterType == ClusterGen.TAGS:
+                    log.info("Tag clustering: \n")
+                else:
+                    log.info("Emoji clustering: \n")
+                clusterer.cluster_all()
+                log.info(
+                    "########## STEP 4 of 6: Generating Alpha Shapes ##########")
+                clusterer.alpha_shapes()
+                log.info(
+                    "########## STEP 5 of 6: Writing Results to Shapefile ##########")
+                clusterer.write_results()
         else:
             print(f'\nUser abort.')
     if cfg.cluster_locations and user_intf.abort is False:
