@@ -15,8 +15,9 @@ from collections import defaultdict
 from typing import List, Set, Dict, Tuple, Optional, TextIO
 import shapely.geometry as geometry
 from multiprocessing.pool import ThreadPool
-from tagmaps.classes.utils import Utils, AnalysisBounds
-from tagmaps.classes.shared_structure import CleanedPost
+from tagmaps.classes.utils import Utils
+from tagmaps.classes.shared_structure import (
+    CleanedPost, AnalysisBounds, PreparedData)
 
 pool = ThreadPool(processes=1)
 sns.set_context('poster')
@@ -63,6 +64,44 @@ class ClusterGen():
                 (self.bounds.lim_lng_max, self.bounds.lim_lat_max)
             ])
         )
+
+    @classmethod
+    def new_clusterer(cls,
+                      clusterer_type: ClusterType,
+                      bounds: AnalysisBounds,
+                      cleaned_post_dict: Dict[str, CleanedPost],
+                      prepared_data: PreparedData
+                      ):
+        """Create new clusterer from type and input data
+
+        Args:
+            clusterer_type (ClusterGen.ClusterType): Either Tags, Locations or Emoji
+            bounds (LoadData.AnalysisBounds): Analaysis spatial boundary
+            cleaned_post_dict (Dict[str, CleanedPost]): Dict of cleaned posts
+            prepared_data (LoadData.PreparedData): Statistics data
+
+        Returns:
+            clusterer (ClusterGen): A new clusterer of ClusterType
+        """
+        if clusterer_type == cls.TAGS:
+            top_list = prepared_data.top_tags_list
+            tmax = prepared_data.tmax
+        elif clusterer_type == cls.EMOJI:
+            top_list = prepared_data.top_emoji_list
+            tmax = prepared_data.emax
+        elif clusterer_type == cls.LOCATIONS:
+            top_list = prepared_data.top_locations_list
+            tmax = prepared_data.emax
+        else:
+            sys.exit("Cluster Type unknown.")
+        clusterer = cls(
+            bounds=bounds,
+            cleaned_post_dict=cleaned_post_dict,
+            top_list=top_list,
+            total_distinct_locations=prepared_data.total_unique_locations,
+            tmax=tmax,
+            cluster_type=clusterer_type)
+        return clusterer
 
     @staticmethod
     def _init_cluster_dist(bounds: AnalysisBounds) -> float:

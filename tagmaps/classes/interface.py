@@ -19,11 +19,11 @@ from typing import List, Set, Dict, Tuple, Optional, TextIO
 import sklearn.datasets as data
 import traceback
 import shapely.geometry as geometry
-from tagmaps.classes.utils import Utils, AnalysisBounds
-from tagmaps.classes.shared_structure import CleanedPost
+from tagmaps.classes.utils import Utils
+from tagmaps.classes.shared_structure import CleanedPost, AnalysisBounds
 from tagmaps.classes.cluster import ClusterGen
 
-# enable interactive mode for pyplot (not necessary?!)
+# enable interactive mode for pyplot
 plt.ion()
 # label_size = 10
 # plt.rcParams['xtick.labelsize'] = label_size
@@ -32,27 +32,22 @@ plt.ion()
 # plt.gca().set_xlim([limXMin, limXMax])
 # plt.gca().set_ylim([limYMin, limYMax])
 # sns.set_color_codes()
-# matplotlib.style.use('ggplot')
 plt.style.use('ggplot')
 
 
 class UserInterface():
     def __init__(self,
-                 tag_cluster: ClusterGen,
-                 emoji_cluster: ClusterGen = None,
-                 location_cluster: ClusterGen = None,
+                 clusterer_list: List[ClusterGen] = None,
                  location_names_dict: Dict[str, str] = None
                  ):
         """Prepare user interface and start Tkinter mainloop()
         """
         self._clst_list = list()
         # append clusters to list
-        if tag_cluster:
-            self._clst_list.append(tag_cluster)
-        if emoji_cluster:
-            self._clst_list.append(emoji_cluster)
-        if location_cluster:
-            self._clst_list.append(location_cluster)
+        if not clusterer_list:
+            sys.exit("No clusterer selected")
+        for clusterer in clusterer_list:
+            self._clst_list.append(clusterer)
         # select initial cluster
         self._clst = self._clst_list[0]
         self.location_names_dict = location_names_dict
@@ -214,7 +209,8 @@ class UserInterface():
         loc_name_dict: Dict[str, str] = self.location_names_dict
         # clear first
         listbox.delete(0, tk.END)
-        for item in top_list:
+        # maximum of 1000 entries shown
+        for item in top_list[:1000]:
             if self._clst.cls_type == ClusterGen.LOCATIONS:
                 item_name = UserInterface._get_locname(item[0], loc_name_dict)
             else:
@@ -708,29 +704,40 @@ class UserInterface():
             post_locids: List[str]) -> List[CleanedPost]:
         """Remove all posts with post_locid from list
 
-        Returns updated list oif Cleaned Posts
-
+        Returns a list of values for fast lookup
+                the dict itself is modified in place
+                across clusters
+                because dicts are mutable
         To-do:
             - update toplists (remove tags/emoji from
             posts that are removed)
         """
-        tkinter.messagebox.showinfo("Len before: ", len(cleaned_post_dict))
+        # tkinter.messagebox.showinfo("Len before: ", len(cleaned_post_dict))
         # first get post guids to be removed
         # this is quite expensive,
         # perhaps there's a better way
-        tkinter.messagebox.showinfo("post_locids: ", f'{post_locids}')
+        # tkinter.messagebox.showinfo("post_locids: ", f'{post_locids}')
         postguids_to_remove = [post_record.guid for post_record
                                in cleaned_post_dict.values()
                                if post_record.loc_id in post_locids]
-        tkinter.messagebox.showinfo(
-            "Len postguids_to_remove: ", len(postguids_to_remove))
-        for post_guid in postguids_to_remove:
-            del cleaned_post_dict[post_guid]
-        tkinter.messagebox.showinfo("Len after: ", len(cleaned_post_dict))
-        # return a list of values for fast lookup
-        # the dict itself is modified in place across clusters
-        # because dicts are mutable
+        if UserInterface._query_user(
+            f'This will also remove '
+            f'{len(postguids_to_remove)} posts from further processing.\n'
+                f'Continue?', f'Continue?') is True:
+            for post_guid in postguids_to_remove:
+                del cleaned_post_dict[post_guid]
         return list(cleaned_post_dict.values())
+
+    @staticmethod
+    def _query_user(question_text: str,
+                    title_text: str) -> bool:
+        """Ask a question with Yes No options"""
+        result = tkinter.messagebox.askquestion(
+            title_text, question_text, icon='question')
+        if result == 'yes':
+            return True
+        else:
+            return False
 
 
 class App(tk.Tk):

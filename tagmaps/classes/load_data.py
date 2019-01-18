@@ -30,9 +30,9 @@ from collections import namedtuple
 from shapely.geometry import Polygon
 from shapely.geometry import shape
 from shapely.geometry import Point
-from tagmaps.classes.utils import Utils, AnalysisBounds
-from tagmaps.classes.shared_structure \
-    import PostStructure, CleanedPost
+from tagmaps.classes.utils import Utils
+from tagmaps.classes.shared_structure import (
+    PostStructure, CleanedPost, AnalysisBounds, PreparedData)
 
 
 class LoadData():
@@ -267,7 +267,7 @@ class LoadData():
         # collect stats in prepared_data
         self.prepared_data.top_tags_list = top_tags_list
         self.prepared_data.top_emoji_list = top_emoji_list
-        self.prepared_data.top_location_list = top_location_list
+        self.prepared_data.top_locations_list = top_location_list
         self.prepared_data.single_mostused_tag = top_tags_list[0]
         self.prepared_data.single_mostused_emoji = top_emoji_list[0]
         self.prepared_data.single_mostused_location = top_location_list[0]
@@ -318,10 +318,17 @@ class LoadData():
             # only once per tag (or emoji)
             overall_usercount_perte.update(tagemoji_hash)
         total_unique = len(overall_usercount_perte)
-        top_list = overall_usercount_perte.most_common(self.cfg.tmax)
+        # get all items for "locations"
+        # but clip list for tags and emoji
+        if listname in ("tags", "emoji"):
+            max_items = self.cfg.tmax
+        else:
+            max_items = None
+        top_list = overall_usercount_perte.most_common(max_items)
         if self.cfg.remove_long_tail is True:
             total_without_longtail = self._remove_long_tail(top_list, listname)
-        self._write_toplist(top_list, listname)
+        max_to_write = min(1000, self.cfg.tmax)
+        self._write_toplist(top_list[:max_to_write], listname)
         return top_list, total_unique, total_without_longtail
 
     @staticmethod
@@ -770,25 +777,3 @@ class DataStats():
         self.count_glob = 0
         self.partcount = 0
         self.count_loc = 0
-
-
-class PreparedData():
-    """Class storing what is needed for tag cluster"""
-
-    def __init__(self):
-        """Initialize structure."""
-        self.top_tags_list = None
-        self.top_emoji_list = None
-        self.top_location_list = None
-        self.total_unique_tags = 0
-        self.total_unique_emoji = 0
-        self.total_unique_locations = 0
-        self.total_tag_count = 0
-        self.total_emoji_count = 0
-        self.total_location_count = 0
-        self.single_mostused_tag = None
-        self.single_mostused_emoji = None
-        self.single_mostused_location = None
-        self.tmax = 0
-        self.emax = 0
-        self.locid_locname_dict = None

@@ -25,7 +25,7 @@ class BaseConfig:
         # or define options as input args
         self.data_source = "fromLBSN"
         self.cluster_tags = True
-        self.cluster_photos = True
+        self.cluster_locations = True
         self.epsg = True
         self.remove_long_tail = True
         self.cluster_emoji = True
@@ -94,11 +94,11 @@ class BaseConfig:
                             "Clusters will be generated per "
                             "distinct tag.")
         parser.add_argument("-p",
-                            "--clusterPhotos",
+                            "--clusterLocations",
                             action="store_true",
                             default=True,
-                            help="Cluster photo locations "
-                            "(no filtering based on tags)"
+                            help="Cluster post locations "
+                            "(no filtering based on tags or emoji)"
                             )
         parser.add_argument("-c",
                             "--localSaturationCheck",
@@ -203,8 +203,8 @@ class BaseConfig:
             self.data_source = args.source
         if args.clusterTags:
             self.cluster_tags = args.clusterTags
-        if args.clusterPhotos:
-            self.cluster_photos = args.clusterPhotos
+        if args.clusterLocations:
+            self.cluster_locations = args.clusterLocations
         if args.EPSG is None:
             self.override_crs = None
         else:

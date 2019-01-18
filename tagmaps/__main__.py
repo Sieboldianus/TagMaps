@@ -32,8 +32,6 @@ from glob import glob
 from typing import List, Set, Dict, Tuple, Optional, TextIO
 from tagmaps.classes.interface import UserInterface
 from tagmaps.classes.cluster import ClusterGen
-from tagmaps.classes.shared_structure \
-    import PostStructure, CleanedPost
 from tagmaps.classes.load_data import LoadData
 from tagmaps.classes.utils import Utils
 
@@ -82,10 +80,11 @@ def main():
              f'{len(lbsn_data.distinct_userlocations_set)}')
     log.info(lbsn_data.bounds.get_bound_report())
 
+    # get prepared data for statistics and clustering
+    prepared_data = lbsn_data.get_prepared_data()
+
     if (cfg.cluster_tags or cfg.cluster_emoji):
         log.info("\n########## STEP 2 of 6: Tag Ranking ##########")
-
-        prepared_data = lbsn_data.get_prepared_data()
 
         location_name_count = len(prepared_data.locid_locname_dict)
         if location_name_count > 0:
@@ -104,50 +103,62 @@ def main():
             f'Total emoji count for the {prepared_data.emax} '
             f'most used emoji: {prepared_data.total_emoji_count}.')
 
-        if cfg.statistics_only is False:
-            # restart time monitoring for actual cluster step
-            now = time.time()
-            log.info(
-                "\n########## STEP 3 of 6: Tag Location Clustering ##########")
-            # initialize clusterers
-            cluster_tag_data = ClusterGen(
+    if cfg.statistics_only is False:
+        # restart time monitoring for monitoring of
+        # actual cluster step
+        now = time.time()
+        log.info(
+            "\n########## STEP 3 of 6: Tag Location Clustering ##########")
+        # initialize list of types to cluster
+        cluster_types = list()
+        if cfg.cluster_tags:
+            cluster_types.append(ClusterGen.TAGS)
+        if cfg.cluster_emoji:
+            cluster_types.append(ClusterGen.EMOJI)
+        if cfg.cluster_locations:
+            cluster_types.append(ClusterGen.LOCATIONS)
+        # initialize clusterers
+        clusterer_list = list()
+        for cls_type in cluster_types:
+            clusterer = ClusterGen.new_clusterer(
+                clusterer_type=cls_type,
                 bounds=lbsn_data.bounds,
                 cleaned_post_dict=cleaned_post_dict,
-                top_list=prepared_data.top_tags_list,
-                total_distinct_locations=prepared_data.total_unique_locations,
-                tmax=prepared_data.tmax,
-                cluster_type=ClusterGen.TAGS)
-            cluster_emoji_data = ClusterGen(
-                bounds=lbsn_data.bounds,
-                cleaned_post_dict=cleaned_post_dict,
-                top_list=prepared_data.top_emoji_list,
-                total_distinct_locations=prepared_data.total_unique_locations,
-                tmax=prepared_data.emax,
-                cluster_type=ClusterGen.EMOJI)
-            cluster_location_data = ClusterGen(
-                bounds=lbsn_data.bounds,
-                cleaned_post_dict=cleaned_post_dict,
-                top_list=prepared_data.top_location_list,
-                total_distinct_locations=prepared_data.total_unique_locations,
-                tmax=prepared_data.emax,
-                cluster_type=ClusterGen.LOCATIONS)
+                prepared_data=prepared_data
+            )
+            clusterer_list.append(clusterer)
 
-            # get user input for cluster distance and taglist
-            if not cfg.auto_mode:
-                user_intf = UserInterface(cluster_tag_data,
-                                          cluster_emoji_data,
-                                          cluster_location_data,
-                                          prepared_data.locid_locname_dict)
-                user_intf.start()
+        # get user input for cluster distances
+        if not cfg.auto_mode:
+            user_intf = UserInterface(
+                clusterer_list,
+                prepared_data.locid_locname_dict)
+            user_intf.start()
 
-            if cfg.auto_mode or user_intf.abort is False:
-                cluster_tag_data.cluster_all()
-                cluster_emoji_data.cluster_all()
-            else:
-                print(f'\nUser abort.')
-
+        if cfg.auto_mode or user_intf.abort is False:
+            for clusterer in clusterer_list:
+                if not clusterer.ClusterType == ClusterGen.LOCATIONS:
+                    if clusterer.ClusterType == ClusterGen.TAGS:
+                        log.info("Tag clustering: \n")
+                    else:
+                        log.info("Emoji clustering: \n")
+                    clusterer.cluster_all()
+                    log.info(
+                        "########## STEP 4 of 6: Generating Alpha Shapes ##########")
+                    clusterer.alpha_shapes()
+                    log.info(
+                        "########## STEP 5 of 6: Writing Results to Shapefile ##########")
+                    clusterer.write_results()
+        else:
+            print(f'\nUser abort.')
+    if cfg.cluster_locations and user_intf.abort is False:
+        log.info(
+            "\n########## STEP 6 of 6: Calculating Overall Post Location Clusters ##########")
+        for clusterer in clusterer_list:
+            if clusterer.ClusterType == ClusterGen.LOCATIONS:
+                clusterer.cluster_all()
     # if cfg.cluster_photos is True:
-    #    log.info("\n########## STEP 6 of 6: Calculating Overall Photo Location Clusters ##########")
+    #
     #    #if not 'clusterTreeCuttingDist' in locals():
     #    #global clusterTreeCuttingDist
     #    if clusterTreeCuttingDist == 0:
