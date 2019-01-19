@@ -4,8 +4,17 @@
 Module for shared structural elements
 """
 
+from typing import List, Set, Dict, Tuple, Optional, TextIO
 from collections import namedtuple
 
+LOCATIONS: str = 'Locations'
+TAGS: str = 'Tags'
+EMOJI: str = 'Emoji'
+ClusterType: Tuple[Tuple[str, int]] = (
+    (LOCATIONS, 1),
+    (TAGS, 2),
+    (EMOJI, 3),
+)
 
 CleanedPost_ = namedtuple(
     'CleanedPost',

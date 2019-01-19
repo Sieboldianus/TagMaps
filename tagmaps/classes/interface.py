@@ -20,7 +20,9 @@ import sklearn.datasets as data
 import traceback
 import shapely.geometry as geometry
 from tagmaps.classes.utils import Utils
-from tagmaps.classes.shared_structure import CleanedPost, AnalysisBounds
+from tagmaps.classes.shared_structure import (
+    CleanedPost, AnalysisBounds,
+    ClusterType, TAGS, LOCATIONS, EMOJI)
 from tagmaps.classes.cluster import ClusterGen
 
 # enable interactive mode for pyplot
@@ -212,7 +214,7 @@ class UserInterface():
         # tkinter.messagebox.showinfo(f"length of list:", f"{len(top_list)}")
         # maximum of 1000 entries shown
         for item in top_list[:1000]:
-            if self._clst.cls_type == ClusterGen.LOCATIONS:
+            if self._clst.cls_type == LOCATIONS:
                 item_name = UserInterface._get_locname(item[0], loc_name_dict)
             else:
                 item_name = item[0]
@@ -448,7 +450,7 @@ class UserInterface():
     def _set_plt_suptitle(self, plt, item: str):
         """Sets suptitle for plot (plt)"""
         title = self._get_plt_suptitle(item)
-        if self._clst.cls_type == ClusterGen.EMOJI:
+        if self._clst.cls_type == EMOJI:
             plt.rcParams['font.family'] = 'DejaVu Sans'
         else:
             plt.rcParams['font.family'] = 'sans-serif'
@@ -461,10 +463,10 @@ class UserInterface():
         - depending on clusterer type
         """
         title = ""
-        if self._clst.cls_type == ClusterGen.LOCATIONS:
+        if self._clst.cls_type == LOCATIONS:
             title = UserInterface._get_locname(
                 item, self.location_names_dict).upper()
-        elif self._clst.cls_type == ClusterGen.EMOJI:
+        elif self._clst.cls_type == EMOJI:
             emoji_name = unicode_name(item)
             title = f'{item} ({emoji_name})'
         else:
@@ -694,7 +696,7 @@ class UserInterface():
             del(self._clst.top_list[index])
         # remove all cleaned posts from processing list if
         # location is removed
-        if self._clst.cls_type == ClusterGen.LOCATIONS:
+        if self._clst.cls_type == LOCATIONS:
             cleaned_post_list_updated = UserInterface._delete_post_locations(
                 self._clst.cleaned_post_dict, id_list_selected)
             self._clst.cleaned_post_list = cleaned_post_list_updated

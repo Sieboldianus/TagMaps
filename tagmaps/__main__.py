@@ -30,6 +30,7 @@ from collections import defaultdict
 from _csv import QUOTE_MINIMAL
 from glob import glob
 from typing import List, Set, Dict, Tuple, Optional, TextIO
+from tagmaps.classes.shared_structure import EMOJI, LOCATIONS, TAGS
 from tagmaps.classes.interface import UserInterface
 from tagmaps.classes.cluster import ClusterGen
 from tagmaps.classes.load_data import LoadData
@@ -112,11 +113,11 @@ def main():
         # initialize list of types to cluster
         cluster_types = list()
         if cfg.cluster_tags:
-            cluster_types.append(ClusterGen.TAGS)
+            cluster_types.append(TAGS)
         if cfg.cluster_emoji:
-            cluster_types.append(ClusterGen.EMOJI)
+            cluster_types.append(EMOJI)
         if cfg.cluster_locations:
-            cluster_types.append(ClusterGen.LOCATIONS)
+            cluster_types.append(LOCATIONS)
         # initialize clusterers
         clusterer_list = list()
         for cls_type in cluster_types:
@@ -138,10 +139,10 @@ def main():
 
         if cfg.auto_mode or user_intf.abort is False:
             for clusterer in clusterer_list:
-                if clusterer.cls_type == ClusterGen.LOCATIONS:
+                if clusterer.cls_type == LOCATIONS:
                     # skip location clustering for now
                     continue
-                if clusterer.cls_type == ClusterGen.TAGS:
+                if clusterer.cls_type == TAGS:
                     log.info("Tag clustering: ")
                 else:
                     log.info("Emoji clustering: ")
@@ -149,7 +150,7 @@ def main():
             log.info(
                 "########## STEP 4 of 6: Generating Alpha Shapes ##########")
             for clusterer in clusterer_list:
-                if clusterer.cls_type == ClusterGen.LOCATIONS:
+                if clusterer.cls_type == LOCATIONS:
                     # skip location clustering for now
                     continue
 
@@ -157,7 +158,7 @@ def main():
             log.info(
                 "########## STEP 5 of 6: Writing Results to Shapefile ##########")
             for clusterer in clusterer_list:
-                if clusterer.cls_type == ClusterGen.LOCATIONS:
+                if clusterer.cls_type == LOCATIONS:
                     # skip location clustering for now
                     continue
                 clusterer.write_results()
@@ -167,7 +168,7 @@ def main():
         log.info(
             "\n########## STEP 6 of 6: Calculating Overall Location Clusters ##########")
         for clusterer in clusterer_list:
-            if clusterer.ClusterType == ClusterGen.LOCATIONS:
+            if clusterer.cls_type == LOCATIONS:
                 clusterer.cluster_all()
     # if cfg.cluster_photos is True:
     #

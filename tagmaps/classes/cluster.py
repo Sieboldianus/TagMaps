@@ -22,7 +22,8 @@ from multiprocessing.pool import ThreadPool
 from tagmaps.classes.utils import Utils
 from tagmaps.classes.alpha_shapes import AlphaShapes
 from tagmaps.classes.shared_structure import (
-    CleanedPost, AnalysisBounds, PreparedData)
+    CleanedPost, AnalysisBounds, PreparedData,
+    ClusterType, TAGS, LOCATIONS, EMOJI)
 
 pool = ThreadPool(processes=1)
 sns.set_context('poster')
@@ -32,14 +33,6 @@ sns.set_style('white')
 class ClusterGen():
     """Cluster module for tags, emoji and post locations
     """
-    LOCATIONS = 'Locations'
-    TAGS = 'Tags'
-    EMOJI = 'Emoji'
-    ClusterType = (
-        (LOCATIONS, 1),
-        (TAGS, 2),
-        (EMOJI, 3),
-    )
 
     def __init__(self, bounds: AnalysisBounds,
                  cleaned_post_dict: Dict[str, CleanedPost],
@@ -88,7 +81,7 @@ class ClusterGen():
         """Create new clusterer from type and input data
 
         Args:
-            clusterer_type (ClusterGen.ClusterType): Either Tags,
+            clusterer_type (ClusterType): Either Tags,
                 Locations or Emoji
             bounds (LoadData.AnalysisBounds): Analaysis spatial boundary
             cleaned_post_dict (Dict[str, CleanedPost]): Dict of cleaned posts
@@ -97,15 +90,15 @@ class ClusterGen():
         Returns:
             clusterer (ClusterGen): A new clusterer of ClusterType
         """
-        if clusterer_type == cls.TAGS:
+        if clusterer_type == TAGS:
             top_list = prepared_data.top_tags_list
             tmax = prepared_data.tmax
             topitem = prepared_data.single_mostused_tag
-        elif clusterer_type == cls.EMOJI:
+        elif clusterer_type == EMOJI:
             top_list = prepared_data.top_emoji_list
             tmax = prepared_data.emax
             topitem = prepared_data.single_mostused_emoji
-        elif clusterer_type == cls.LOCATIONS:
+        elif clusterer_type == LOCATIONS:
             top_list = prepared_data.top_locations_list
             tmax = prepared_data.emax
             topitem = prepared_data.single_mostused_location
@@ -164,17 +157,17 @@ class ClusterGen():
         distinct_localloc_count = set()
         selected_postguids_list = list()
         for cleaned_photo_location in self.cleaned_post_list:
-            if self.cls_type == self.TAGS:
+            if self.cls_type == TAGS:
                 self._filter_tags(
                     item, cleaned_photo_location,
                     selected_postguids_list,
                     distinct_localloc_count)
-            elif self.cls_type == self.EMOJI:
+            elif self.cls_type == EMOJI:
                 self._filter_emoji(
                     item, cleaned_photo_location,
                     selected_postguids_list,
                     distinct_localloc_count)
-            elif self.cls_type == self.LOCATIONS:
+            elif self.cls_type == LOCATIONS:
                 self._filter_locations(
                     item, cleaned_photo_location,
                     selected_postguids_list,
@@ -234,7 +227,7 @@ class ClusterGen():
         if silent:
             return selected_postguids_list
         # console reporting
-        if self.cls_type == self.EMOJI:
+        if self.cls_type == EMOJI:
             item_text = unicode_name(item)
         else:
             item_text = item
@@ -441,13 +434,13 @@ class ClusterGen():
         self.tnum = 1
         # get remaining clusters
         for item in self.top_list:
-            self.tnum += 1
             if (self.local_saturation_check and
                     self.tnum == 1 and
                     item[0] in self.clustered_items):
                 # skip item if already
                 # clustered due to local saturation
                 continue
+            self.tnum += 1
             self._get_update_clusters(
                 item,
                 self.single_items,
@@ -605,7 +598,7 @@ class ClusterGen():
         weightsv3_mod_b = 1000 - weightsv3_mod_a * weightsv3_max
         # Write a new Shapefile
         # WGS1984
-        if self.cls_type == ClusterGen.EMOJI:
+        if self.cls_type == EMOJI:
             shapefile_name = "allEmojiCluster"
         else:
             shapefile_name = "allTagCluster"
@@ -643,7 +636,7 @@ class ClusterGen():
                 # geom_proj = transform(project, alphaShapeAndMeta[0])
                 # c.write({
                 #    'geometry': geometry.mapping(geom_proj),
-                if self.cls_type == ClusterGen.EMOJI:
+                if self.cls_type == EMOJI:
                     emoji = 1
                     imp_tag_text = ""
                 else:
@@ -663,7 +656,7 @@ class ClusterGen():
                                    # 'shapetype': alphaShapeAndMeta[9],
                                    'emoji': emoji},
                 })
-        if self.cls_type == ClusterGen.EMOJI:
+        if self.cls_type == EMOJI:
             with open("02_Output/emojiTable.csv",
                       "w", encoding='utf-8') as emoji_table:
                 emoji_table.write("FID,Emoji\n")
