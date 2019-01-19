@@ -8,6 +8,7 @@ import sys
 import math
 import pyproj
 import numpy as np
+import logging
 from decimal import Decimal
 from typing import List, Set, Dict, Tuple
 from math import radians, cos, sin, asin, sqrt
@@ -17,45 +18,10 @@ from descartes import PolygonPatch
 from scipy.spatial import Delaunay
 from fiona.crs import from_epsg
 from tagmaps.classes.utils import Utils
+from tagmaps.classes.shared_structure import AnalysisBounds
 
 
 class AlphaShapes():
-
-    @staticmethod
-    def _get_best_utmzone(bound_points_shapely: geometry.MultiPoint):
-        """Calculate best UTM Zone SRID/EPSG Code
-        Args:
-        True centroid (coords may be multipoint)"""
-        input_lon_center = bound_points_shapely.centroid.coords[0][0]
-        input_lat_center = bound_points_shapely.centroid.coords[0][1]
-        epsg_code = AlphaShapes._convert_wgs_to_utm(
-            input_lon_center, input_lat_center)
-        crs_proj = pyproj.Proj(init=f'epsg:{epsg_code}')
-        return crs_proj, epsg_code
-
-    @staticmethod
-    def _convert_wgs_to_utm(lon: float, lat: float):
-        """"[summary]"
-
-        Args:
-            lon: latitude
-            lat: longitude
-
-        Returns:
-            [type]: [description]
-
-        Notes:
-        # https://stackoverflow.com/questions/40132542/get-a-cartesian-projection-accurate-around-a-lat-lng-pair
-        """
-
-        utm_band = str((math.floor((lon + 180) / 6) % 60) + 1)
-        if len(utm_band) == 1:
-            utm_band = '0'+utm_band
-        if lat >= 0:
-            epsg_code = '326' + utm_band
-        else:
-            epsg_code = '327' + utm_band
-        return epsg_code
 
     @staticmethod
     def get_cluster_shape(

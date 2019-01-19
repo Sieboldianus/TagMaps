@@ -32,7 +32,7 @@ from descartes import PolygonPatch
 from scipy.spatial import Delaunay
 import argparse
 from tagmaps.config.config import BaseConfig
-from tagmaps.classes.shared_structure import CleanedPost
+from tagmaps.classes.shared_structure import CleanedPost, AnalysisBounds
 
 
 class Utils():
@@ -40,6 +40,54 @@ class Utils():
 
     Primarily @classmethods and @staticmethods
     """
+
+    @staticmethod
+    def _get_shapely_bounds(
+            bounds: AnalysisBounds) -> geometry.MultiPoint:
+        """Returns boundary shape from 4 coordinates"""
+        bound_points_shapely = geometry.MultiPoint([
+                (bounds.lim_lng_min, bounds.lim_lat_min),
+                (bounds.lim_lng_max, bounds.lim_lat_max)
+            ])
+        return bound_points_shapely
+
+    @staticmethod
+    def _get_best_utmzone(bound_points_shapely: geometry.MultiPoint):
+        """Calculate best UTM Zone SRID/EPSG Code
+        Args:
+        True centroid (coords may be multipoint)"""
+        input_lon_center = bound_points_shapely.centroid.coords[0][0]
+        input_lat_center = bound_points_shapely.centroid.coords[0][1]
+        epsg_code = Utils._convert_wgs_to_utm(
+            input_lon_center, input_lat_center)
+        crs_proj = pyproj.Proj(init=f'epsg:{epsg_code}')
+        return crs_proj, epsg_code
+
+    @staticmethod
+    def _convert_wgs_to_utm(lon: float, lat: float):
+        """"Return best epsg code for pair
+        of WGS coordinates (lat/lng)
+
+        Args:
+            lon: latitude
+            lat: longitude
+
+        Returns:
+            [type]: [description]
+
+        Notes:
+        # https://stackoverflow.com/questions/40132542/get-a-cartesian-projection-accurate-around-a-lat-lng-pair
+        """
+
+        utm_band = str((math.floor((lon + 180) / 6) % 60) + 1)
+        if len(utm_band) == 1:
+            utm_band = '0'+utm_band
+        if lat >= 0:
+            epsg_code = '326' + utm_band
+        else:
+            epsg_code = '327' + utm_band
+        return epsg_code
+
     @staticmethod
     def default_empty_cstructure():
         """Generates a tuple of parametric length with

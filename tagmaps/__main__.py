@@ -34,6 +34,8 @@ from tagmaps.classes.shared_structure import EMOJI, LOCATIONS, TAGS
 from tagmaps.classes.interface import UserInterface
 from tagmaps.classes.cluster import ClusterGen
 from tagmaps.classes.load_data import LoadData
+from tagmaps.classes.alpha_shapes import AlphaShapes
+from tagmaps.classes.compile_output import Compile
 from tagmaps.classes.utils import Utils
 
 __author__ = "Alexander Dunkel"
@@ -146,22 +148,22 @@ def main():
                     log.info("Tag clustering: ")
                 else:
                     log.info("Emoji clustering: ")
-                clusterer.cluster_all()
+                clusterer.get_itemized_clusters()
             log.info(
                 "########## STEP 4 of 6: Generating Alpha Shapes ##########")
+            # store results for tags and emoji in one list
+            shapes_and_meta_list = list()
             for clusterer in clusterer_list:
                 if clusterer.cls_type == LOCATIONS:
                     # skip location clustering for now
                     continue
-
-                clusterer.alpha_shapes()
+                cluster_shapes = clusterer.get_cluster_shapes()
+                shapes_and_meta_list.append(cluster_shapes)
             log.info(
                 "########## STEP 5 of 6: Writing Results to Shapefile ##########")
-            for clusterer in clusterer_list:
-                if clusterer.cls_type == LOCATIONS:
-                    # skip location clustering for now
-                    continue
-                clusterer.write_results()
+            Compile.write_shapes(
+                bounds=lbsn_data.bounds,
+                shapes_and_meta_list=shapes_and_meta_list)
         else:
             print(f'\nUser abort.')
     if cfg.cluster_locations and user_intf.abort is False:
@@ -169,7 +171,11 @@ def main():
             "\n########## STEP 6 of 6: Calculating Overall Location Clusters ##########")
         for clusterer in clusterer_list:
             if clusterer.cls_type == LOCATIONS:
-                clusterer.cluster_all()
+                cluster_centroids = clusterer.get_cluster_centroids()
+        Compile.write_centroids(
+            bounds=lbsn_data.bounds,
+            cluster_centroids=cluster_centroids)
+
     #
     #    #if not 'clusterTreeCuttingDist' in locals():
     #    #global clusterTreeCuttingDist

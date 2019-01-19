@@ -14,7 +14,6 @@ import hdbscan
 import pyproj
 import fiona
 from unicodedata import name as unicode_name
-from fiona.crs import from_epsg
 from collections import defaultdict
 from typing import List, Set, Dict, Tuple, Optional, TextIO
 import shapely.geometry as geometry
@@ -58,19 +57,20 @@ class ClusterGen():
         self.number_of_clusters = None
         self.mask_noisy = None
         self.clusterer = None
-        # storing cluster results:
-        self.single_items = defaultdict(list)
-        self.clustered_items = defaultdict(list)
         self.local_saturation_check = local_saturation_check
-        self.alphashapes_and_meta = list()
+        # storing cluster results:
+        self.single_items_dict = defaultdict(list)
+        self.clustered_items_dict = defaultdict(list)
+        self.clustered_guids_all = list()
+        self.none_clustered_guids = list()
         # set initial analysis bounds
         self._update_bounds()
-        self.bound_points_shapely = (
-            geometry.MultiPoint([
-                (self.bounds.lim_lng_min, self.bounds.lim_lat_min),
-                (self.bounds.lim_lng_max, self.bounds.lim_lat_max)
-            ])
-        )
+        self.bound_points_shapely = Utils._get_shapely_bounds(
+            self.bounds)
+        # data always in lat/lng WGS1984
+        self.crs_wgs = pyproj.Proj(init='epsg:4326')
+        self.crs_proj, __ = Utils._get_best_utmzone(
+            self.bound_points_shapely)
 
     @classmethod
     def new_clusterer(cls,
@@ -261,7 +261,8 @@ class ClusterGen():
 
     def _get_np_points_guids(self,
                              item: str = None,
-                             silent: bool = None
+                             silent: bool = None,
+                             sel_all: bool = None
                              ) -> np.ndarray:
         """Gets numpy array of selected points with latlng containing _item
 
@@ -276,14 +277,23 @@ class ClusterGen():
         # no log reporting for selected points
         if silent is None:
             silent = False
-
-        selected_postguids_list = self._getselect_postguids(
-            item, silent=silent)
-        # clustering
-        if len(selected_postguids_list) < 2:
-            return [], selected_postguids_list
-        selected_posts_list = self._getselect_posts(
-            selected_postguids_list)
+        if sel_all is None:
+            sel_all = False
+        if sel_all:
+            # select all post guids
+            selected_postguids_list = list()
+            for cleaned_post in self.cleaned_post_list:
+                selected_postguids_list.append(
+                    cleaned_post.guid)
+            selected_posts_list = self.cleaned_post_list
+        else:
+            selected_postguids_list = self._getselect_postguids(
+                item, silent=silent)
+            # clustering
+            if len(selected_postguids_list) < 2:
+                return [], selected_postguids_list
+            selected_posts_list = self._getselect_posts(
+                selected_postguids_list)
         # only used for tag clustering,
         # otherwise (photo location clusters),
         # global vars are used (df, points)
@@ -303,8 +313,16 @@ class ClusterGen():
         return points
 
     def cluster_points(self, points,
-                       min_span_tree: bool = False,
-                       preview_mode: bool = False):
+                       min_span_tree: bool = None,
+                       preview_mode: bool = None,
+                       min_cluster_size: int = None,
+                       allow_single_cluster: bool = True):
+        if min_span_tree is None:
+            min_span_tree = False
+        if preview_mode is None:
+            preview_mode = False
+        if allow_single_cluster is None:
+            allow_single_cluster = True
         # cluster data
         # conversion to radians for HDBSCAN
         # (does not support decimal degrees)
@@ -312,12 +330,14 @@ class ClusterGen():
         # for each tag in overallNumOfUsersPerTag_global.most_common(1000)
         # (descending), calculate HDBSCAN Clusters
         # min_cluster_size default - 5% optimum:
-        min_cluster_size = max(
-            2, int(((len(points))/100)*5))
+        if min_cluster_size is None:
+            min_cluster_size = max(
+                2, int(((len(points))/100)*5))
         self.clusterer = hdbscan.HDBSCAN(
             min_cluster_size=min_cluster_size,
             gen_min_span_tree=min_span_tree,
-            allow_single_cluster=True, min_samples=1)
+            allow_single_cluster=allow_single_cluster,
+            min_samples=1)
         # clusterer = hdbscan.HDBSCAN(
         #                   min_cluster_size=minClusterSize,
         #                   gen_min_span_tree=True,
@@ -355,10 +375,11 @@ class ClusterGen():
             cluster_labels = self.clusterer.single_linkage_tree_.get_clusters(
                 Utils.get_radians_from_meters(
                     self.cluster_distance), min_cluster_size=2)
-        # exit function in case final processing loop (no figure generating)
+        # exit function in case of
+        # final processing loop (no figure generating)
         if not preview_mode:
             return cluster_labels
-
+        # verbose reporting if preview mode
         self.mask_noisy = (cluster_labels == -1)
         # len(sel_labels)
         self.number_of_clusters = len(
@@ -380,10 +401,25 @@ class ClusterGen():
     def _cluster_item(self, sel_item: Tuple[str, int]):
         """Cluster specific item"""
 
-        result = self._get_np_points_guids(item=sel_item[0], silent=False)
+        result = self._get_np_points_guids(
+            item=sel_item[0], silent=False)
         points = result[0]
         selected_post_guids = result[1]
-        clusters = self.cluster_points(points=points, preview_mode=False)
+        clusters = self.cluster_points(
+            points=points, preview_mode=False)
+        return clusters, selected_post_guids
+
+    def _cluster_all_items(self):
+        """Cluster all items (e.g. all locations)"""
+        result = self._get_np_points_guids(
+            silent=False, sel_all=True)
+        points = result[0]
+        selected_post_guids = result[1]
+        # min_cluster_size = 2 (LOCATIONS)
+        # do not allow clusters with one item
+        clusters = self.cluster_points(
+            points=points, preview_mode=False,
+            min_cluster_size=2, allow_single_cluster=False)
         return clusters, selected_post_guids
 
     @staticmethod
@@ -398,59 +434,78 @@ class ClusterGen():
             number_of_clusters = len(np.unique(clusters[~mask_noisy]))
         if number_of_clusters == 0:
             print("--> No cluster.")
-            non_clustered_guids = list(np_selected_post_guids)
+            none_clustered_guids = list(np_selected_post_guids)
         else:
             print(f'--> {number_of_clusters} cluster.')
             for x in range(number_of_clusters):
                 current_clustered_guids = np_selected_post_guids[clusters == x]
                 clustered_guids.append(current_clustered_guids)
-            non_clustered_guids = list(np_selected_post_guids[clusters == -1])
+            none_clustered_guids = list(np_selected_post_guids[clusters == -1])
             # Sort descending based on size of cluster
             # https://stackoverflow.com/questions/30346356/how-to-sort-list-of-lists-according-to-length-of-sublists
             clustered_guids.sort(key=len, reverse=True)
-        return clustered_guids, non_clustered_guids
+        return clustered_guids, none_clustered_guids
 
-    def _get_update_clusters(self, item,
-                             single_items_dict,
-                             cluster_items_dict):
+    def _get_update_clusters(self, item: Tuple[str, int] = None,
+                             single_items_dict=None,
+                             cluster_items_dict=None,
+                             itemized: bool = None):
         """Get clusters for items and write results to dicts"""
-        clusters, selected_post_guids = self._cluster_item(item)
+        if itemized is None:
+            # default
+            itemized = True
+        if itemized:
+            cluster_results = self._cluster_item(item)
+        else:
+            cluster_results = self._cluster_all_items()
+        clusters = cluster_results[0]
+        selected_post_guids = cluster_results[1]
+        # get clustered guids/ non-clustered guids
         result = self._get_cluster_guids(clusters, selected_post_guids)
         clustered_guids = result[0]
-        # sys.exit(clustered_guids)
-        non_clustered_guids = result[1]
-        single_items_dict[item[0]] = non_clustered_guids
-        if not len(clustered_guids) == 0:
-            cluster_items_dict[item[0]] = clustered_guids
+        none_clustered_guids = result[1]
+        if itemized:
+            self.single_items_dict[item[0]] = none_clustered_guids
+            if not len(clustered_guids) == 0:
+                self.clustered_items_dict[item[0]] = clustered_guids
+            # dicts modified in place, no need to return
+            return
+        else:
+            self.clustered_guids_all = clustered_guids
+            self.none_clustered_guids = none_clustered_guids
 
-    def cluster_all(self):
-        """Cluster all items attached to self
+    def get_overall_clusters(self):
+        """Get clusters for all items attached to self
 
-        Updates results to:
-            self.single_items
-            self.clustered_items
+        Updates results as two lists:
+            self.clustered_guids_all
+            self.none_clustered_guids
         """
+        self._get_update_clusters(itemized=False)
 
+    def get_itemized_clusters(self):
+        """Get itemized clusters for top_list attached to self
+
+        Updates results as two Dict of Lists:
+            self.single_items_dict
+            self.clustered_items_dict
+        """
         # get clusters for top item
         if self.local_saturation_check:
             self._get_update_clusters(
-                self.topitem,
-                self.single_items,
-                self.clustered_items)
+                item=self.topitem)
         self.tnum = 1
         # get remaining clusters
         for item in self.top_list:
             if (self.local_saturation_check and
                     self.tnum == 1 and
-                    item[0] in self.clustered_items):
+                    item[0] in self.clustered_items_dict):
                 # skip item if already
                 # clustered due to local saturation
                 continue
             self.tnum += 1
             self._get_update_clusters(
-                item,
-                self.single_items,
-                self.clustered_items)
+                item=item)
         # logging.getLogger("tagmaps").info(
         #    f'{len(self.clustered_items)} '
         #    f'{self.cls_type.rstrip("s")} clusters.\n'
@@ -458,26 +513,50 @@ class ClusterGen():
         # flush console output once
         sys.stdout.flush()
 
-    def alpha_shapes(self):
+    def get_cluster_centroids(self):
+        """Get centroids for clustered data"""
+        resultshapes_and_meta = list()
+        for post_cluster in self.clustered_guids_all:
+            posts = [self.cleaned_post_dict[x] for x in post_cluster]
+            unique_user_count = len(set([post.user_guid for post in posts]))
+            # get points and project coordinates to suitable UTM
+            points = [geometry.Point(
+                pyproj.transform(self.crs_wgs, self.crs_proj,
+                                 post.lng, post.lat)
+            ) for post in posts]
+            point_collection = geometry.MultiPoint(list(points))
+            # convex hull enough for calculating centroid
+            result_polygon = point_collection.convex_hull
+            result_centroid = result_polygon.centroid
+            if result_centroid is not None and not result_centroid.is_empty:
+                resultshapes_and_meta.append(
+                    (result_centroid, unique_user_count)
+                )
+        # noclusterphotos = [cleanedPhotoDict[x] for x in singlePhotoGuidList]
+        for no_cluster_post in self.none_clustered_guids:
+            post = self.cleaned_post_dict[no_cluster_post]
+            x, y = pyproj.transform(self.crs_wgs, self.crs_proj,
+                                    post.lng, post.lat)
+            p_center = geometry.Point(x, y)
+            if p_center is not None and not p_center.is_empty:
+                resultshapes_and_meta.append((p_center, 1))
+        return resultshapes_and_meta
+
+    def get_cluster_shapes(self):
         """For each cluster of points,
         calculate boundary shape and
         add statistics (HImpTag etc.)
 
-        Updates results to self.alphashapes_and_meta = list()
+        Returns results as alphashapes_and_meta = list()
         """
         saturation_exclude_count = 0
-        # data always in lat/lng WGS1984
-        crs_wgs = pyproj.Proj(init='epsg:4326')
-        crs_proj, __ = AlphaShapes._get_best_utmzone(
-            self.bound_points_shapely)
-
-        alphashapes_and_meta = self.alphashapes_and_meta
-        self.tnum = 0
+        resultshapes_and_meta = list()
+        tnum = 0
         if self.local_saturation_check:
             # calculate total area of Top1-Tag
             # for 80% saturation check for lower level tags
             saturation_exclude_count = 0
-            clustered_post_guids = self.clustered_items.get(
+            clustered_post_guids = self.clustered_items_dict.get(
                 self.topitem[0], None)
             # print("Topitem: " + str(topitem[0]))
             if clustered_post_guids is None:
@@ -486,50 +565,52 @@ class ClusterGen():
                          f'{self.topitem[0]}')
             __, topitem_area = AlphaShapes.get_cluster_shape(
                 self.topitem, clustered_post_guids, self.cleaned_post_dict,
-                crs_wgs, crs_proj, self.cluster_distance,
+                self.crs_wgs, self.crs_proj, self.cluster_distance,
                 self.local_saturation_check)
         for item in self.top_list:
-            self.tnum += 1
-            clustered_post_guids = self.clustered_items.get(
+            tnum += 1
+            clustered_post_guids = self.clustered_items_dict.get(
                 item[0], None)
-            # Generate tag Cluster Shapes
+            # Generate item cluster shapes
+            # and attach meta information
             if clustered_post_guids:
                 result = AlphaShapes.get_cluster_shape(
                     item, clustered_post_guids, self.cleaned_post_dict,
-                    crs_wgs, crs_proj, self.cluster_distance,
+                    self.crs_wgs, self.crs_proj, self.cluster_distance,
                     self.local_saturation_check)
-                alphashapes_and_meta_tmp = result[0]
+                shapes_tmp = result[0]
                 item_area = result[1]
                 if (self.local_saturation_check
                         and not item_area == 0
-                        and not self.tnum == 1):
+                        and not tnum == 1):
                     local_saturation = item_area/(topitem_area/100)
                     # print("Local Saturation for Tag " + top_item[0] "
                     #       "+ ": " + str(round(localSaturation,0)))
                     if local_saturation > 60:
                         # skip tag entirely due to saturation
-                        # (if total area > 80% of total area
+                        # (if total area > 60% of total area
                         # of item clusters)
                         # print("Skipped: " + top_item[0] + " due
                         # to saturation (" +
                         # str(round(localSaturation,0)) + "%).")
                         saturation_exclude_count += 1
                         continue  # next item
+                # append result
+                if len(shapes_tmp) > 0:
+                    resultshapes_and_meta.extend(
+                        shapes_tmp)
 
-                if len(alphashapes_and_meta_tmp) > 0:
-                    alphashapes_and_meta.extend(
-                        alphashapes_and_meta_tmp)
-
-            non_clustered_guids = self.single_items.get(item[0], None)
-            if non_clustered_guids:
+            none_clustered_guids = self.single_items_dict.get(
+                item[0], None)
+            if none_clustered_guids:
                 shapetype = "Single cluster"
                 # print("Single: " + str(len(singlePhotoGuidList)))
                 posts = [self.cleaned_post_dict[x]
-                         for x in non_clustered_guids]
+                         for x in none_clustered_guids]
                 for single_post in posts:
                     # project lat/lng to UTM
                     x, y = pyproj.transform(
-                        crs_wgs, crs_proj,
+                        self.crs_wgs, self.crs_proj,
                         single_post.lng, single_post.lat)
                     pcoordinate = geometry.Point(x, y)
                     # single dots are presented
@@ -544,134 +625,17 @@ class ClusterGen():
                             result_polygon.is_empty):
                         continue
                     # append statistics for item with no cluster
-                    alphashapes_and_meta.append((
+                    resultshapes_and_meta.append((
                         result_polygon, 1,
                         max(single_post.post_views_count,
                             single_post.post_like_count),
                         1, str(item[0]),
                         item[1], 1, 1, 1, shapetype))
         logging.getLogger("tagmaps").info(
-            f'{len(alphashapes_and_meta)} '
+            f'{len(resultshapes_and_meta)} '
             f'alpha shapes. Done.')
         if saturation_exclude_count > 0:
             logging.getLogger("tagmaps").info(
                 f'Excluded {saturation_exclude_count} '
                 f'{self.cls_type.rstrip("s")} on local saturation check.')
-
-    def write_results(self):
-        """Write all results to output
-        """
-        __, epsg_code = AlphaShapes._get_best_utmzone(
-            self.bound_points_shapely)
-        # Define polygon feature geometry
-        schema = {
-            'geometry': 'Polygon',
-            'properties': {'Join_Count': 'int',
-                           'Views': 'int',
-                           'COUNT_User': 'int',
-                           'ImpTag': 'str',
-                           'TagCountG': 'int',
-                           'HImpTag': 'int',
-                           'Weights': 'float',
-                           'WeightsV2': 'float',
-                           'WeightsV3': 'float',
-                           # 'shapetype': 'str',
-                           'emoji': 'int'},
-        }
-
-        # Normalization of Values (1-1000 Range),
-        # precalc Step:
-        # get the n'th column out for calculating the max/min
-        weightsv1_range = [x[6] for x in self.alphashapes_and_meta]
-        weightsv2_range = [x[7] for x in self.alphashapes_and_meta]
-        weightsv3_range = [x[8] for x in self.alphashapes_and_meta]
-        weightsv1_min = min(weightsv1_range)
-        weightsv1_max = max(weightsv1_range)
-        weightsv2_min = min(weightsv2_range)
-        weightsv2_max = max(weightsv2_range)
-        weightsv3_min = min(weightsv3_range)
-        weightsv3_max = max(weightsv3_range)
-        # precalc, see
-        # https://stats.stackexchange.com/questions/70801/how-to-normalize-data-to-0-1-range
-        weightsv1_mod_a = (1000-1)/(
-            weightsv1_max-weightsv1_min)
-        weightsv1_mod_b = 1000 - weightsv1_mod_a * weightsv1_max
-        weightsv2_mod_a = (1000-1)/(
-            weightsv2_max-weightsv2_min)
-        weightsv2_mod_b = 1000 - weightsv2_mod_a * weightsv2_max
-        weightsv3_mod_a = (1000-1)/(
-            weightsv3_max-weightsv3_min)
-        weightsv3_mod_b = 1000 - weightsv3_mod_a * weightsv3_max
-        # Write a new Shapefile
-        # WGS1984
-        if self.cls_type == EMOJI:
-            shapefile_name = "allEmojiCluster"
-        else:
-            shapefile_name = "allTagCluster"
-        with fiona.open(
-            f'02_Output/{shapefile_name}.shp', mode='w',
-            encoding='UTF-8', driver='ESRI Shapefile',
-                schema=schema, crs=from_epsg(epsg_code)) as c:
-            # Normalize Weights to 0-1000 Range
-            idx = 0
-            for alphashape_and_meta in self.alphashapes_and_meta:
-                if (idx == 0 or
-                        self.alphashapes_and_meta[idx][4] != self.alphashapes_and_meta[idx-1][4]):
-                    h_imp = 1
-                else:
-                    h_imp = 0
-                # emoName = unicode_name(alphaShapeAndMeta[4])
-                # Calculate Normalized Weights Values based on precalc Step
-                if not alphashape_and_meta[6] == 1:
-                    weight1_normalized = weightsv1_mod_a * \
-                        alphashape_and_meta[6] + weightsv1_mod_b
-                else:
-                    weight1_normalized = 1
-                if not alphashape_and_meta[7] == 1:
-                    weight2_normalized = weightsv2_mod_a * \
-                        alphashape_and_meta[7] + weightsv2_mod_b
-                else:
-                    weight2_normalized = 1
-                if not alphashape_and_meta[8] == 1:
-                    weight3_normalized = weightsv3_mod_a * \
-                        alphashape_and_meta[8] + weightsv3_mod_b
-                else:
-                    weight3_normalized = 1
-                idx += 1
-                # project data
-                # geom_proj = transform(project, alphaShapeAndMeta[0])
-                # c.write({
-                #    'geometry': geometry.mapping(geom_proj),
-                if self.cls_type == EMOJI:
-                    emoji = 1
-                    imp_tag_text = ""
-                else:
-                    emoji = 0
-                    imp_tag_text = f'{alphashape_and_meta[4]}'
-                c.write({
-                    'geometry': geometry.mapping(alphashape_and_meta[0]),
-                    'properties': {'Join_Count': alphashape_and_meta[1],
-                                   'Views': alphashape_and_meta[2],
-                                   'COUNT_User': alphashape_and_meta[3],
-                                   'ImpTag': imp_tag_text,
-                                   'TagCountG': alphashape_and_meta[5],
-                                   'HImpTag': h_imp,
-                                   'Weights': weight1_normalized,
-                                   'WeightsV2': weight2_normalized,
-                                   'WeightsV3': weight3_normalized,
-                                   # 'shapetype': alphaShapeAndMeta[9],
-                                   'emoji': emoji},
-                })
-        if self.cls_type == EMOJI:
-            with open("02_Output/emojiTable.csv",
-                      "w", encoding='utf-8') as emoji_table:
-                emoji_table.write("FID,Emoji\n")
-                idx = 0
-                for alphashape_and_meta in self.alphashapes_and_meta:
-                    if alphashape_and_meta[4] in self.top_list:
-                        imp_tag_text = f'{alphashape_and_meta[4]}'
-                    else:
-                        imp_tag_text = ""
-                    emoji_table.write(
-                        f'{idx},{imp_tag_text}\n')
-                    idx += 1
+        return resultshapes_and_meta, self.cls_type
