@@ -170,7 +170,6 @@ def main():
         for clusterer in clusterer_list:
             if clusterer.cls_type == LOCATIONS:
                 clusterer.cluster_all()
-    # if cfg.cluster_photos is True:
     #
     #    #if not 'clusterTreeCuttingDist' in locals():
     #    #global clusterTreeCuttingDist

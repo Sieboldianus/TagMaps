@@ -47,7 +47,8 @@ class ClusterGen():
         self.tmax = tmax
         self.topitem = topitem
         self.bounds = bounds
-        self.cluster_distance = ClusterGen._init_cluster_dist(self.bounds)
+        self.cluster_distance = ClusterGen._init_cluster_dist(
+            self.bounds, self.cls_type)
         self.cleaned_post_dict = cleaned_post_dict
         self.cleaned_post_list = list(cleaned_post_dict.values())
         self.top_list = top_list
@@ -116,7 +117,8 @@ class ClusterGen():
         return clusterer
 
     @staticmethod
-    def _init_cluster_dist(bounds: AnalysisBounds) -> float:
+    def _init_cluster_dist(bounds: AnalysisBounds,
+                           cls_type: ClusterType) -> float:
         """Get initial cluster distance from analysis bounds.
 
         - 7% of research area width/height (max) = optimal
@@ -131,6 +133,10 @@ class ClusterGen():
                                  bounds.lim_lng_max,
                                  bounds.lim_lat_min)
         cluster_distance = (min(dist_x, dist_y)/100)*7
+        if cls_type == LOCATIONS:
+            # since location clustering includes
+            # all data, use reduced default distance
+            cluster_distance = cluster_distance/8
         return cluster_distance
 
     def _update_bounds(self):
