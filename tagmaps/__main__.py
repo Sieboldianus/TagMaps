@@ -108,7 +108,7 @@ def main():
         # actual cluster step
         now = time.time()
         log.info(
-            "\n########## STEP 3 of 6: Tag Location Clustering ##########")
+            "\n########## STEP 3 of 6: Tag & Emoji Location Clustering ##########")
         # initialize list of types to cluster
         cluster_types = list()
         if cfg.cluster_tags:
@@ -142,29 +142,30 @@ def main():
                     # skip location clustering for now
                     continue
                 if clusterer.cls_type == ClusterGen.TAGS:
-                    log.info("Tag clustering: \n")
+                    log.info("Tag clustering: ")
                 else:
-                    log.info("Emoji clustering: \n")
+                    log.info("Emoji clustering: ")
                 clusterer.cluster_all()
+            log.info(
+                "########## STEP 4 of 6: Generating Alpha Shapes ##########")
             for clusterer in clusterer_list:
                 if clusterer.cls_type == ClusterGen.LOCATIONS:
                     # skip location clustering for now
                     continue
-                log.info(
-                    "########## STEP 4 of 6: Generating Alpha Shapes ##########")
+
                 clusterer.alpha_shapes()
+            log.info(
+                "########## STEP 5 of 6: Writing Results to Shapefile ##########")
             for clusterer in clusterer_list:
                 if clusterer.cls_type == ClusterGen.LOCATIONS:
                     # skip location clustering for now
                     continue
-                log.info(
-                    "########## STEP 5 of 6: Writing Results to Shapefile ##########")
                 clusterer.write_results()
         else:
             print(f'\nUser abort.')
     if cfg.cluster_locations and user_intf.abort is False:
         log.info(
-            "\n########## STEP 6 of 6: Calculating Overall Post Location Clusters ##########")
+            "\n########## STEP 6 of 6: Calculating Overall Location Clusters ##########")
         for clusterer in clusterer_list:
             if clusterer.ClusterType == ClusterGen.LOCATIONS:
                 clusterer.cluster_all()

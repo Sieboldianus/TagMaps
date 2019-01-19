@@ -13,6 +13,7 @@ import seaborn as sns
 import hdbscan
 import pyproj
 import fiona
+from unicodedata import name as unicode_name
 from fiona.crs import from_epsg
 from collections import defaultdict
 from typing import List, Set, Dict, Tuple, Optional, TextIO
@@ -230,23 +231,26 @@ class ClusterGen():
         selected_postguids_list = query_result[0]
         distinct_localloc_count = query_result[1]
 
+        if silent:
+            return selected_postguids_list
+        # console reporting
+        if self.cls_type == self.EMOJI:
+            item_text = unicode_name(item)
+        else:
+            item_text = item
+        type_text = self.cls_type.rstrip('s')
         perc_oftotal_locations = (
             distinct_localloc_count /
             (self.total_distinct_locations/100)
         )
-        # if silent:
-        #     if tag in prepared_data.top_emoji_list:
-        #         text = unicode_name(toptag[0])
-        # else:
-        type_text = self.cls_type.rstrip('s')
-        item_text = item
-        if silent:
-            return selected_postguids_list
+        perc_text = ""
+        if perc_oftotal_locations >= 1:
+            perc_text = (f'({perc_oftotal_locations:.0f}% '
+                         f'of total distinct locations in area)')
         print(f'({self.tnum} of {self.tmax}) '
               f'Found {len(selected_postguids_list)} posts (UPL) '
               f'for {type_text} \'{item_text}\' '
-              f'({perc_oftotal_locations:.0f}% '
-              f'of total distinct locations in area)', end=" ")
+              f'{perc_text}', end=" ")
         return selected_postguids_list
 
     def _getselect_posts(self,
@@ -437,6 +441,7 @@ class ClusterGen():
         self.tnum = 1
         # get remaining clusters
         for item in self.top_list:
+            self.tnum += 1
             if (self.local_saturation_check and
                     self.tnum == 1 and
                     item[0] in self.clustered_items):
@@ -447,6 +452,10 @@ class ClusterGen():
                 item,
                 self.single_items,
                 self.clustered_items)
+        # logging.getLogger("tagmaps").info(
+        #    f'{len(self.clustered_items)} '
+        #    f'{self.cls_type.rstrip("s")} clusters.\n'
+        #    f'{len(self.single_items)} without neighbors.')
         # flush console output once
         sys.stdout.flush()
 
@@ -544,11 +553,11 @@ class ClusterGen():
                         item[1], 1, 1, 1, shapetype))
         logging.getLogger("tagmaps").info(
             f'{len(alphashapes_and_meta)} '
-            f'Alpha Shapes. Done.')
+            f'alpha shapes. Done.')
         if saturation_exclude_count > 0:
             logging.getLogger("tagmaps").info(
                 f'Excluded {saturation_exclude_count} '
-                f'Tags on local saturation check.')
+                f'{self.cls_type.rstrip("s")} on local saturation check.')
 
     def write_results(self):
         """Write all results to output
