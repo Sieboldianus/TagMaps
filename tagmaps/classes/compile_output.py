@@ -9,6 +9,7 @@ from fiona.crs import from_epsg
 import shapely.geometry as geometry
 from typing import List, Set, Dict, Tuple, Optional, TextIO
 from collections import namedtuple
+from operator import itemgetter
 from tagmaps.classes.utils import Utils
 from tagmaps.classes.shared_structure import (AnalysisBounds,
                                               TAGS, LOCATIONS, EMOJI)
@@ -34,28 +35,38 @@ class Compile():
         # data always in lat/lng WGS1984
         __, epsg_code = Utils._get_best_utmzone(
             bound_points_shapely)
-        cls._shape_writer_select(shapes_and_meta_list, epsg_code)
+        cls._compile_merge_shapes(shapes_and_meta_list, epsg_code)
 
     @classmethod
-    def _shape_writer_select(cls, shapes_and_meta_list,
-                             epsg_code):
-        """Wrapper to select different shape writer for itemized and
-        not itemized cluster results"""
-        itemized_shapes = list()
-        non_itemized_shapes = list()
-        for shapes_and_meta, cls_type, itemized in shapes_and_meta_list:
+    def _compile_merge_shapes(cls, shapes_and_meta_list,
+                              epsg_code):
+        all_itemized_shapes = list()
+        all_non_itemized_shapes = list()
+        contains_emoji_output = False
+        for shapes, cls_type, itemized in shapes_and_meta_list:
             if itemized:
-                itemized_shapes.append(
-                    (shapes_and_meta, cls_type))
+                if cls_type == EMOJI:
+                    contains_emoji_output = True
+                # normalize types separately (e.g. emoji/tags)
+                global_weights = cls._get_weights(shapes, [6, 7, 8])
+                itemized_shapes = cls._getcompile_itemized_shapes(
+                    shapes, cls_type, global_weights)
+                # print(f'type itemized_shapes: {type(itemized_shapes)}\n')
+                all_itemized_shapes.extend(itemized_shapes)
             else:
-                non_itemized_shapes.append(
-                    (shapes_and_meta, cls_type))
-        if itemized_shapes:
-            cls._shape_writer(itemized_shapes,
-                              epsg_code, True)
-        if non_itemized_shapes:
-            cls._shape_writer(non_itemized_shapes,
-                              epsg_code, False)
+                global_weights = cls._get_weights(shapes, [1])
+                non_itemized_shapes = cls._getcompile_nonitemized_shapes(
+                    shapes, global_weights)
+                all_non_itemized_shapes.extend(non_itemized_shapes)
+        # writing step:
+        if all_itemized_shapes:
+            cls._write_all(
+                all_itemized_shapes, True,
+                contains_emoji_output, epsg_code)
+        if all_non_itemized_shapes:
+            cls._write_all(
+                all_non_itemized_shapes, False,
+                contains_emoji_output, epsg_code)
 
     @staticmethod
     def _get_shape_schema(itemized):
@@ -84,62 +95,6 @@ class Compile():
             }
         return schema
 
-    @classmethod
-    def _shape_writer(cls, shapes_and_meta_list,
-                      epsg_code, itemized):
-        # Initialize a new Shapefile
-        # WGS1984
-        schema = cls._get_shape_schema(itemized)
-        # better parametrization needed here:
-        # select name based on cls_type, not itemized
-        contains_emoji_output = cls._contains_emoji_output(
-            shapes_and_meta_list)
-        if itemized:
-            if (contains_emoji_output and
-                    len(shapes_and_meta_list) == 1):
-                # if only emoji output
-                shapefile_name = "allEmojiCluster"
-            else:
-                # if writing only tags
-                # or tags and emoji
-                shapefile_name = "allTagCluster"
-        else:
-            shapefile_name = "allLocationCluster"
-        with fiona.open(
-            f'02_Output/{shapefile_name}.shp', mode='w',
-            encoding='UTF-8', driver='ESRI Shapefile',
-                schema=schema, crs=from_epsg(epsg_code)) as shapefile:
-            cls._attach_emojitable_handler(
-                shapefile,
-                shapes_and_meta_list,
-                epsg_code, schema,
-                contains_emoji_output,
-                itemized)
-
-    @classmethod
-    def _attach_emojitable_handler(cls, shapefile,
-                                   shapes_and_meta_list,
-                                   epsg_code, schema,
-                                   contains_emoji_output,
-                                   itemized):
-        """If Emoji Output present, open csv for writing
-        Note: refactor as optional property!
-        """
-        if contains_emoji_output:
-            with open("02_Output/emojiTable.csv",
-                      "w", encoding='utf-8') as emoji_table:
-                emoji_table.write("FID,Emoji\n")
-                cls._loop_shapemetalist(shapefile,
-                                        shapes_and_meta_list,
-                                        epsg_code, schema,
-                                        emoji_table,
-                                        itemized)
-        else:
-            cls._loop_shapemetalist(shapefile,
-                                    shapes_and_meta_list,
-                                    epsg_code, schema,
-                                    None, itemized)
-
     @staticmethod
     def _contains_emoji_output(shapes_and_meta_list):
         """Check if emoji type is in output list"""
@@ -150,65 +105,138 @@ class Compile():
         return contains_emoji_output
 
     @classmethod
-    def _loop_shapemetalist(cls, shapefile, shapes_and_meta_list,
-                            epsg_code, schema, emoji_table: TextIO,
-                            itemized):
-        fid = 0
-        for shapes, cls_type in shapes_and_meta_list:
-            if itemized:
-                # normalize types separately (e.g. emoji/tags)
-                global_weights = cls._get_weights(shapes, [6, 7, 8])
-                fid += 1
-                cls._write_itemized_shapes(
-                    shapefile, shapes,
-                    cls_type, global_weights, emoji_table, fid)
-            else:
-                # normalize types separately (e.g. emoji/tags)
-                global_weights = cls._get_weights(shapes, [1])
-                cls._write_nonitemized_shapes(
-                    shapefile, shapes,
-                    cls_type, global_weights, emoji_table)
-
-    @classmethod
-    def _write_nonitemized_shapes(
-            cls, shapefile,
-            shapes, cls_type,
+    def _getcompile_nonitemized_shapes(
+            cls, shapes,
             weights: Dict[int, Tuple[float, float]],
-            emoji_table: TextIO
     ):
+        """Compilation of final records to be
+
+        written to shapefile. Includes normalization
+        of values"""
+        shapelist = list()
         for alphashape_and_meta in shapes:
             local_value = alphashape_and_meta[1]
             local_value_normalized = cls._get_normalize_value(
                 local_value, weights.get(1))
-            shapefile.write({
-                'geometry': geometry.mapping(alphashape_and_meta[0]),
-                'properties': {'Join_Count': alphashape_and_meta[1],
-                               'Weights': local_value_normalized},
-            })
+            # each part of the tuple is
+            # one column in output shapefile
+            shapelist.append(
+                (alphashape_and_meta[0],
+                 alphashape_and_meta[1],
+                 local_value_normalized))
+        return shapelist
 
     @classmethod
-    def _write_itemized_shapes(
-            cls, shapefile,
-            shapes, cls_type,
-            weights: Dict[int, Tuple[float, float]],
-            emoji_table: TextIO,
-            fid: int):
+    def _write_all(cls, shapes, itemized,
+                   contains_emoji_output, epsg_code):
+        schema = cls._get_shape_schema(itemized)
+        # update for emoji only run
+        if itemized:
+            shapefile_name = "allTagCluster"
+        else:
+            shapefile_name = "allLocationCluster"
+        # sort shapelist by firstg column,
+        # in descending order
+        shapes.sort(key=itemgetter(1), reverse=True)
+        # sorted_shapes_desc = sorted(
+        #    shapes, key=itemgetter(1), reverse=True)
+        with fiona.open(
+                f'02_Output/{shapefile_name}.shp', mode='w',
+                encoding='UTF-8', driver='ESRI Shapefile',
+                schema=schema, crs=from_epsg(epsg_code)) as shapefile:
+            cls._attach_emojitable_handler(
+                shapefile,
+                shapes,
+                contains_emoji_output,
+                itemized)
+
+    @classmethod
+    def _attach_emojitable_handler(cls, shapefile,
+                                   shapes,
+                                   contains_emoji_output,
+                                   itemized):
+        """If Emoji Output present, open csv for writing
+        Note: refactor as optional property!
+        """
+        if contains_emoji_output:
+            with open("02_Output/emojiTable.csv",
+                      "w", encoding='utf-8') as emoji_table:
+                emoji_table.write("FID,Emoji\n")
+                if itemized:
+                    cls._write_all_shapes(
+                        shapefile, shapes,
+                        emoji_table, itemized)
+
+        else:
+            cls._write_all_shapes(
+                shapefile, shapes, None, itemized)
+
+    @classmethod
+    def _write_all_shapes(cls, shapefile, shapes,
+                          emoji_table: TextIO,
+                          itemized: bool):
+        fid = 0
+        for shape in shapes:
+            fid += 1
+            if itemized:
+                cls._write_itemized_shape(shapefile, shape)
+            else:
+                cls._write_nonitemized_shape(shapefile, shape)
+            if emoji_table:
+                # check if colum 10 is set to 1
+                # == emoji record
+                if shape[10] == 1:
+                    is_emoji_record = True
+                else:
+                    is_emoji_record = False
+                cls._write_emoji_record(fid,
+                                        shape,
+                                        emoji_table,
+                                        is_emoji_record)
+
+    @staticmethod
+    def _write_nonitemized_shape(shapefile, shape):
+        shapefile.write({
+            'geometry': geometry.mapping(shape[0]),
+            'properties': {'Join_Count': shape[1],
+                           'Weights': shape[2]},
+        })
+
+    @staticmethod
+    def _write_itemized_shape(shapefile, shape):
+        shapefile.write({
+            'geometry': geometry.mapping(shape[0]),
+            'properties': {'Join_Count': shape[1],
+                           'Views': shape[2],
+                           'COUNT_User': shape[3],
+                           'ImpTag': shape[4],
+                           'TagCountG': shape[5],
+                           'HImpTag': shape[6],
+                           'Weights': shape[7],
+                           'WeightsV2': shape[8],
+                           'WeightsV3': shape[9],
+                           # 'shapetype': alphaShapeAndMeta[9],
+                           'emoji': shape[10]},
+        })
+
+    @classmethod
+    def _getcompile_itemized_shapes(
+            cls, shapes, cls_type,
+            weights: Dict[int, Tuple[float, float]]):
         """Main wrapper for writing
         all results to output
         """
         # Normalize Weights to 0-1000 Range
         idx = 0
+        shapelist = list()
         for alphashape_and_meta in shapes:
             h_imp = cls._get_himp(idx, shapes)
             idx += 1
-            cls._write_shape(
-                shapefile, alphashape_and_meta,
+            item_shape = cls._getcompile_item_shape(
+                alphashape_and_meta,
                 cls_type, weights, h_imp)
-            if emoji_table:
-                cls._write_emoji_table(fid,
-                                       alphashape_and_meta,
-                                       emoji_table,
-                                       cls_type == EMOJI)
+            shapelist.append((item_shape))
+        return shapelist
 
     @staticmethod
     def _get_himp(idx, shapes):
@@ -228,23 +256,22 @@ class Compile():
         return h_imp
 
     @staticmethod
-    def _write_emoji_table(idx, alphashape_and_meta, emoji_table,
-                           is_emoji):
+    def _write_emoji_record(fid, shape, emoji_table,
+                            is_emoji):
         """Write Emoji table separetely to join to shapefile"""
-        imp_tag_text = f'{alphashape_and_meta[4]}'
         if is_emoji:
-            imp_tag_text = f'{alphashape_and_meta[4]}'
+            imp_tag_text = f'{shape[4]}'
         else:
             # also write tags as empty
             # records to table, necessary
             # for accurate join/ fid count
             imp_tag_text = ""
         emoji_table.write(
-            f'{idx},{imp_tag_text}\n')
+            f'{fid},{imp_tag_text}\n')
 
     @classmethod
-    def _write_shape(
-            cls, shapefile,
+    def _getcompile_item_shape(
+            cls,
             alphashape_and_meta, cls_type,
             weights: Dict[int, Tuple[float, float]],
             h_imp):
@@ -273,20 +300,20 @@ class Compile():
         else:
             emoji = 0
             imp_tag_text = f'{alphashape_and_meta[4]}'
-        shapefile.write({
-            'geometry': geometry.mapping(alphashape_and_meta[0]),
-            'properties': {'Join_Count': alphashape_and_meta[1],
-                           'Views': alphashape_and_meta[2],
-                           'COUNT_User': alphashape_and_meta[3],
-                           'ImpTag': imp_tag_text,
-                           'TagCountG': alphashape_and_meta[5],
-                           'HImpTag': h_imp,
-                           'Weights': weight1_normalized,
-                           'WeightsV2': weight2_normalized,
-                           'WeightsV3': weight3_normalized,
-                           # 'shapetype': alphaShapeAndMeta[9],
-                           'emoji': emoji},
-        })
+        item_shape = (
+            alphashape_and_meta[0],
+            alphashape_and_meta[1],
+            alphashape_and_meta[2],
+            alphashape_and_meta[3],
+            imp_tag_text,
+            alphashape_and_meta[5],
+            h_imp,
+            weight1_normalized,
+            weight2_normalized,
+            weight3_normalized,
+            emoji
+        )
+        return item_shape
 
     @classmethod
     def _get_weights(cls, shapes, columns: List[int]):

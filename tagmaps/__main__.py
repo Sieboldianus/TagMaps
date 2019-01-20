@@ -75,8 +75,8 @@ def main():
     cleaned_post_dict = lbsn_data.get_cleaned_post_dict()
     # status report
     log.info(
-        f'\nTotal user count (UC): {len(lbsn_data.locations_per_userid_dict)} (UC)')
-    log.info(f'Total post count (PC): {lbsn_data.stats.count_glob:02d} (PC)')
+        f'\nTotal user count (UC): {len(lbsn_data.locations_per_userid_dict)}')
+    log.info(f'Total post count (PC): {lbsn_data.stats.count_glob:02d}')
     log.info(f'Total tag count (PTC): {lbsn_data.stats.count_tags_global}')
     log.info(f'Total emoji count (PEC): {lbsn_data.stats.count_emojis_global}')
     log.info(f'Total user post locations (UPL): '
