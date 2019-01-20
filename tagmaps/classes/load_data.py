@@ -129,7 +129,7 @@ class LoadData():
             # modulo: print only once every 10 iterations
             print(msg, end='\r')
         # log last message to file, clean stdout
-        print(" " * len(msg), end='\n')
+        print(" " * len(msg), end='\r')
         sys.stdout.flush()
         self.log.info(msg)
 

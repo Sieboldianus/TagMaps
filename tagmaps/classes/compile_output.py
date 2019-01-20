@@ -44,11 +44,175 @@ class Compile():
                            # 'shapetype': 'str',
                            'emoji': 'int'},
         }
+        cls._shape_writer(schema,
+                          shapes_and_meta_list, epsg_code)
+
+    @classmethod
+    def _shape_writer(cls, schema,
+                      shapes_and_meta_list, epsg_code):
+        # Initialize a new Shapefile
+        # WGS1984
+
+        contains_emoji_output = cls._contains_emoji_output(
+            shapes_and_meta_list)
+        if (contains_emoji_output and len(shapes_and_meta_list) == 1):
+            # if only emoji output
+            shapefile_name = "allEmojiCluster"
+        else:
+            # if writing only tags
+            # or tags and emoji
+            shapefile_name = "allTagCluster"
+        with fiona.open(
+            f'02_Output/{shapefile_name}.shp', mode='w',
+            encoding='UTF-8', driver='ESRI Shapefile',
+                schema=schema, crs=from_epsg(epsg_code)) as shapefile:
+            cls._attach_emojitable_handler(
+                shapefile,
+                shapes_and_meta_list,
+                epsg_code, schema,
+                contains_emoji_output)
+
+    @classmethod
+    def _attach_emojitable_handler(cls, shapefile,
+                                   shapes_and_meta_list,
+                                   epsg_code, schema,
+                                   contains_emoji_output):
+        """If Emoji Output present, open csv for writing
+        Note: refactor as optional property!
+        """
+        if contains_emoji_output:
+            with open("02_Output/emojiTable.csv",
+                      "w", encoding='utf-8') as emoji_table:
+                emoji_table.write("FID,Emoji\n")
+                cls._loop_shapemetalist(shapefile,
+                                        shapes_and_meta_list,
+                                        epsg_code, schema,
+                                        emoji_table)
+        else:
+            cls._loop_shapemetalist(shapefile,
+                                    shapes_and_meta_list,
+                                    epsg_code, schema,
+                                    None)
+
+    @staticmethod
+    def _contains_emoji_output(shapes_and_meta_list):
+        """Check if emoji type is in output list"""
+        contains_emoji_output = False
+        for __, output_type in shapes_and_meta_list:
+            if output_type == EMOJI:
+                contains_emoji_output = True
+        return contains_emoji_output
+
+    @classmethod
+    def _loop_shapemetalist(cls, shapefile, shapes_and_meta_list,
+                            epsg_code, schema, emoji_table: TextIO):
         for shapes, cls_type in shapes_and_meta_list:
+            # normalize types separately (e.g. emoji/tags)
             global_weights = cls._get_weights(shapes)
             cls._write_shapes(
-                shapes, cls_type,
-                epsg_code, schema, global_weights)
+                shapefile, shapes,
+                cls_type, global_weights, emoji_table)
+
+    @classmethod
+    def _write_shapes(
+            cls, shapefile,
+            shapes, cls_type,
+            weights: Dict[int, Tuple[float, float]],
+            emoji_table: TextIO):
+        """Main wrapper for writing
+        all results to output
+        """
+        # Normalize Weights to 0-1000 Range
+        idx = 0
+        for alphashape_and_meta in shapes:
+            h_imp = cls._get_himp(idx, shapes)
+            idx += 1
+            cls._write_shape(
+                shapefile, alphashape_and_meta,
+                cls_type, weights, h_imp)
+            if emoji_table:
+                cls._write_emoji_table(idx,
+                                       alphashape_and_meta,
+                                       emoji_table,
+                                       cls_type == EMOJI)
+
+    @staticmethod
+    def _get_himp(idx, shapes):
+        """check if current cluster is most
+        used for item
+        Compares item str to previous item,
+        if different, then himp=1
+        Note: Items are ordered,
+        therefore a change means
+        new item begins
+        """
+        if (idx == 0 or
+                shapes[idx][4] != shapes[idx-1][4]):
+            h_imp = 1
+        else:
+            h_imp = 0
+        return h_imp
+
+    @staticmethod
+    def _write_emoji_table(idx, alphashape_and_meta, emoji_table,
+                           is_emoji):
+        """Write Emoji table separetely to join to shapefile"""
+        imp_tag_text = f'{alphashape_and_meta[4]}'
+        if is_emoji:
+            imp_tag_text = f'{alphashape_and_meta[4]}'
+        else:
+            # also write tags as empty
+            # records to table, necessary
+            # for accurate join/ fid count
+            imp_tag_text = ""
+        emoji_table.write(
+            f'{idx},{imp_tag_text}\n')
+
+    @classmethod
+    def _write_shape(
+            cls, shapefile,
+            alphashape_and_meta, cls_type,
+            weights: Dict[int, Tuple[float, float]],
+            h_imp):
+
+        # emoName = unicode_name(alphaShapeAndMeta[4])
+        # Calculate Normalized Weights Values based on precalc Step
+        value_weight1 = alphashape_and_meta[6]
+        weight1_normalized = cls._get_normalize_value(
+            value_weight1, weights.get(1))
+        value_weight2 = alphashape_and_meta[7]
+        weight2_normalized = cls._get_normalize_value(
+            value_weight2, weights.get(2))
+        value_weight3 = alphashape_and_meta[8]
+        weight3_normalized = cls._get_normalize_value(
+            value_weight3, weights.get(3))
+        # project data
+        # geom_proj = transform(project, alphaShapeAndMeta[0])
+        # c.write({
+        #    'geometry': geometry.mapping(geom_proj),
+        if cls_type == EMOJI:
+            emoji = 1
+            # due to bug in ArcGIS
+            # leave blank
+            # emoji must be imported separately
+            imp_tag_text = ""
+        else:
+            emoji = 0
+            imp_tag_text = f'{alphashape_and_meta[4]}'
+        shapefile.write({
+            'geometry': geometry.mapping(alphashape_and_meta[0]),
+            'properties': {'Join_Count': alphashape_and_meta[1],
+                           'Views': alphashape_and_meta[2],
+                           'COUNT_User': alphashape_and_meta[3],
+                           'ImpTag': imp_tag_text,
+                           'TagCountG': alphashape_and_meta[5],
+                           'HImpTag': h_imp,
+                           'Weights': weight1_normalized,
+                           'WeightsV2': weight2_normalized,
+                           'WeightsV3': weight3_normalized,
+                           # 'shapetype': alphaShapeAndMeta[9],
+                           'emoji': emoji},
+        })
 
     @classmethod
     def write_centroids(cls,
@@ -138,83 +302,3 @@ class Compile():
             value_normalized = cls._normalize_value(
                 weights_tuple, local_value)
         return value_normalized
-
-    @classmethod
-    def _write_shapes(
-            cls,
-            shapes, cls_type,
-            epsg_code, schema,
-            weights: Dict[int, Tuple[float, float]]):
-        """Main wrapper for writing
-        all results to output
-        """
-        # Write a new Shapefile
-        # WGS1984
-        if cls_type == EMOJI:
-            shapefile_name = "allEmojiCluster"
-        else:
-            shapefile_name = "allTagCluster"
-        with fiona.open(
-            f'02_Output/{shapefile_name}.shp', mode='w',
-            encoding='UTF-8', driver='ESRI Shapefile',
-                schema=schema, crs=from_epsg(epsg_code)) as c:
-            # Normalize Weights to 0-1000 Range
-            idx = 0
-            for alphashape_and_meta in shapes:
-                if (idx == 0 or
-                        shapes[idx][4] != shapes[idx-1][4]):
-                    h_imp = 1
-                else:
-                    h_imp = 0
-                # emoName = unicode_name(alphaShapeAndMeta[4])
-                # Calculate Normalized Weights Values based on precalc Step
-                value_weight1 = alphashape_and_meta[6]
-                weight1_normalized = cls._get_normalize_value(
-                    value_weight1, weights.get(1))
-                value_weight2 = alphashape_and_meta[7]
-                weight2_normalized = cls._get_normalize_value(
-                    value_weight2, weights.get(2))
-                value_weight3 = alphashape_and_meta[8]
-                weight3_normalized = cls._get_normalize_value(
-                    value_weight3, weights.get(3))
-                idx += 1
-                # project data
-                # geom_proj = transform(project, alphaShapeAndMeta[0])
-                # c.write({
-                #    'geometry': geometry.mapping(geom_proj),
-                if cls_type == EMOJI:
-                    emoji = 1
-                    # due to bug in ArcGIS
-                    # leave blank
-                    # emoji must be imported separately
-                    imp_tag_text = ""
-                else:
-                    emoji = 0
-                    imp_tag_text = f'{alphashape_and_meta[4]}'
-                c.write({
-                    'geometry': geometry.mapping(alphashape_and_meta[0]),
-                    'properties': {'Join_Count': alphashape_and_meta[1],
-                                   'Views': alphashape_and_meta[2],
-                                   'COUNT_User': alphashape_and_meta[3],
-                                   'ImpTag': imp_tag_text,
-                                   'TagCountG': alphashape_and_meta[5],
-                                   'HImpTag': h_imp,
-                                   'Weights': weight1_normalized,
-                                   'WeightsV2': weight2_normalized,
-                                   'WeightsV3': weight3_normalized,
-                                   # 'shapetype': alphaShapeAndMeta[9],
-                                   'emoji': emoji},
-                })
-        if cls_type == EMOJI:
-            with open("02_Output/emojiTable.csv",
-                      "w", encoding='utf-8') as emoji_table:
-                emoji_table.write("FID,Emoji\n")
-                idx = 0
-                for alphashape_and_meta in shapes:
-                    # if alphashape_and_meta[4] in self.top_list:
-                    #    imp_tag_text = f'{alphashape_and_meta[4]}'
-                    # else:
-                    imp_tag_text = ""
-                    emoji_table.write(
-                        f'{idx},{imp_tag_text}\n')
-                    idx += 1
