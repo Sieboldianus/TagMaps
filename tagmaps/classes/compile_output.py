@@ -29,6 +29,8 @@ class Compile():
         or:
           List[[Tuple[List[],cls_type, itemized: bool = False]]]
           (overall clusters)
+        - List[] contains clustered shapes from ClusterGen and
+            attached statistic information
         """
         bound_points_shapely = Utils._get_shapely_bounds(
             bounds)
@@ -177,22 +179,25 @@ class Compile():
                           itemized: bool):
         fid = 0
         for shape in shapes:
-            fid += 1
             if itemized:
-                cls._write_itemized_shape(shapefile, shape)
-            else:
-                cls._write_nonitemized_shape(shapefile, shape)
-            if emoji_table:
                 # check if colum 10 is set to 1
                 # == emoji record
                 if shape[10] == 1:
                     is_emoji_record = True
                 else:
                     is_emoji_record = False
-                cls._write_emoji_record(fid,
-                                        shape,
-                                        emoji_table,
-                                        is_emoji_record)
+                cls._write_itemized_shape(
+                    shapefile, shape, is_emoji_record)
+                if emoji_table:
+                    cls._write_emoji_record(
+                        fid,
+                        shape,
+                        emoji_table,
+                        is_emoji_record)
+                    fid += 1
+            else:
+                cls._write_nonitemized_shape(
+                    shapefile, shape)
 
     @staticmethod
     def _write_nonitemized_shape(shapefile, shape):
@@ -203,13 +208,21 @@ class Compile():
         })
 
     @staticmethod
-    def _write_itemized_shape(shapefile, shape):
+    def _write_itemized_shape(shapefile, shape, is_emoji_record):
+        """Append final record to shape"""
+        # do not write emoji to shapefile directly
+        # bug in Arcgis, needs to be imported
+        # using join
+        if is_emoji_record:
+            imptag = ""
+        else:
+            imptag = shape[4]
         shapefile.write({
             'geometry': geometry.mapping(shape[0]),
             'properties': {'Join_Count': shape[1],
                            'Views': shape[2],
                            'COUNT_User': shape[3],
-                           'ImpTag': shape[4],
+                           'ImpTag': imptag,
                            'TagCountG': shape[5],
                            'HImpTag': shape[6],
                            'Weights': shape[7],
@@ -296,16 +309,16 @@ class Compile():
             # due to bug in ArcGIS
             # leave blank
             # emoji must be imported separately
-            imp_tag_text = ""
+            # imp_tag_text = ""
         else:
             emoji = 0
-            imp_tag_text = f'{alphashape_and_meta[4]}'
+        #    imp_tag_text = f'{alphashape_and_meta[4]}'
         item_shape = (
             alphashape_and_meta[0],
             alphashape_and_meta[1],
             alphashape_and_meta[2],
             alphashape_and_meta[3],
-            imp_tag_text,
+            alphashape_and_meta[4],
             alphashape_and_meta[5],
             h_imp,
             weight1_normalized,
