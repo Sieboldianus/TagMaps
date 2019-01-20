@@ -697,14 +697,10 @@ class UserInterface():
         # remove all cleaned posts from processing list if
         # location is removed
         if self._clst.cls_type == LOCATIONS:
-            cleaned_post_list_updated = UserInterface._delete_post_locations(
-                self._clst.cleaned_post_dict, id_list_selected)
-            self._clst.cleaned_post_list = cleaned_post_list_updated
+            self._delete_post_locations(id_list_selected)
 
-    @staticmethod
-    def _delete_post_locations(
-            cleaned_post_dict: Dict[str, CleanedPost],
-            post_locids: List[str]) -> List[CleanedPost]:
+    def _delete_post_locations(self,
+                               post_locids: List[str]) -> List[CleanedPost]:
         """Remove all posts with post_locid from list
 
         Returns a list of values for fast lookup
@@ -721,15 +717,20 @@ class UserInterface():
         # perhaps there's a better way
         # tkinter.messagebox.showinfo("post_locids: ", f'{post_locids}')
         postguids_to_remove = [post_record.guid for post_record
-                               in cleaned_post_dict.values()
+                               in self._clst.cleaned_post_dict.values()
                                if post_record.loc_id in post_locids]
         if UserInterface._query_user(
             f'This will also remove '
             f'{len(postguids_to_remove)} posts from further processing.\n'
                 f'Continue?', f'Continue?') is True:
             for post_guid in postguids_to_remove:
-                del cleaned_post_dict[post_guid]
-        return list(cleaned_post_dict.values())
+                del(self._clst.cleaned_post_dict[post_guid])
+            for clusterer in self._clst_list:
+                # update all lists needed? check mutability
+                # see
+                # https://benkurtovic.com/2015/01/28/python-object-replacement.html
+                clusterer.cleaned_post_list = list(
+                    self._clst.cleaned_post_dict.values())
 
     @staticmethod
     def _query_user(question_text: str,

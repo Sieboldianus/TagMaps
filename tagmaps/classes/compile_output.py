@@ -347,7 +347,15 @@ class Compile():
             weights_mod_b = 1000 - weights_mod_a * values_max
             weights_dict[idx] = (weights_mod_a, weights_mod_b)
             idx += 1
+        cls._write_legend_info(weights_dict)
         return weights_dict
+
+    @staticmethod
+    def _write_legend_info(weights_dict):
+        """Helper Function for updating ArcGIS legend
+        - not implemented
+        """
+        return
 
     @staticmethod
     def _get_column_min_max(

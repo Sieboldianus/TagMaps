@@ -405,6 +405,8 @@ class ClusterGen():
             item=sel_item[0], silent=False)
         points = result[0]
         selected_post_guids = result[1]
+        if len(selected_post_guids) < 2:
+            return
         clusters = self.cluster_points(
             points=points, preview_mode=False)
         return clusters, selected_post_guids
@@ -417,6 +419,8 @@ class ClusterGen():
         selected_post_guids = result[1]
         # min_cluster_size = 2 (LOCATIONS)
         # do not allow clusters with one item
+        if len(selected_post_guids) < 2:
+            return
         clusters = self.cluster_points(
             points=points, preview_mode=False,
             min_cluster_size=2, allow_single_cluster=False)
@@ -458,6 +462,9 @@ class ClusterGen():
             cluster_results = self._cluster_item(item)
         else:
             cluster_results = self._cluster_all_items()
+        if not cluster_results:
+            print("--> No cluster (all locations removed).")
+            return
         clusters = cluster_results[0]
         selected_post_guids = cluster_results[1]
         # get clustered guids/ non-clustered guids
@@ -481,6 +488,9 @@ class ClusterGen():
             self.clustered_guids_all
             self.none_clustered_guids
         """
+        # update in case of locations removed
+        self.cleaned_post_list = list(
+            self.cleaned_post_dict.values())
         self._get_update_clusters(itemized=False)
 
     def get_itemized_clusters(self):
@@ -490,6 +500,9 @@ class ClusterGen():
             self.single_items_dict
             self.clustered_items_dict
         """
+        # update in case of locations removed
+        self.cleaned_post_list = list(
+            self.cleaned_post_dict.values())
         # get clusters for top item
         if self.local_saturation_check:
             self._get_update_clusters(
