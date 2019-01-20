@@ -244,8 +244,8 @@ class ClusterGen():
         )
         perc_text = ""
         if perc_oftotal_locations >= 1:
-            perc_text = (f'({perc_oftotal_locations:.0f}% '
-                         f'of total distinct locations in area)')
+            perc_text = (f'(found in {perc_oftotal_locations:.0f}% '
+                         f'of DLC in area)')
         print(f'({self.tnum} of {self.tmax}) '
               f'Found {len(selected_postguids_list)} posts (UPL) '
               f'for {type_text} \'{item_text}\' '

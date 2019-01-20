@@ -75,8 +75,8 @@ def main():
     cleaned_post_dict = lbsn_data.get_cleaned_post_dict()
     # status report
     log.info(
-        f'\nTotal user count: {len(lbsn_data.locations_per_userid_dict)} (UC)')
-    log.info(f'Total post count: {lbsn_data.stats.count_glob:02d} (PC)')
+        f'\nTotal user count (UC): {len(lbsn_data.locations_per_userid_dict)} (UC)')
+    log.info(f'Total post count (PC): {lbsn_data.stats.count_glob:02d} (PC)')
     log.info(f'Total tag count (PTC): {lbsn_data.stats.count_tags_global}')
     log.info(f'Total emoji count (PEC): {lbsn_data.stats.count_emojis_global}')
     log.info(f'Total user post locations (UPL): '
@@ -95,16 +95,20 @@ def main():
                 f"Number of locations with names: "
                 f"{location_name_count}")
 
-        log.info(f"Total unique tags: {prepared_data.total_unique_tags}")
-        log.info(f"Total unique emoji: {prepared_data.total_unique_emoji}")
         log.info(
-            f"Total unique locations: {prepared_data.total_unique_locations}")
+            f"Total distinct tags (DTC): {prepared_data.total_unique_tags}")
+        log.info(
+            f"Total distinct emoji (DEC): {prepared_data.total_unique_emoji}")
+        log.info(
+            f"Total distinct locations (DLC): {prepared_data.total_unique_locations}")
         log.info(
             f'Total tags count for the {prepared_data.tmax} '
-            f'most used tags: {prepared_data.total_tag_count}.')
+            f'most used tags in selected area: '
+            f'{prepared_data.total_tag_count}.')
         log.info(
             f'Total emoji count for the {prepared_data.emax} '
-            f'most used emoji: {prepared_data.total_emoji_count}.')
+            f'most used emoji in selected area: '
+            f'{prepared_data.total_emoji_count}.')
 
     if cfg.statistics_only is False:
         # restart time monitoring for monitoring of
