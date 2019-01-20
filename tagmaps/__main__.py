@@ -173,12 +173,15 @@ def main():
     if cfg.cluster_locations and user_intf.abort is False:
         log.info(
             "\n########## STEP 6 of 6: Calculating Overall Location Clusters ##########")
+        shapes_and_meta_list.clear()
         for clusterer in clusterer_list:
             if clusterer.cls_type == LOCATIONS:
-                cluster_centroids = clusterer.get_cluster_centroids()
-        Compile.write_centroids(
+                clusterer.get_overall_clusters()
+                cluster_shapes = clusterer.get_cluster_centroids()
+                shapes_and_meta_list.append(cluster_shapes)
+        Compile.write_shapes(
             bounds=lbsn_data.bounds,
-            cluster_centroids=cluster_centroids)
+            shapes_and_meta_list=shapes_and_meta_list)
 
     #
     #    #if not 'clusterTreeCuttingDist' in locals():

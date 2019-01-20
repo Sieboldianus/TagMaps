@@ -515,6 +515,7 @@ class ClusterGen():
 
     def get_cluster_centroids(self):
         """Get centroids for clustered data"""
+        itemized = False
         resultshapes_and_meta = list()
         for post_cluster in self.clustered_guids_all:
             posts = [self.cleaned_post_dict[x] for x in post_cluster]
@@ -540,7 +541,9 @@ class ClusterGen():
             p_center = geometry.Point(x, y)
             if p_center is not None and not p_center.is_empty:
                 resultshapes_and_meta.append((p_center, 1))
-        return resultshapes_and_meta
+        sys.stdout.flush()
+        # log.debug(f'{resultshapes_and_meta[:10]}')
+        return resultshapes_and_meta, self.cls_type, itemized
 
     def get_cluster_shapes(self):
         """For each cluster of points,
@@ -549,6 +552,7 @@ class ClusterGen():
 
         Returns results as alphashapes_and_meta = list()
         """
+        itemized = True
         saturation_exclude_count = 0
         resultshapes_and_meta = list()
         tnum = 0
@@ -638,4 +642,4 @@ class ClusterGen():
             logging.getLogger("tagmaps").info(
                 f'Excluded {saturation_exclude_count} '
                 f'{self.cls_type.rstrip("s")} on local saturation check.')
-        return resultshapes_and_meta, self.cls_type
+        return resultshapes_and_meta, self.cls_type, itemized

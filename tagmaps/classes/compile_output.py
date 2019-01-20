@@ -22,46 +22,89 @@ class Compile():
                      shapes_and_meta_list):
         """Main wrapper for writing
         all results to output
+
+        shapes_and_meta_list is either:
+        - List[[Tuple[List[],cls_type, itemized: bool = True]]]
+        or:
+          List[[Tuple[List[],cls_type, itemized: bool = False]]]
+          (overall clusters)
         """
         bound_points_shapely = Utils._get_shapely_bounds(
             bounds)
         # data always in lat/lng WGS1984
         __, epsg_code = Utils._get_best_utmzone(
             bound_points_shapely)
-
-        # Define polygon feature geometry
-        schema = {
-            'geometry': 'Polygon',
-            'properties': {'Join_Count': 'int',
-                           'Views': 'int',
-                           'COUNT_User': 'int',
-                           'ImpTag': 'str',
-                           'TagCountG': 'int',
-                           'HImpTag': 'int',
-                           'Weights': 'float',
-                           'WeightsV2': 'float',
-                           'WeightsV3': 'float',
-                           # 'shapetype': 'str',
-                           'emoji': 'int'},
-        }
-        cls._shape_writer(schema,
-                          shapes_and_meta_list, epsg_code)
+        cls._shape_writer_select(shapes_and_meta_list, epsg_code)
 
     @classmethod
-    def _shape_writer(cls, schema,
-                      shapes_and_meta_list, epsg_code):
+    def _shape_writer_select(cls, shapes_and_meta_list,
+                             epsg_code):
+        """Wrapper to select different shape writer for itemized and
+        not itemized cluster results"""
+        itemized_shapes = list()
+        non_itemized_shapes = list()
+        for shapes_and_meta, cls_type, itemized in shapes_and_meta_list:
+            if itemized:
+                itemized_shapes.append(
+                    (shapes_and_meta, cls_type))
+            else:
+                non_itemized_shapes.append(
+                    (shapes_and_meta, cls_type))
+        if itemized_shapes:
+            cls._shape_writer(itemized_shapes,
+                              epsg_code, True)
+        if non_itemized_shapes:
+            cls._shape_writer(non_itemized_shapes,
+                              epsg_code, False)
+
+    @staticmethod
+    def _get_shape_schema(itemized):
+        """Define polygon feature geometry"""
+        if itemized:
+            schema = {
+                'geometry': 'Polygon',
+                'properties': {'Join_Count': 'int',
+                               'Views': 'int',
+                               'COUNT_User': 'int',
+                               'ImpTag': 'str',
+                               'TagCountG': 'int',
+                               'HImpTag': 'int',
+                               'Weights': 'float',
+                               'WeightsV2': 'float',
+                               'WeightsV3': 'float',
+                               # 'shapetype': 'str',
+                               'emoji': 'int'},
+            }
+        else:
+            # Define a polygon feature geometry with one attribute
+            schema = {
+                'geometry': 'Point',
+                'properties': {'Join_Count': 'int',
+                               'Weights': 'float'},
+            }
+        return schema
+
+    @classmethod
+    def _shape_writer(cls, shapes_and_meta_list,
+                      epsg_code, itemized):
         # Initialize a new Shapefile
         # WGS1984
-
+        schema = cls._get_shape_schema(itemized)
+        # better parametrization needed here:
+        # select name based on cls_type, not itemized
         contains_emoji_output = cls._contains_emoji_output(
             shapes_and_meta_list)
-        if (contains_emoji_output and len(shapes_and_meta_list) == 1):
-            # if only emoji output
-            shapefile_name = "allEmojiCluster"
+        if itemized:
+            if (contains_emoji_output and
+                    len(shapes_and_meta_list) == 1):
+                # if only emoji output
+                shapefile_name = "allEmojiCluster"
+            else:
+                # if writing only tags
+                # or tags and emoji
+                shapefile_name = "allTagCluster"
         else:
-            # if writing only tags
-            # or tags and emoji
-            shapefile_name = "allTagCluster"
+            shapefile_name = "allLocationCluster"
         with fiona.open(
             f'02_Output/{shapefile_name}.shp', mode='w',
             encoding='UTF-8', driver='ESRI Shapefile',
@@ -70,13 +113,15 @@ class Compile():
                 shapefile,
                 shapes_and_meta_list,
                 epsg_code, schema,
-                contains_emoji_output)
+                contains_emoji_output,
+                itemized)
 
     @classmethod
     def _attach_emojitable_handler(cls, shapefile,
                                    shapes_and_meta_list,
                                    epsg_code, schema,
-                                   contains_emoji_output):
+                                   contains_emoji_output,
+                                   itemized):
         """If Emoji Output present, open csv for writing
         Note: refactor as optional property!
         """
@@ -87,12 +132,13 @@ class Compile():
                 cls._loop_shapemetalist(shapefile,
                                         shapes_and_meta_list,
                                         epsg_code, schema,
-                                        emoji_table)
+                                        emoji_table,
+                                        itemized)
         else:
             cls._loop_shapemetalist(shapefile,
                                     shapes_and_meta_list,
                                     epsg_code, schema,
-                                    None)
+                                    None, itemized)
 
     @staticmethod
     def _contains_emoji_output(shapes_and_meta_list):
@@ -105,16 +151,41 @@ class Compile():
 
     @classmethod
     def _loop_shapemetalist(cls, shapefile, shapes_and_meta_list,
-                            epsg_code, schema, emoji_table: TextIO):
+                            epsg_code, schema, emoji_table: TextIO,
+                            itemized):
         for shapes, cls_type in shapes_and_meta_list:
-            # normalize types separately (e.g. emoji/tags)
-            global_weights = cls._get_weights(shapes)
-            cls._write_shapes(
-                shapefile, shapes,
-                cls_type, global_weights, emoji_table)
+            if itemized:
+                # normalize types separately (e.g. emoji/tags)
+                global_weights = cls._get_weights(shapes, [6, 7, 8])
+                cls._write_itemized_shapes(
+                    shapefile, shapes,
+                    cls_type, global_weights, emoji_table)
+            else:
+                # normalize types separately (e.g. emoji/tags)
+                global_weights = cls._get_weights(shapes, [1])
+                cls._write_nonitemized_shapes(
+                    shapefile, shapes,
+                    cls_type, global_weights, emoji_table)
 
     @classmethod
-    def _write_shapes(
+    def _write_nonitemized_shapes(
+            cls, shapefile,
+            shapes, cls_type,
+            weights: Dict[int, Tuple[float, float]],
+            emoji_table: TextIO
+    ):
+        for alphashape_and_meta in shapes:
+            local_value = alphashape_and_meta[1]
+            local_value_normalized = cls._get_normalize_value(
+                local_value, weights.get(1))
+            shapefile.write({
+                'geometry': geometry.mapping(alphashape_and_meta[0]),
+                'properties': {'Join_Count': alphashape_and_meta[1],
+                               'Weights': local_value_normalized},
+            })
+
+    @classmethod
+    def _write_itemized_shapes(
             cls, shapefile,
             shapes, cls_type,
             weights: Dict[int, Tuple[float, float]],
@@ -215,71 +286,37 @@ class Compile():
         })
 
     @classmethod
-    def write_centroids(cls,
-                        bounds: AnalysisBounds,
-                        cluster_centroids):
-
-        bound_points_shapely = Utils._get_shapely_bounds(
-            bounds)
-        # data always in lat/lng WGS1984
-        __, epsg_code = Utils._get_best_utmzone(
-            bound_points_shapely)
-
-        # Define a polygon feature geometry with one attribute
-        schema = {
-            'geometry': 'Point',
-            'properties': {'Join_Count': 'int'},
-        }
-
-        # Write a new Shapefile
-        # WGS1984
-        with fiona.open('02_Output/allPhotoCluster.shp',
-                        mode='w',
-                        driver='ESRI Shapefile', schema=schema,
-                        crs=from_epsg(epsg_code)) as c:
-            # If there are multiple geometries, put the "for" loop here
-            idx = 0
-            for cluster_centroid in cluster_centroids:
-                idx += 1
-                c.write({
-                    'geometry': geometry.mapping(cluster_centroid[0]),
-                    'properties': {'Join_Count': cluster_centroid[1]},
-                })
+    def _get_weights(cls, shapes, columns: List[int]):
+        """Normalization of Values (1-1000 Range),
+        precalc Step (global weights),
+        see
+        https://stats.stackexchange.com/questions/70801/how-to-normalize-data-to-0-1-range
+        """
+        idx = 1
+        weights_dict: Dict[int, Tuple[float, float]] = dict()
+        for column in columns:
+            # int: weights algorithm
+            # Tuple: min and max modifiers
+            values_min, values_max = cls._get_column_min_max(
+                shapes, column)
+            weights_mod_a = (1000-1)/(
+                values_max-values_min)
+            weights_mod_b = 1000 - weights_mod_a * values_max
+            weights_dict[idx] = (weights_mod_a, weights_mod_b)
+            idx += 1
+        return weights_dict
 
     @staticmethod
-    def _get_weights(shapes):
-        """Normalization of Values (1-1000 Range),
-        precalc Step (global weights)
-        """
+    def _get_column_min_max(
+            shapes,
+            column: int) -> Tuple[float, float]:
+        """Get min and max values of specific column
+        for normalization"""
         # get the n'th column out for calculating the max/min
-        weightsv1_range = [x[6] for x in shapes]
-        weightsv2_range = [x[7] for x in shapes]
-        weightsv3_range = [x[8] for x in shapes]
-        weightsv1_min = min(weightsv1_range)
-        weightsv1_max = max(weightsv1_range)
-        weightsv2_min = min(weightsv2_range)
-        weightsv2_max = max(weightsv2_range)
-        weightsv3_min = min(weightsv3_range)
-        weightsv3_max = max(weightsv3_range)
-        # precalc, see
-        # https://stats.stackexchange.com/questions/70801/how-to-normalize-data-to-0-1-range
-
-        # int: weights algorithm
-        # Tuple: min and max modifiers
-        weights: Dict[int, Tuple[float, float]] = dict()
-        weightsv1_mod_a = (1000-1)/(
-            weightsv1_max-weightsv1_min)
-        weightsv1_mod_b = 1000 - weightsv1_mod_a * weightsv1_max
-        weights[1] = (weightsv1_mod_a, weightsv1_mod_b)
-        weightsv2_mod_a = (1000-1)/(
-            weightsv2_max-weightsv2_min)
-        weightsv2_mod_b = 1000 - weightsv2_mod_a * weightsv2_max
-        weights[2] = (weightsv2_mod_a, weightsv2_mod_b)
-        weightsv3_mod_a = (1000-1)/(
-            weightsv3_max-weightsv3_min)
-        weightsv3_mod_b = 1000 - weightsv3_mod_a * weightsv3_max
-        weights[3] = (weightsv3_mod_a, weightsv3_mod_b)
-        return weights
+        weights_range = [x[column] for x in shapes]
+        weights_min = min(weights_range)
+        weights_max = max(weights_range)
+        return weights_min, weights_max
 
     @staticmethod
     def _normalize_value(
