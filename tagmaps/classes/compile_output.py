@@ -153,13 +153,15 @@ class Compile():
     def _loop_shapemetalist(cls, shapefile, shapes_and_meta_list,
                             epsg_code, schema, emoji_table: TextIO,
                             itemized):
+        fid = 0
         for shapes, cls_type in shapes_and_meta_list:
             if itemized:
                 # normalize types separately (e.g. emoji/tags)
                 global_weights = cls._get_weights(shapes, [6, 7, 8])
+                fid += 1
                 cls._write_itemized_shapes(
                     shapefile, shapes,
-                    cls_type, global_weights, emoji_table)
+                    cls_type, global_weights, emoji_table, fid)
             else:
                 # normalize types separately (e.g. emoji/tags)
                 global_weights = cls._get_weights(shapes, [1])
@@ -189,7 +191,8 @@ class Compile():
             cls, shapefile,
             shapes, cls_type,
             weights: Dict[int, Tuple[float, float]],
-            emoji_table: TextIO):
+            emoji_table: TextIO,
+            fid: int):
         """Main wrapper for writing
         all results to output
         """
@@ -202,7 +205,7 @@ class Compile():
                 shapefile, alphashape_and_meta,
                 cls_type, weights, h_imp)
             if emoji_table:
-                cls._write_emoji_table(idx,
+                cls._write_emoji_table(fid,
                                        alphashape_and_meta,
                                        emoji_table,
                                        cls_type == EMOJI)
