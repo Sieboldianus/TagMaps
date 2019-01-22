@@ -35,21 +35,23 @@ class ClusterGen():
 
     def __init__(self, bounds: AnalysisBounds,
                  cleaned_post_dict: Dict[str, CleanedPost],
+                 cleaned_post_list: List[CleanedPost],
                  top_list: List[Tuple[str, int]],
                  total_distinct_locations: int,
                  tmax: int,
                  cluster_type: ClusterType = TAGS,
-                 topitem: Tuple[str, int] = None,
+                 # topitem: Tuple[str, int] = None,
                  local_saturation_check: bool = True):
         self.cls_type = cluster_type
         self.tnum = 0
         self.tmax = tmax
-        self.topitem = topitem
+        # self.topitem = topitem
         self.bounds = bounds
         self.cluster_distance = ClusterGen._init_cluster_dist(
             self.bounds, self.cls_type)
         self.cleaned_post_dict = cleaned_post_dict
-        self.cleaned_post_list = list(cleaned_post_dict.values())
+        # self.cleaned_post_list = list(cleaned_post_dict.values())
+        self.cleaned_post_list = cleaned_post_list
         self.top_list = top_list
         self.total_distinct_locations = total_distinct_locations
         self.autoselect_clusters = False
@@ -77,6 +79,7 @@ class ClusterGen():
                       clusterer_type: ClusterType,
                       bounds: AnalysisBounds,
                       cleaned_post_dict: Dict[str, CleanedPost],
+                      cleaned_post_list: List[CleanedPost],
                       prepared_data: PreparedData,
                       local_saturation_check: bool):
         """Create new clusterer from type and input data
@@ -94,25 +97,23 @@ class ClusterGen():
         if clusterer_type == TAGS:
             top_list = prepared_data.top_tags_list
             tmax = prepared_data.tmax
-            topitem = prepared_data.single_mostused_tag
         elif clusterer_type == EMOJI:
             top_list = prepared_data.top_emoji_list
             tmax = prepared_data.emax
-            topitem = prepared_data.single_mostused_emoji
         elif clusterer_type == LOCATIONS:
             top_list = prepared_data.top_locations_list
             tmax = prepared_data.emax
-            topitem = prepared_data.single_mostused_location
         else:
             sys.exit("Cluster Type unknown.")
+
         clusterer = cls(
             bounds=bounds,
             cleaned_post_dict=cleaned_post_dict,
+            cleaned_post_list=cleaned_post_list,
             top_list=top_list,
             total_distinct_locations=prepared_data.total_unique_locations,
             tmax=tmax,
             cluster_type=clusterer_type,
-            topitem=topitem,
             local_saturation_check=local_saturation_check)
         return clusterer
 
@@ -489,8 +490,8 @@ class ClusterGen():
             self.none_clustered_guids
         """
         # update in case of locations removed
-        self.cleaned_post_list = list(
-            self.cleaned_post_dict.values())
+        # self.cleaned_post_list = list(
+        #     self.cleaned_post_dict.values())
         self._get_update_clusters(itemized=False)
 
     def get_itemized_clusters(self):
@@ -501,12 +502,12 @@ class ClusterGen():
             self.clustered_items_dict
         """
         # update in case of locations removed
-        self.cleaned_post_list = list(
-            self.cleaned_post_dict.values())
+        # self.cleaned_post_list = list(
+        #     self.cleaned_post_dict.values())
         # get clusters for top item
         if self.local_saturation_check:
             self._get_update_clusters(
-                item=self.topitem)
+                item=self.top_list[0])
         self.tnum = 1
         # get remaining clusters
         for item in self.top_list:
@@ -574,14 +575,14 @@ class ClusterGen():
             # for 80% saturation check for lower level tags
             saturation_exclude_count = 0
             clustered_post_guids = self.clustered_items_dict.get(
-                self.topitem[0], None)
+                self.top_list[0][0], None)
             # print("Topitem: " + str(topitem[0]))
             if clustered_post_guids is None:
                 sys.exit(f'Something went wrong: '
                          f'No posts found for toptag: '
-                         f'{self.topitem[0]}')
+                         f'{self.top_list[0][0]}')
             __, topitem_area = AlphaShapes.get_cluster_shape(
-                self.topitem, clustered_post_guids, self.cleaned_post_dict,
+                self.top_list[0], clustered_post_guids, self.cleaned_post_dict,
                 self.crs_wgs, self.crs_proj, self.cluster_distance,
                 self.local_saturation_check)
         for item in self.top_list:

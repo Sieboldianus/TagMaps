@@ -91,7 +91,7 @@ class UserInterface():
                            highlightthickness=0, background="gray7")
         header_label = tk.Label(canvas,
                                 text="Optional: Exclude tags, "
-                                "emoji and locations.",
+                                "emoji or locations.",
                                 background="gray7", fg="gray80",
                                 font="Arial 10 bold")
         header_label.pack(padx=10, pady=10)
@@ -148,7 +148,7 @@ class UserInterface():
         canvas = tk.Canvas(buttonsFrame, width=150, height=200,
                            highlightthickness=0, background="gray7")
         UserInterface._create_button(
-            canvas, "Remove Tag(s)", lambda: self._delete_fromtoplist(
+            canvas, "Remove Selected", lambda: self._delete_fromtoplist(
                 self.listbox),
             left=False)
         c = tk.Checkbutton(canvas, text="Map Tags",
@@ -723,14 +723,33 @@ class UserInterface():
             f'This will also remove '
             f'{len(postguids_to_remove)} posts from further processing.\n'
                 f'Continue?', f'Continue?') is True:
+            # the following code will remove
+            # dict records and list entries from current clusterer
+            # but since both lists and dicts are mutable objects
+            # and further both dicts are referenced from outside clusterer
+            # this will modify the original list and dict
+            # all clusterer cleaned_post_dict and cleaned_post_list
+            # reference the same dict/list
             for post_guid in postguids_to_remove:
                 del(self._clst.cleaned_post_dict[post_guid])
-            for clusterer in self._clst_list:
+            indexes_to_remove = list()
+            for idx, cleaned_post in enumerate(self._clst.cleaned_post_list):
+                if cleaned_post.guid in postguids_to_remove:
+                    indexes_to_remove.append(idx)
+            # looping over list indices backwards
+            # as to not throw off the subsequent indexes.
+            for index in sorted(indexes_to_remove, reverse=True):
+                del self._clst.cleaned_post_list[index]
+            # for clusterer in self._clst_list:
                 # update all lists needed? check mutability
                 # see
                 # https://benkurtovic.com/2015/01/28/python-object-replacement.html
-                clusterer.cleaned_post_list = list(
-                    self._clst.cleaned_post_dict.values())
+                # https://robertheaton.com/2014/02/09/pythons-pass-by-object-reference-as-explained-by-philip-k-dick/
+                # http://foobarnbaz.com/2012/07/08/understanding-python-variables/
+                # Use singleton-pattern:
+                # http://foobarnbaz.com/2010/10/06/borg-pattern/
+                # clusterer.cleaned_post_list = list(
+                #    self._clst.cleaned_post_dict.values())
 
     @staticmethod
     def _query_user(question_text: str,

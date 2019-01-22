@@ -135,13 +135,15 @@ class Compile():
         # update for emoji only run
         if itemized:
             shapefile_name = "allTagCluster"
+            # sort shapelist by firstg column,
+            # in descending order
+            # we want most important tags places first
+            shapes.sort(key=itemgetter(1), reverse=True)
         else:
             shapefile_name = "allLocationCluster"
-        # sort shapelist by firstg column,
-        # in descending order
-        shapes.sort(key=itemgetter(1), reverse=True)
-        # sorted_shapes_desc = sorted(
-        #    shapes, key=itemgetter(1), reverse=True)
+            # sort ascending, we want smalles clusters places
+            # first as small points, overlayed by larger ones
+            shapes.sort(key=itemgetter(1))
         with fiona.open(
                 f'02_Output/{shapefile_name}.shp', mode='w',
                 encoding='UTF-8', driver='ESRI Shapefile',

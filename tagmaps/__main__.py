@@ -73,6 +73,7 @@ def main():
     now = time.time()
     # get cleaned data for use in clustering
     cleaned_post_dict = lbsn_data.get_cleaned_post_dict()
+    cleaned_post_list = list(cleaned_post_dict.values())
     # status report
     log.info(
         f'\nTotal user count (UC): {len(lbsn_data.locations_per_userid_dict)}')
@@ -131,6 +132,7 @@ def main():
                 clusterer_type=cls_type,
                 bounds=lbsn_data.bounds,
                 cleaned_post_dict=cleaned_post_dict,
+                cleaned_post_list=cleaned_post_list,
                 prepared_data=prepared_data,
                 local_saturation_check=cfg.local_saturation_check
             )
@@ -142,6 +144,13 @@ def main():
                 clusterer_list,
                 prepared_data.locid_locname_dict)
             user_intf.start()
+            # for x in range(3):
+            #    clusterer_list[x].cluster_distance = user_intf._clst_list[x].cluster_distance
+            #    clusterer_list[x].top_list = user_intf._clst_list[x].top_list
+            #    clusterer_list[x].topitem = user_intf._clst_list[x].top_list[0]
+            #    clusterer_list[x].tmax = len(user_intf._clst_list[x].top_list)
+            #    clusterer_list[x].cleaned_post_dict = user_intf._clst_list[x].cleaned_post_dict
+            #    clusterer_list[x].cleaned_post_list = user_intf._clst_list[x].cleaned_post_list
 
         if cfg.auto_mode or user_intf.abort is False:
             for clusterer in clusterer_list:
