@@ -24,6 +24,39 @@ from tagmaps.classes.shared_structure import AnalysisBounds
 class AlphaShapes():
 
     @staticmethod
+    def _get_single_cluster_shape(
+            item, single_post, crs_wgs,
+            crs_proj, cluster_distance):
+        """Get Shapes for items with no clusters
+        Will return a buffer based on cluster distance
+        """
+        shapetype = "Single cluster"
+        # project lat/lng to UTM
+        x, y = pyproj.transform(
+            crs_wgs, crs_proj,
+            single_post.lng, single_post.lat)
+        pcoordinate = geometry.Point(x, y)
+        # single dots are presented
+        # as buffers with 0.5% of width-area
+        result_polygon = pcoordinate.buffer(
+            cluster_distance/4,
+            resolution=3)
+        # result_polygon = pcoordinate.buffer(
+        #   min(distXLng,distYLat)/100,
+        #   resolution=3)
+        if (result_polygon is None or
+                result_polygon.is_empty):
+            return None
+        # append statistics for item with no cluster
+        result_tuple = (
+            result_polygon, 1,
+            max(single_post.post_views_count,
+                single_post.post_like_count),
+            1, str(item[0]),
+            item[1], 1, 1, 1, shapetype)
+        return result_tuple
+
+    @staticmethod
     def get_cluster_shape(
             item, clustered_post_guids,
             cleaned_post_dict,

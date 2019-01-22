@@ -15,7 +15,7 @@ import pyproj
 import fiona
 from unicodedata import name as unicode_name
 from collections import defaultdict
-from typing import List, Set, Dict, Tuple, Optional, TextIO
+from typing import List, Set, Dict, Tuple, Optional, TextIO, Any
 import shapely.geometry as geometry
 from multiprocessing.pool import ThreadPool
 from tagmaps.classes.utils import Utils
@@ -30,7 +30,7 @@ sns.set_style('white')
 
 
 class ClusterGen():
-    """Cluster module for tags, emoji and post locations
+    """Cluster methods for tags, emoji and post locations
     """
 
     def __init__(self, bounds: AnalysisBounds,
@@ -44,12 +44,10 @@ class ClusterGen():
         self.cls_type = cluster_type
         self.tnum = 0
         self.tmax = len(top_list)
-        # self.topitem = topitem
         self.bounds = bounds
         self.cluster_distance = ClusterGen._init_cluster_dist(
             self.bounds, self.cls_type)
         self.cleaned_post_dict = cleaned_post_dict
-        # self.cleaned_post_list = list(cleaned_post_dict.values())
         self.cleaned_post_list = cleaned_post_list
         self.top_list = top_list
         self.total_distinct_locations = total_distinct_locations
@@ -62,8 +60,8 @@ class ClusterGen():
         # storing cluster results:
         self.single_items_dict = defaultdict(list)
         self.clustered_items_dict = defaultdict(list)
-        self.clustered_guids_all = list()
-        self.none_clustered_guids = list()
+        self.clustered_guids_all: List[str] = list()
+        self.none_clustered_guids: List[str] = list()
         # set initial analysis bounds
         self._update_bounds()
         self.bound_points_shapely = Utils._get_shapely_bounds(
@@ -556,102 +554,121 @@ class ClusterGen():
         # log.debug(f'{resultshapes_and_meta[:10]}')
         return resultshapes_and_meta, self.cls_type, itemized
 
+    def _get_item_clustershapes(
+            self,
+            item: Tuple[str, int]) -> Tuple[List[Tuple[Any]], float]:
+        """Get Cluster Shapes from a list of coordinates
+        for a given item"""
+        clustered_post_guids = self.clustered_items_dict.get(
+            item[0], None)
+        if not clustered_post_guids:
+            return None, 0
+        result = AlphaShapes.get_cluster_shape(
+            item, clustered_post_guids, self.cleaned_post_dict,
+            self.crs_wgs, self.crs_proj, self.cluster_distance,
+            self.local_saturation_check)
+        cluster_shapes = result[0]
+        cluster_shapes_area = result[1]
+        return cluster_shapes, cluster_shapes_area
+
+    def _get_item_clusterarea(
+            self,
+            item: Tuple[str, int]) -> float:
+        """Wrapper: only get cluster shape area for item"""
+        __, cluster_shapes_area = self._get_item_clustershapes(item)
+        return cluster_shapes_area
+
+    @staticmethod
+    def _is_saturated_item(
+            item_area: float,
+            topitem_area: float):
+        """Skip item entirely if saturated, i.e.
+        if total area > 60%
+        of top item cluster area
+
+        Args:
+            item_area: item cluster area
+            topitem_area: top item cluster area
+        """
+        local_saturation = item_area/(topitem_area/100)
+        # print("Local Saturation for Tag " + top_item[0] "
+        #       "+ ": " + str(round(localSaturation,0)))
+        if local_saturation > 60:
+            return True
+        else:
+            return False
+
+    def _get_item_shapeslist(self, item, topitem_area, tnum):
+        """Get all item shapes for item clusters"""
+        resultshapes_and_meta_tmp = list()
+        result = self._get_item_clustershapes(item)
+        shapes_tmp = result[0]
+        item_area = result[1]
+        if (self.local_saturation_check
+                and not item_area == 0
+                and not tnum == 1):
+            if self._is_saturated_item(item_area,
+                                       topitem_area):
+                # next item
+                return None
+        # append result
+        if shapes_tmp and len(shapes_tmp) > 0:
+            resultshapes_and_meta_tmp.extend(
+                shapes_tmp)
+        # get shapes for single items (non-clustered)
+        none_clustered_guids = self.single_items_dict.get(
+            item[0], None)
+        if not none_clustered_guids:
+            return resultshapes_and_meta_tmp
+        posts = [self.cleaned_post_dict[x]
+                 for x in none_clustered_guids]
+        for single_post in posts:
+            shapes_single_tmp = AlphaShapes._get_single_cluster_shape(
+                item, single_post, self.crs_wgs,
+                self.crs_proj, self.cluster_distance)
+            if not shapes_single_tmp:
+                continue
+            # Use append, since always single Tuple
+            resultshapes_and_meta_tmp.append(
+                shapes_single_tmp)
+        return resultshapes_and_meta_tmp
+
     def get_cluster_shapes(self):
         """For each cluster of points,
         calculate boundary shape and
         add statistics (HImpTag etc.)
 
-        Returns results as alphashapes_and_meta = list()
+        Returns results as shapes_and_meta = list()
         """
         itemized = True
         saturation_exclude_count = 0
-        resultshapes_and_meta = list()
+        shapes_and_meta = list()
         tnum = 0
         if self.local_saturation_check:
             # calculate total area of Top1-Tag
             # for 80% saturation check for lower level tags
-            saturation_exclude_count = 0
-            clustered_post_guids = self.clustered_items_dict.get(
-                self.top_list[0][0], None)
-            # print("Topitem: " + str(topitem[0]))
-            if clustered_post_guids is None:
+            topitem_area = self._get_item_clusterarea(
+                self.top_list[0])
+            if topitem_area == 0:
                 raise ValueError(
                     f'Something went wrong: '
-                    f'No posts found for toptag: '
-                    f'{self.top_list[0][0]}')
-            __, topitem_area = AlphaShapes.get_cluster_shape(
-                self.top_list[0], clustered_post_guids, self.cleaned_post_dict,
-                self.crs_wgs, self.crs_proj, self.cluster_distance,
-                self.local_saturation_check)
+                    f'Could not get area for Top item '
+                    f'{self.top_list[0]}')
         for item in self.top_list:
             tnum += 1
-            clustered_post_guids = self.clustered_items_dict.get(
-                item[0], None)
-            # Generate item cluster shapes
-            # and attach meta information
-            if clustered_post_guids:
-                result = AlphaShapes.get_cluster_shape(
-                    item, clustered_post_guids, self.cleaned_post_dict,
-                    self.crs_wgs, self.crs_proj, self.cluster_distance,
-                    self.local_saturation_check)
-                shapes_tmp = result[0]
-                item_area = result[1]
-                if (self.local_saturation_check
-                        and not item_area == 0
-                        and not tnum == 1):
-                    local_saturation = item_area/(topitem_area/100)
-                    # print("Local Saturation for Tag " + top_item[0] "
-                    #       "+ ": " + str(round(localSaturation,0)))
-                    if local_saturation > 60:
-                        # skip tag entirely due to saturation
-                        # (if total area > 60% of total area
-                        # of item clusters)
-                        # print("Skipped: " + top_item[0] + " due
-                        # to saturation (" +
-                        # str(round(localSaturation,0)) + "%).")
-                        saturation_exclude_count += 1
-                        continue  # next item
-                # append result
-                if len(shapes_tmp) > 0:
-                    resultshapes_and_meta.extend(
-                        shapes_tmp)
-
-            none_clustered_guids = self.single_items_dict.get(
-                item[0], None)
-            if none_clustered_guids:
-                shapetype = "Single cluster"
-                # print("Single: " + str(len(singlePhotoGuidList)))
-                posts = [self.cleaned_post_dict[x]
-                         for x in none_clustered_guids]
-                for single_post in posts:
-                    # project lat/lng to UTM
-                    x, y = pyproj.transform(
-                        self.crs_wgs, self.crs_proj,
-                        single_post.lng, single_post.lat)
-                    pcoordinate = geometry.Point(x, y)
-                    # single dots are presented
-                    # as buffers with 0.5% of width-area
-                    result_polygon = pcoordinate.buffer(
-                        self.cluster_distance/4,
-                        resolution=3)
-                    # result_polygon = pcoordinate.buffer(
-                    #   min(distXLng,distYLat)/100,
-                    #   resolution=3)
-                    if (result_polygon is None or
-                            result_polygon.is_empty):
-                        continue
-                    # append statistics for item with no cluster
-                    resultshapes_and_meta.append((
-                        result_polygon, 1,
-                        max(single_post.post_views_count,
-                            single_post.post_like_count),
-                        1, str(item[0]),
-                        item[1], 1, 1, 1, shapetype))
+            shapes_tmp = self._get_item_shapeslist(
+                item, topitem_area, tnum)
+            if shapes_tmp is None:
+                saturation_exclude_count += 1
+                continue
+            if len(shapes_tmp) == 0:
+                continue
+            shapes_and_meta.extend(shapes_tmp)
         logging.getLogger("tagmaps").info(
-            f'{len(resultshapes_and_meta)} '
+            f'{len(shapes_and_meta)} '
             f'alpha shapes. Done.')
         if saturation_exclude_count > 0:
             logging.getLogger("tagmaps").info(
                 f'Excluded {saturation_exclude_count} '
                 f'{self.cls_type.rstrip("s")} on local saturation check.')
-        return resultshapes_and_meta, self.cls_type, itemized
+        return shapes_and_meta, self.cls_type, itemized
