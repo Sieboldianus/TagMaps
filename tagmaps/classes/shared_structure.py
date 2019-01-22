@@ -4,8 +4,10 @@
 Module for shared structural elements
 """
 
-from typing import List, Set, Dict, Tuple, Optional, TextIO
+from typing import List, Set, Dict, Tuple, Optional, TextIO, Any, NamedTuple
 from collections import namedtuple
+from decimal import Decimal
+import attr
 
 LOCATIONS: str = 'Locations'
 TAGS: str = 'Tags'
@@ -39,47 +41,45 @@ class CleanedPost(CleanedPost_):
     pass
 
 
-class PostStructure():
+@attr.s
+class PostStructure(object):
     """Shared structure for Post Attributes
 
     Contains attributes shared among PG DB and LBSN ProtoBuf spec.
     - this could also be replaces by protobuf lbsnPost() from
     lbsnstructure package
     """
-
-    def __init__(self):
-        self.origin_id = None
-        self.guid = None
-        self.post_latlng = None
-        self.place_guid = None
-        self.city_guid = None
-        self.country_guid = None
-        self.post_geoaccuracy = None
-        self.user_guid = None
-        self.post_create_date = None
-        self.post_publish_date = None
-        self.post_body = None
-        self.post_language = None
-        self.user_mentions = None
-        self.hashtags = None
-        self.emoji = None
-        self.post_like_count = None
-        self.post_comment_count = None
-        self.post_views_count = None
-        self.post_title = None
-        self.post_thumbnail_url = None
-        self.post_url = None
-        self.post_type = None
-        self.post_filter = None
-        self.post_quote_count = None
-        self.post_share_count = None
-        self.input_source = None
-        self.post_content_license = None
-        # optional:
-        self.latitude = None
-        self.longitude = None
-        self.loc_id = None
-        self.loc_name = None
+    origin_id = attr.ib(init=False)
+    guid = attr.ib(init=False)
+    post_latlng = attr.ib(init=False)
+    place_guid = attr.ib(init=False)
+    city_guid = attr.ib(init=False)
+    country_guid = attr.ib(init=False)
+    post_geoaccuracy = attr.ib(init=False)
+    user_guid = attr.ib(init=False)
+    post_create_date = attr.ib(init=False)
+    post_publish_date = attr.ib(init=False)
+    post_body = attr.ib(init=False)
+    post_language = attr.ib(init=False)
+    user_mentions = attr.ib(init=False)
+    hashtags = attr.ib(init=False)
+    emoji = attr.ib(init=False)
+    post_like_count = attr.ib(init=False)
+    post_comment_count = attr.ib(init=False)
+    post_views_count = attr.ib(init=False)
+    post_title = attr.ib(init=False)
+    post_thumbnail_url = attr.ib(init=False)
+    post_url = attr.ib(init=False)
+    post_type = attr.ib(init=False)
+    post_filter = attr.ib(init=False)
+    post_quote_count = attr.ib(init=False)
+    post_share_count = attr.ib(init=False)
+    input_source = attr.ib(init=False)
+    post_content_license = attr.ib(init=False)
+    latitude = attr.ib(init=False)
+    longitude = attr.ib(init=False)
+    loc_id = attr.ib(init=False)
+    loc_name = attr.ib(init=False)
 
 
 class AnalysisBounds():
@@ -117,23 +117,21 @@ class AnalysisBounds():
         return bound_report
 
 
+@attr.s
 class PreparedData():
-    """Class storing what is needed for tag cluster"""
-
-    def __init__(self):
-        """Initialize structure."""
-        self.top_tags_list = None
-        self.top_emoji_list = None
-        self.top_locations_list = None
-        self.total_unique_tags = 0
-        self.total_unique_emoji = 0
-        self.total_unique_locations = 0
-        self.total_tag_count = 0
-        self.total_emoji_count = 0
-        self.total_location_count = 0
-        self.single_mostused_tag = None
-        self.single_mostused_emoji = None
-        self.single_mostused_location = None
-        self.tmax = 0
-        self.emax = 0
-        self.locid_locname_dict = None
+    """Class storing what is needed for running tag cluster"""
+    top_tags_list = attr.ib(init=False)
+    top_emoji_list = attr.ib(init=False)
+    top_locations_list = attr.ib(init=False)
+    total_unique_tags = attr.ib(init=False, default=0)
+    total_unique_emoji = attr.ib(init=False, default=0)
+    total_unique_locations = attr.ib(init=False, default=0)
+    total_tag_count = attr.ib(init=False, default=0)
+    total_emoji_count = attr.ib(init=False, default=0)
+    total_location_count = attr.ib(init=False, default=0)
+    single_mostused_tag = attr.ib(init=False)
+    single_mostused_emoji = attr.ib(init=False)
+    single_mostused_location = attr.ib(init=False)
+    tmax = attr.ib(init=False, default=0)
+    emax = attr.ib(init=False, default=0)
+    locid_locname_dict = attr.ib(init=False)

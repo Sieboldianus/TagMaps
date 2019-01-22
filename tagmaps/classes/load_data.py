@@ -761,8 +761,10 @@ class LoadData():
             f'*.{config.source_map.file_extension}'))
         input_count = len(filelist)
         if input_count == 0:
-            sys.exit(f"No input files *.{config.source_map.file_extension} "
-                     "found.")
+            raise ValueError(
+                f'No input files *.'
+                f'{config.source_map.file_extension} '
+                f'found.')
         else:
             return filelist
 

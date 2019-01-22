@@ -38,13 +38,12 @@ class ClusterGen():
                  cleaned_post_list: List[CleanedPost],
                  top_list: List[Tuple[str, int]],
                  total_distinct_locations: int,
-                 tmax: int,
                  cluster_type: ClusterType = TAGS,
                  # topitem: Tuple[str, int] = None,
                  local_saturation_check: bool = True):
         self.cls_type = cluster_type
         self.tnum = 0
-        self.tmax = tmax
+        self.tmax = len(top_list)
         # self.topitem = topitem
         self.bounds = bounds
         self.cluster_distance = ClusterGen._init_cluster_dist(
@@ -96,15 +95,12 @@ class ClusterGen():
         """
         if clusterer_type == TAGS:
             top_list = prepared_data.top_tags_list
-            tmax = prepared_data.tmax
         elif clusterer_type == EMOJI:
             top_list = prepared_data.top_emoji_list
-            tmax = prepared_data.emax
         elif clusterer_type == LOCATIONS:
             top_list = prepared_data.top_locations_list
-            tmax = prepared_data.emax
         else:
-            sys.exit("Cluster Type unknown.")
+            raise ValueError("Cluster Type unknown.")
 
         clusterer = cls(
             bounds=bounds,
@@ -112,7 +108,6 @@ class ClusterGen():
             cleaned_post_list=cleaned_post_list,
             top_list=top_list,
             total_distinct_locations=prepared_data.total_unique_locations,
-            tmax=tmax,
             cluster_type=clusterer_type,
             local_saturation_check=local_saturation_check)
         return clusterer
@@ -180,7 +175,7 @@ class ClusterGen():
                     selected_postguids_list,
                     distinct_localloc_count)
             else:
-                sys.exit(f"Clusterer {self.clusterer} unknown.")
+                raise ValueError(f"Clusterer {self.cls_type} unknown.")
         return selected_postguids_list, len(distinct_localloc_count)
 
     @staticmethod
@@ -292,6 +287,7 @@ class ClusterGen():
                 item, silent=silent)
             # clustering
             if len(selected_postguids_list) < 2:
+                # return empty list of points
                 return [], selected_postguids_list
             selected_posts_list = self._getselect_posts(
                 selected_postguids_list)
@@ -311,7 +307,8 @@ class ClusterGen():
                        ) -> np.ndarray:
         """Wrapper that only returns points for _get_np_points_guids"""
         points, __ = self._get_np_points_guids(item, silent)
-        return points
+        if len(points) > 0:
+            return points
 
     def cluster_points(self, points,
                        min_span_tree: bool = None,
@@ -501,9 +498,9 @@ class ClusterGen():
             self.single_items_dict
             self.clustered_items_dict
         """
-        # update in case of locations removed
-        # self.cleaned_post_list = list(
-        #     self.cleaned_post_dict.values())
+        # update in case of items
+        # have been removed from top_list
+        self.tmax = len(self.top_list)
         # get clusters for top item
         if self.local_saturation_check:
             self._get_update_clusters(
@@ -578,9 +575,10 @@ class ClusterGen():
                 self.top_list[0][0], None)
             # print("Topitem: " + str(topitem[0]))
             if clustered_post_guids is None:
-                sys.exit(f'Something went wrong: '
-                         f'No posts found for toptag: '
-                         f'{self.top_list[0][0]}')
+                raise ValueError(
+                    f'Something went wrong: '
+                    f'No posts found for toptag: '
+                    f'{self.top_list[0][0]}')
             __, topitem_area = AlphaShapes.get_cluster_shape(
                 self.top_list[0], clustered_post_guids, self.cleaned_post_dict,
                 self.crs_wgs, self.crs_proj, self.cluster_distance,

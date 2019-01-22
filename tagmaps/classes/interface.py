@@ -47,7 +47,7 @@ class UserInterface():
         self._clst_list = list()
         # append clusters to list
         if not clusterer_list:
-            sys.exit("No clusterer selected")
+            raise ValueError('No clusterer selected.')
         for clusterer in clusterer_list:
             self._clst_list.append(clusterer)
         # select initial cluster
@@ -479,6 +479,11 @@ class UserInterface():
         points = self._clst._get_np_points(
             item=sel_item[0],
             silent=True)
+        if points is None:
+            tkinter.messagebox.showinfo(
+                "No locations found.",
+                "All locations for given item have been removed.")
+            return
         if self.fig1:
             plt.figure(1).clf()  # clear figure 1
             # earth = Basemap()
@@ -732,24 +737,9 @@ class UserInterface():
             # reference the same dict/list
             for post_guid in postguids_to_remove:
                 del(self._clst.cleaned_post_dict[post_guid])
-            indexes_to_remove = list()
-            for idx, cleaned_post in enumerate(self._clst.cleaned_post_list):
-                if cleaned_post.guid in postguids_to_remove:
-                    indexes_to_remove.append(idx)
-            # looping over list indices backwards
-            # as to not throw off the subsequent indexes.
-            for index in sorted(indexes_to_remove, reverse=True):
-                del self._clst.cleaned_post_list[index]
-            # for clusterer in self._clst_list:
-                # update all lists needed? check mutability
-                # see
-                # https://benkurtovic.com/2015/01/28/python-object-replacement.html
-                # https://robertheaton.com/2014/02/09/pythons-pass-by-object-reference-as-explained-by-philip-k-dick/
-                # http://foobarnbaz.com/2012/07/08/understanding-python-variables/
-                # Use singleton-pattern:
-                # http://foobarnbaz.com/2010/10/06/borg-pattern/
-                # clusterer.cleaned_post_list = list(
-                #    self._clst.cleaned_post_dict.values())
+            # To modify the list in-place, assign to its slice:
+            self._clst.cleaned_post_list[:] = list(
+                self._clst.cleaned_post_dict.values())
 
     @staticmethod
     def _query_user(question_text: str,
