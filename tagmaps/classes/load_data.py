@@ -396,7 +396,6 @@ class LoadData():
 
         - optionally writes entries to file, if handler exists
         """
-        empty_default_tuple = Utils.default_empty_cstructure()
         cleaned_post_dict = defaultdict(CleanedPost)
         for user_key, locationhash in \
                 self.locations_per_userid_dict.items():
@@ -405,7 +404,7 @@ class LoadData():
                 post_latlng = location.split(':')
 
                 first_post = self.userlocations_firstpost_dict.get(
-                    locid_userid, empty_default_tuple)
+                    locid_userid, None)
                 if first_post is None:
                     return
                 # create tuple with cleaned photo data
@@ -573,7 +572,7 @@ class LoadData():
         return attr_list
 
     def _get_cleaned_wordlist(self, post_body_string):
-        cleaned_post_body = Utils.remove_special_chars(post_body_string)
+        cleaned_post_body = Utils._remove_special_chars(post_body_string)
         cleaned_wordlist = LoadData._get_wordlist(cleaned_post_body)
         return cleaned_wordlist
 
@@ -649,7 +648,7 @@ class LoadData():
         return lbsn_post
 
     def _get_emoji(self, post_body):
-        emoji_filtered = set(Utils.extract_emoji(post_body))
+        emoji_filtered = set(Utils._extract_emoji(post_body))
         if not len(emoji_filtered) == 0:
             self.stats.count_emojis_global += len(emoji_filtered)
             # self.total_emoji_counter.update(emoji_filtered)
@@ -664,7 +663,7 @@ class LoadData():
             count_skipped = 0
         else:
             tags, count_tags, count_skipped = \
-                Utils.filterTags(
+                Utils.filter_tags(
                     tags,
                     self.cfg.sort_out_always_set,
                     self.cfg.sort_out_always_instr_set
