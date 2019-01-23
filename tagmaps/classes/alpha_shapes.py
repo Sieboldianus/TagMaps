@@ -4,21 +4,23 @@
 Module for tag maps alpha shapes generation
 """
 
-import sys
-import math
-import pyproj
-import numpy as np
 import logging
+import math
+import sys
 from decimal import Decimal
-from typing import List, Set, Dict, Tuple
-from math import radians, cos, sin, asin, sqrt
+from math import asin, cos, radians, sin, sqrt
+from typing import Dict, List, Set, Tuple
+
+import numpy as np
+import pyproj
 import shapely.geometry as geometry
-from shapely.ops import transform, cascaded_union, polygonize
 from descartes import PolygonPatch
-from scipy.spatial import Delaunay
 from fiona.crs import from_epsg
-from tagmaps.classes.utils import Utils
+from scipy.spatial import Delaunay  # pylint: disable=E0611
+from shapely.ops import cascaded_union, polygonize, transform
+
 from tagmaps.classes.shared_structure import AnalysisBounds
+from tagmaps.classes.utils import Utils
 
 
 class AlphaShapes():
@@ -66,8 +68,7 @@ class AlphaShapes():
         """Returns alpha shapes and tag_area (sqm) for a point cloud"""
         # we define a new list of Temp Alpha Shapes outside the loop,
         # so that it is not overwritten each time
-        alphashapes_and_meta_tmp = []
-        # points = []
+        alphashapes_and_meta_tmp = list()
         tag_area = 0
         for post_guids in clustered_post_guids:
             # for each cluster for this toptag
@@ -78,169 +79,28 @@ class AlphaShapes():
                 set([post.user_guid for post in posts]))
             sum_views = sum(
                 [post.post_views_count for post in posts])
-            # calculate different weighting formulas
-            # weightsv1 = 1+ photoCount *(
-            #   sqrt(1/( photoCount / uniqueUserCount )**3)
-            #   )
-            # -> Standard weighting formula
-            # (x**y means x raised to the power y);
-            # +1 to UserCount: prevent 1-2
-            # Range from being misaligned
-            # weightsv2 = 1+ photoCount *(
-            #   sqrt(1/( photoCount / uniqueUserCount )**2)
-            # )
-            weightsv1 = post_count * (
-                sqrt(1/(post_count / (unique_user_count+1))**3))
-            # -> Standard weighting formula
-            # (x**y means x raised to the power y);
-            # +1 to UserCount: prevent 1-2
-            # Range from being misaligned
-            weightsv2 = post_count * (
-                sqrt(1/(post_count / (unique_user_count+1))**2))
-            # -> less importance on User_Count in correlation
-            # to photo count [Join_Count];
-            # +1 to UserCount: prevent 1-2
-            # Range from being misaligned
-            weightsv3 = sqrt(
-                (post_count+(2*sqrt(post_count)))*2)
-            # -> Ignores User_Count,
-            # this will emphasize individual
-            # and very active users
-            # points = [geometry.Point(photo.lng, photo.lat)
-            #          for photo in photos]
-            # instead of lat/lng for each photo,
-            # we use photo_locID to identify a
-            # list of distinct locations
+
+            weightsv1 = Utils._get_weight(
+                1, post_count, unique_user_count)
+
+            weightsv2 = Utils._get_weight(
+                2, post_count, unique_user_count)
+            weightsv3 = Utils._get_weight(
+                3, post_count, unique_user_count)
             distinct_locations = set([post.loc_id
                                       for post in posts])
-            # simple list comprehension without projection:
-            # points = [geometry.Point(
-            #               Decimal(location.split(':')[1]),
-            #               Decimal(location.split(':')[0]))
-            #           for location in distinctLocations]
+            # simple list comprehension with projection:
             points = [geometry.Point(
-                pyproj.transform(
-                    crs_wgs,
-                    crs_proj,
-                    Decimal(location.split(':')[1]),
-                    Decimal(location.split(':')[0])))
-                for location in distinct_locations]
-            point_collection = geometry.MultiPoint(
-                list(points))
-            result_polygon = None
-
-            if len(points) >= 5:
-                if len(points) < 10:
-                    # convex hull for small point clouds:
-                    result_polygon = point_collection.convex_hull
-                    result_polygon = result_polygon.buffer(
-                        cluster_distance/4, resolution=3)
-                    shapetype = "between 5 and 10 points_convexHull"
-                    # result_polygon = result_polygon.buffer(
-                    #   min(distXLng,distYLat)/100,resolution=3)
-                else:
-                    if len(points) > 500:
-                        startalpha = 1000000
-                    elif len(points) > 200:
-                        startalpha = 10000
-                    else:
-                        startalpha = 9000
-                    # concave hull/alpha shape /50000:
-                    result_polygon = AlphaShapes.alpha_shape(
-                        points, alpha=cluster_distance/startalpha)
-                    shapetype = "Initial Alpha Shape + Buffer"
-                    # check type comparison here
-                    if (type(result_polygon) is geometry.multipolygon.MultiPolygon
-                            or isinstance(result_polygon, bool)):
-                        # repeat generating alpha shapes with
-                        # smaller alpha value if Multigon is
-                        # generated
-                        # smaller alpha values mean less
-                        # granularity of resulting polygon
-                        # but too large alpha may result
-                        # in empty polygon
-                        # (this branch is sometimes
-                        # executed for larger scales)
-                        for i in range(1, 6):
-                            # try decreasing alpha
-                            # ** means cube
-                            alpha = startalpha + (startalpha * (i**i))
-                            # /100000
-                            result_polygon = AlphaShapes.alpha_shape(
-                                points, alpha=cluster_distance/alpha)
-                            if (type(result_polygon) is not geometry.multipolygon.MultiPolygon
-                                    and not isinstance(result_polygon, bool)):
-                                shapetype = "Multipolygon Alpha Shape /" + \
-                                    str(alpha)
-                                break
-                        if (type(result_polygon) is geometry.multipolygon.MultiPolygon
-                                or isinstance(result_polygon, bool)):
-                            # try increasing alpha
-                            for i in range(1, 6):
-                                # try decreasing alpha
-                                alpha = startalpha / (i*i)
-                                # /100000
-                                result_polygon = AlphaShapes.alpha_shape(
-                                    points, alpha=cluster_distance/alpha)
-                                if (type(result_polygon) is not geometry.multipolygon.MultiPolygon
-                                        and not isinstance(result_polygon, bool)):
-                                    shapetype = "Multipolygon Alpha Shape /" + \
-                                        str(alpha)
-                                    break
-                        if type(result_polygon) is geometry.multipolygon.MultiPolygon:
-                            shapetype = "Multipolygon Alpha Shape -> Convex Hull"
-                            # if still of type multipolygon,
-                            # try to remove holes and do a convex_hull
-                            result_polygon = result_polygon.convex_hull
-                        # OR: in case there was a problem with generating
-                        # alpha shapes
-                        # (circum_r = a*b*c/(4.0*area)
-                        # --> ZeroDivisionError: float division by zero)
-                        # this branch is rarely executed
-                        # for large point clusters where
-                        # alpha is perhaps set too small
-                        elif (isinstance(result_polygon, bool)
-                              or result_polygon.is_empty):
-                            shapetype = "BoolAlpha -> Fallback to PointCloud Convex Hull"
-                            # convex hull
-                            result_polygon = point_collection.convex_hull
-                    # Finally do a buffer to smooth alpha
-                    result_polygon = result_polygon.buffer(
-                        cluster_distance/4, resolution=3)
-                    # result_polygon = result_polygon.buffer(
-                    #   min(distXLng,distYLat)/100,resolution=3)
-            elif 2 <= len(points) < 5:
-                shapetype = "between 2 and 5 points_buffer"
-                # calc distance between points, see
-                # http://www.mathwarehouse.com/algebra/distance_formula/index.php
-                # bdist = math.sqrt(
-                #   (points[0].coords.xy[0][0]-points[1].coords.xy[0][0])**2
-                # + (points[0].coords.xy[1][0]-points[1].coords.xy[1][0])**2)
-                # print(str(bdist))
-
-                # single dots are presented as buffer with 0.5% of width-area:
-                result_polygon = point_collection.buffer(
-                    cluster_distance/4, resolution=3)
-                result_polygon = result_polygon.convex_hull
-                # result_polygon = point_collection.buffer(
-                #   min(distXLng,distYLat)/100,resolution=3)
-                # #single dots are presented as buffer with 0.5% of width-area
-            elif (len(points) == 1 or
-                  type(result_polygon) is geometry.point.Point
-                  or result_polygon is None):
-                shapetype = "1 point cluster"
-                # single dots are presented as buffer
-                # with 0.5% of width-area
-                result_polygon = point_collection.buffer(
-                    cluster_distance/4, resolution=3)
-                # result_polygon = point_collection.buffer(
-                # min(distXLng,distYLat)/100,resolution=3)
-                # #single dots are presented as buffer
-                # with 0.5% of width-area
-            # final check for multipolygon
-            if type(result_polygon) is geometry.multipolygon.MultiPolygon:
-                # usually not executed
-                result_polygon = result_polygon.convex_hull
+                      pyproj.transform(
+                          crs_wgs,
+                          crs_proj,
+                          Decimal(location.split(':')[1]),
+                          Decimal(location.split(':')[0])))
+                      for location in distinct_locations]
+            # get poly shape from points
+            result = AlphaShapes._get_poly(points, cluster_distance)
+            result_polygon = result[0]
+            shapetype = result[1]
             # Geom, Join_Count, Views,  COUNT_User,ImpTag,TagCountG,HImpTag
             if result_polygon is not None and not result_polygon.is_empty:
                 if local_saturation_check:
@@ -256,6 +116,170 @@ class AlphaShapes():
             alphashapes_and_meta_tmp = sorted(
                 alphashapes_and_meta_tmp, key=lambda x: -x[6])
         return alphashapes_and_meta_tmp, tag_area
+
+    @staticmethod
+    def _get_poly_five_to_ten(
+            point_collection, cluster_distance):
+        """ convex hull for small point clouds"""
+        result_polygon = point_collection.convex_hull
+        result_polygon = result_polygon.buffer(
+            cluster_distance/4, resolution=3)
+        shapetype = "between 5 and 10 points_convexHull"
+        # result_polygon = result_polygon.buffer(
+        #   min(distXLng,distYLat)/100,resolution=3)
+        return result_polygon, shapetype
+
+    @staticmethod
+    def _get_poly_two_to_five(
+            point_collection, cluster_distance):
+        """ convex hull for tiny point clouds"""
+        shapetype = "between 2 and 5 points_buffer"
+        # calc distance between points, see
+        # http://www.mathwarehouse.com/algebra/distance_formula/index.php
+        # bdist = math.sqrt(
+        #   (points[0].coords.xy[0][0]-points[1].coords.xy[0][0])**2
+        # + (points[0].coords.xy[1][0]-points[1].coords.xy[1][0])**2)
+        # print(str(bdist))
+        # single dots are presented as buffer with 0.5% of width-area:
+        poly_shape = point_collection.buffer(
+            cluster_distance/4, resolution=3)
+        poly_shape = poly_shape.convex_hull
+        # result_polygon = point_collection.buffer(
+        #   min(distXLng,distYLat)/100,resolution=3)
+        # #single dots are presented as buffer with 0.5% of width-area
+        return poly_shape, shapetype
+
+    @staticmethod
+    def _get_poly_larger_ten(
+            points, pointcount,
+            cluster_distance,
+            point_collection):
+        """ Get poly for larger point clouds
+        This is still recursive trial & error
+
+        Repeat generating alpha shapes with
+        smaller alpha value if Multigon is
+        generated. Smaller alpha values mean
+        less granularity of resulting polygon,
+        but too large alpha may result
+        in empty polygon
+        (this branch is sometimes
+        executed for larger scales)
+        """
+        if pointcount > 500:
+            startalpha = 1000000
+        elif pointcount > 200:
+            startalpha = 10000
+        else:
+            startalpha = 9000
+        # concave hull/alpha shape /50000:
+        poly_shape = AlphaShapes.alpha_shape(
+            points, alpha=cluster_distance/startalpha)
+        shapetype = "Initial Alpha Shape + Buffer"
+        # check type comparison here
+        if (type(poly_shape) is geometry.multipolygon.MultiPolygon
+                or isinstance(poly_shape, bool)):
+            for i in range(1, 6):
+                # try decreasing alpha
+                # ** means cube
+                alpha = startalpha + (startalpha * (i**i))
+                # /100000
+                poly_shape = AlphaShapes.alpha_shape(
+                    points, alpha=cluster_distance/alpha)
+                if (type(poly_shape) is not
+                        geometry.multipolygon.MultiPolygon
+                        and not isinstance(poly_shape, bool)):
+                    shapetype = "Multipolygon Alpha Shape /" + \
+                        str(alpha)
+                    break
+            if (type(poly_shape) is
+                    geometry.multipolygon.MultiPolygon
+                    or isinstance(poly_shape, bool)):
+                # try increasing alpha
+                for i in range(1, 6):
+                    # try decreasing alpha
+                    alpha = startalpha / (i*i)
+                    # /100000
+                    poly_shape = AlphaShapes.alpha_shape(
+                        points, alpha=cluster_distance/alpha)
+                    if (type(poly_shape) is not
+                            geometry.multipolygon.MultiPolygon
+                            and not isinstance(poly_shape, bool)):
+                        shapetype = "Multipolygon Alpha Shape /" + \
+                            str(alpha)
+                        break
+            if type(poly_shape) is geometry.multipolygon.MultiPolygon:
+                shapetype = "Multipolygon Alpha Shape -> Convex Hull"
+                # if still of type multipolygon,
+                # try to remove holes and do a convex_hull
+                poly_shape = poly_shape.convex_hull
+            # OR: in case there was a problem with generating
+            # alpha shapes
+            # (circum_r = a*b*c/(4.0*area)
+            # --> ZeroDivisionError: float division by zero)
+            # this branch is rarely executed
+            # for large point clusters where
+            # alpha is perhaps set too small
+            elif (isinstance(poly_shape, bool)
+                  or poly_shape.is_empty):
+                shapetype = "BoolAlpha -> Fallback "
+                "to PointCloud Convex Hull"
+                # convex hull
+                poly_shape = point_collection.convex_hull
+        # Finally do a buffer to smooth alpha
+        poly_shape = poly_shape.buffer(
+            cluster_distance/4, resolution=3)
+        # result_polygon = result_polygon.buffer(
+        #   min(distXLng,distYLat)/100,resolution=3)
+        return poly_shape, shapetype
+
+    @staticmethod
+    def _get_poly_one(
+            point_collection, cluster_distance):
+        shapetype = "1 point cluster"
+        # single dots are presented as buffer
+        # with 0.5% of width-area
+        poly_shape = point_collection.buffer(
+            cluster_distance/4, resolution=3)
+        # result_polygon = point_collection.buffer(
+        # min(distXLng,distYLat)/100,resolution=3)
+        # #single dots are presented as buffer
+        # with 0.5% of width-area
+        return poly_shape, shapetype
+
+    @staticmethod
+    def _get_poly(points, cluster_distance):
+        """Get polygon/shape for collection
+        of geooordinates (points)
+
+        Returns:
+        Shape (Polygon)
+        Shapetype (Approach of Shape-Gen)
+        """
+        point_collection = geometry.MultiPoint(
+            list(points))
+        poly_shape = None
+        pointcount = len(points)
+        if pointcount >= 5:
+            if pointcount < 10:
+                poly_shape, shapetype = AlphaShapes._get_poly_five_to_ten(
+                    point_collection, cluster_distance)
+            else:
+                poly_shape, shapetype = AlphaShapes._get_poly_larger_ten(
+                    points, pointcount, cluster_distance, point_collection)
+        elif 2 <= pointcount < 5:
+            poly_shape, shapetype = AlphaShapes._get_poly_two_to_five(
+                point_collection, cluster_distance)
+        elif (pointcount == 1 or
+              type(poly_shape) is geometry.point.Point
+              or poly_shape is None):
+            poly_shape, shapetype = AlphaShapes._get_poly_one(
+                point_collection, cluster_distance)
+        # final check for multipolygon
+        if type(poly_shape) is geometry.multipolygon.MultiPolygon:
+            # usually not executed
+            poly_shape = poly_shape.convex_hull
+        return poly_shape, shapetype
 
     @staticmethod
     def alpha_shape(points, alpha):
