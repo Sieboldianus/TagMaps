@@ -4,25 +4,26 @@
 Module for tag maps clustering methods
 """
 
+import logging
 import sys
 import warnings
-import numpy as np
-import logging
-import pandas as pd
-import seaborn as sns
-import hdbscan
-import pyproj
-import fiona
-from unicodedata import name as unicode_name
 from collections import defaultdict
-from typing import List, Set, Dict, Tuple, Optional, TextIO, Any
-import shapely.geometry as geometry
 from multiprocessing.pool import ThreadPool
-from tagmaps.classes.utils import Utils
+from typing import Any, Dict, List, Optional, Set, TextIO, Tuple
+
+import fiona
+import hdbscan
+import numpy as np
+import pandas as pd
+import pyproj
+import seaborn as sns
+import shapely.geometry as geometry
+
 from tagmaps.classes.alpha_shapes import AlphaShapes
-from tagmaps.classes.shared_structure import (
-    CleanedPost, AnalysisBounds, PreparedData,
-    ClusterType, TAGS, LOCATIONS, EMOJI)
+from tagmaps.classes.shared_structure import (EMOJI, LOCATIONS, TAGS,
+                                              AnalysisBounds, CleanedPost,
+                                              ClusterType, PreparedData)
+from tagmaps.classes.utils import Utils
 
 pool = ThreadPool(processes=1)
 sns.set_context('poster')
@@ -228,7 +229,7 @@ class ClusterGen():
             return selected_postguids_list
         # console reporting
         if self.cls_type == EMOJI:
-            item_text = unicode_name(item)
+            item_text = Utils._get_emojiname(item)
         else:
             item_text = item
         type_text = self.cls_type.rstrip('s')
@@ -359,7 +360,7 @@ class ClusterGen():
             # disable joblist multithread warning
             warnings.simplefilter('ignore', UserWarning)
             async_result = pool.apply_async(
-                Utils.fit_cluster, (self.clusterer, tag_radians_data))
+                ClusterGen.fit_cluster, (self.clusterer, tag_radians_data))
             self.clusterer = async_result.get()
             # clusterer.fit(tagRadiansData)
             # updateNeeded = False
@@ -369,7 +370,7 @@ class ClusterGen():
             # min_cluster_size:
             # 0.000035 without haversine: 223 m (or 95 m for 0.000015)
             cluster_labels = self.clusterer.single_linkage_tree_.get_clusters(
-                Utils.get_radians_from_meters(
+                Utils._get_radians_from_meters(
                     self.cluster_distance), min_cluster_size=2)
         # exit function in case of
         # final processing loop (no figure generating)
@@ -672,3 +673,18 @@ class ClusterGen():
                 f'Excluded {saturation_exclude_count} '
                 f'{self.cls_type.rstrip("s")} on local saturation check.')
         return shapes_and_meta, self.cls_type, itemized
+
+    @staticmethod
+    def fit_cluster(clusterer, data):
+        """Perform HDBSCAN clustering from features or distance matrix.
+
+        Args:
+            clusterer ([type]): HDBScan clusterer
+            data ([type]): A feature array (points)
+
+        Returns:
+            [type]: Clusterer
+        """
+
+        clusterer.fit(data)
+        return clusterer
