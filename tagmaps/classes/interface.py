@@ -11,7 +11,6 @@ import tkinter as tk
 import logging
 from tkinter.messagebox import showerror
 import tkinter.messagebox
-from unicodedata import name as unicode_name
 import matplotlib
 import numpy as np
 import matplotlib.pyplot as plt
@@ -219,11 +218,12 @@ class UserInterface():
             else:
                 item_name = item[0]
             try:
+                # try inserting emoji first,
+                # some emoji can be printed
                 listbox.insert(tk.END, f'{item_name} ({item[1]} user)')
             except tk.TclError:
-                # print(item[0].encode("utf-8"))
-                # Utils.with_surrogates()
-                emoji = "".join(unicode_name(c) for c in item[0])
+                # replace emoji by unicode name
+                emoji = Utils._get_emojiname(item_name)
                 listbox.insert(tk.END, f'{emoji} ({item[1]} user)')
 
     @staticmethod
@@ -350,7 +350,7 @@ class UserInterface():
                 p=max(50, min(number_of_clusters*10, 256)))
             # tkinter.messagebox.showinfo("messagr", str(type(ax)))
             # plot cutting distance
-            y = Utils.get_radians_from_meters(
+            y = Utils._get_radians_from_meters(
                 self._clst.cluster_distance)
             xmin = ax.get_xlim()[0]
             xmax = ax.get_xlim()[1]
@@ -364,7 +364,7 @@ class UserInterface():
             vals = ax.get_yticks()
             ax.set_yticklabels(
                 ['{:3.1f}m'.format(
-                    Utils.get_meters_from_radians(x)
+                    Utils._get_meters_from_radians(x)
                 ) for x in vals])
         else:
             plt.figure(3).canvas.set_window_title(
@@ -377,7 +377,7 @@ class UserInterface():
                       fontsize=12, loc='center')
             # tkinter.messagebox.showinfo("messagr", str(type(fig3)))
             # plot cutting distance
-            y = Utils.get_radians_from_meters(self._clst.cluster_distance)
+            y = Utils._get_radians_from_meters(self._clst.cluster_distance)
             xmin = self.fig3.get_xlim()[0]
             xmax = self.fig3.get_xlim()[1]
             line, = self.fig3.plot(
@@ -389,7 +389,7 @@ class UserInterface():
             self.fig3.legend(fontsize=10)
             vals = self.fig3.get_yticks()
             self.fig3.set_yticklabels(
-                [f'{Utils.get_meters_from_radians(x):3.1f}m' for x in vals])
+                [f'{Utils._get_meters_from_radians(x):3.1f}m' for x in vals])
         plt.tick_params(labelsize=10)
         if self.create_min_spanning_tree:
             if self.fig4:
@@ -467,7 +467,7 @@ class UserInterface():
             title = UserInterface._get_locname(
                 item, self.location_names_dict).upper()
         elif self._clst.cls_type == EMOJI:
-            emoji_name = unicode_name(item)
+            emoji_name = Utils._get_emojiname(item)
             title = f'{item} ({emoji_name})'
         else:
             title = item.upper()

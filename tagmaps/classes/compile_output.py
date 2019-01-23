@@ -215,10 +215,11 @@ class Compile():
         # do not write emoji to shapefile directly
         # bug in Arcgis, needs to be imported
         # using join
-        if is_emoji_record:
-            imptag = ""
-        else:
-            imptag = shape[4]
+        # if is_emoji_record:
+        #    imptag = ""
+        # else:
+        #    imptag = shape[4]
+        imptag = shape[4]
         shapefile.write({
             'geometry': geometry.mapping(shape[0]),
             'properties': {'Join_Count': shape[1],
