@@ -6,12 +6,6 @@ Spatio-Temporal Tag and Photo Location Clustering for generating Tag Maps
 This Library uses the single-linkage tree that is available from [HDBSCAN](https://github.com/scikit-learn-contrib/hdbscan) to cut trees at a specific user-defined distance for all available tags in the given dataset. 
 Afterwards, Alpha Shapes are generated as a means to 'soft' placement of tags on a map, according to their area of use. Two Shapefiles are generated that can be used to visualize maps, for example, in ArcGIS. 
 
-```diff
-- Please be advised: This repository contains, in its current form, 
-- Python code that is very difficult to read or contribute to. 
-- I intend to put more work into structuring code ...as soon as more time is available.
-```
-
 ![Tag Map Example](/resources/img6.png?raw=true)
 
 ## Installation
@@ -28,7 +22,10 @@ Afterwards, Alpha Shapes are generated as a means to 'soft' placement of tags on
 
 ## Code
 
-At the moment, the code is pretty messy. I wrote this in less than a week, without any other contributors in mind. I will work on this when there's more time available..
+The code has been completely refactored in January 2019, but there are still some missing pieces.
+The API (that is: `import tagmaps`) and pypi `pip install tagmaps` are not yet fully working.
+Some code parts don't follow all PEP conventions. However, the structure improved a lot compared
+to the original version and should be usable.
 
 ## Resources
 
@@ -39,7 +36,9 @@ At the moment, the code is pretty messy. I wrote this in less than a week, witho
 
 ## Contributors
 
-* todo: future goals, extending scope of program beyond Flickr photo data (include Twitter & Instagram, for example)
+* include topic modeling
+* improve automatic detection of general vs specific tags for an area
+* include mapping/visualization step (replace ArcGIS)
 
 ## Built With
 This project includes and makes use of several other projects/libraries/frameworks:
@@ -61,6 +60,12 @@ This project includes and makes use of several other projects/libraries/framewor
 GNU GPLv3
 
 ## Changelog & Download
+
+2019-01-23: [**TagMaps v0.10.4**]()
+
+* complete refactor of code with improved encapsulation and code, following most PEP conventions
+* bugfix: emoji handling now accurately recognizes grapheme clusters consisting of multiple unicode codepoints. This also fixes a display issue with shapefiles in ArcGIS.
+* interface: add feature to filter based on toplists for tags, emoji and locations
 
 2018-01-31: [**TagMaps v0.9.2**](https://cloudstore.zih.tu-dresden.de/index.php/s/8EFfeJcpNCStQ9X/download)
 
