@@ -584,7 +584,7 @@ class ClusterGen():
             item_area: float,
             topitem_area: float):
         """Skip item entirely if saturated, i.e.
-        if total area > 60%
+        if total area > 80%
         of top item cluster area
 
         Args:
@@ -594,7 +594,7 @@ class ClusterGen():
         local_saturation = item_area/(topitem_area/100)
         # print("Local Saturation for Tag " + top_item[0] "
         #       "+ ": " + str(round(localSaturation,0)))
-        if local_saturation > 60:
+        if local_saturation > 80:
             return True
         else:
             return False
