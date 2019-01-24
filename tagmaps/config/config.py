@@ -107,7 +107,8 @@ class BaseConfig:
                             help="Will attempt to exclude any tags that "
                             "are (over)used at above a certain percentage "
                             "of locations in processing extent. This "
-                            "may improve legibility of tag maps at larger scales"
+                            "may improve legibility of tag maps at "
+                            "larger scales"
                             )
         parser.add_argument("-j",
                             "--tokenizeJapanese",
