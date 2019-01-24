@@ -119,6 +119,7 @@ def main():
             cluster_types.append(EMOJI)
         if cfg.cluster_locations:
             cluster_types.append(LOCATIONS)
+
         # initialize clusterers
         clusterer_list = list()
         for cls_type in cluster_types:

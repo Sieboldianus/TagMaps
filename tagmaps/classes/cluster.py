@@ -645,6 +645,7 @@ class ClusterGen():
         saturation_exclude_count = 0
         shapes_and_meta = list()
         tnum = 0
+        topitem_area = None
         if self.local_saturation_check:
             # calculate total area of Top1-Tag
             # for 80% saturation check for lower level tags
