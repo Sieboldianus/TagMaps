@@ -31,7 +31,7 @@ class BaseConfig:
         self.cluster_emoji = True
         self.topic_modeling = False
         self.write_cleaned_data = True
-        self.local_saturation_check = True
+        self.local_saturation_check = False
         self.tokenize_japanese = False  # currently not implemented
         self.shapefile_intersect = False
         self.shapefile_path = ""
@@ -101,14 +101,13 @@ class BaseConfig:
                             "(no filtering based on tags or emoji)"
                             )
         parser.add_argument("-c",
-                            "--disableLocalSaturationCheck",
+                            "--localSaturationCheck",
                             action="store_true",
                             default=False,
-                            help="Will not exclude any tags that "
+                            help="Will attempt to exclude any tags that "
                             "are (over)used at above a certain percentage "
-                            "of locations in processing extent. Since this "
-                            "will usually improve legibility of tag maps, it "
-                            "is enabled by default. Disable with this flag."
+                            "of locations in processing extent. This "
+                            "may improve legibility of tag maps at larger scales"
                             )
         parser.add_argument("-j",
                             "--tokenizeJapanese",
@@ -217,8 +216,8 @@ class BaseConfig:
             self.topic_modeling = args.topicModeling
         if args.writeCleanedData:
             self.write_cleaned_data = args.writeCleanedData
-        if args.disableLocalSaturationCheck:
-            self.local_saturation_check = False
+        if args.localSaturationCheck:
+            self.local_saturation_check = True
         if args.shapefileIntersect:
             self.shapefile_intersect = args.shapefileIntersect
         if args.shapefilePath:
