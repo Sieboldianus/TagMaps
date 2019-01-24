@@ -41,6 +41,7 @@ def main():
         "########## "
         "STEP 1 of 6: Data Cleanup "
         "##########")
+
     lbsn_data.parse_input_records()
     # get current time
     now = time.time()

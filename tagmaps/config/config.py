@@ -103,7 +103,7 @@ class BaseConfig:
         parser.add_argument("-c",
                             "--disableLocalSaturationCheck",
                             action="store_true",
-                            default=True,
+                            default=False,
                             help="Will not exclude any tags that "
                             "are (over)used at above a certain percentage "
                             "of locations in processing extent. Since this "
