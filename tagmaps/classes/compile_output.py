@@ -164,7 +164,7 @@ class Compile():
         """
         if contains_emoji_output:
             with open("02_Output/emojiTable.csv",
-                      "w", encoding='utf-8') as emoji_table:
+                      "w", newline='', encoding='utf-8') as emoji_table:
                 emoji_table.write("FID,Emoji\n")
                 if itemized:
                     cls._write_all_shapes(
