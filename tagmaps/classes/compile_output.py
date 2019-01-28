@@ -163,6 +163,8 @@ class Compile():
         Note: refactor as optional property!
         """
         if contains_emoji_output:
+            # If newline is '', no translation takes place on write
+            # that means: \n (LF) is written, not CRLF
             with open("02_Output/emojiTable.csv",
                       "w", newline='', encoding='utf-8') as emoji_table:
                 emoji_table.write("FID,Emoji\n")
