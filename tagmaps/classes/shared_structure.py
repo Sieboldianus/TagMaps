@@ -134,4 +134,4 @@ class PreparedData():
     single_mostused_location = attr.ib(init=False)
     tmax = attr.ib(init=False, default=0)
     emax = attr.ib(init=False, default=0)
-    locid_locname_dict = attr.ib(init=False)
+    locid_locname_dict = attr.ib(default=dict())
