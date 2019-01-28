@@ -1,14 +1,15 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 
 """
-Tag Maps Clustering
+Tag Maps Clustering Package
 
-- will read in geotagged (lat/lng) decimal degree point data
-- will generate HDBSCAN Cluster Hierarchy
-- will output shapefiles with Alpha Shapes/Delauney
-for cluster cut at specific distance
+Package to cluster data (locations, tags or emoji)
+and output shapefile containing Alpha Shapes
+and statistics.
+
+Package can be executed directly (__main__) or
+imported using from tagmaps import tagmaps.TagMaps as TM
 """
 
 __author__ = "Alexander Dunkel"
