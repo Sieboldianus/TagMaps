@@ -2,16 +2,16 @@
 
 """Setup config for cx_freeze (built)"""
 
-# import os.path
+import os.path
 from cx_Freeze import setup, Executable
 
 # Derive Package Paths Dynamically
-# PYTHON_INSTALL_DIR = os.path.dirname(
-#     os.path.dirname(os.__file__))
-# os.environ['TCL_LIBRARY'] = os.path.join(
-#     PYTHON_INSTALL_DIR, 'tcl', 'tcl8.6')
-# os.environ['TK_LIBRARY'] = os.path.join
-# (PYTHON_INSTALL_DIR, 'tcl', 'tk8.6')
+PYTHON_INSTALL_DIR = os.path.dirname(
+    os.path.dirname(os.__file__))
+os.environ['TCL_LIBRARY'] = os.path.join(
+    PYTHON_INSTALL_DIR, 'tcl', 'tcl8.6')
+os.environ['TK_LIBRARY'] = os.path.join(
+    PYTHON_INSTALL_DIR, 'tcl', 'tk8.6')
 
 VERSION_DICT = {}
 with open("tagmaps/version.py") as fp:
@@ -39,7 +39,7 @@ INCLUDE_FOLDERS_FILES = [
     '00_generateClusters_OnlyEmoji.cmd',
     '00_generateClusters_OnlyPhotoLocations.cmd',
     '00_generateClusters_OnlyTags.cmd',
-    ('./tagmaps/matplotlibrc',
+    ('tagmaps/matplotlibrc',
      "matplotlibrc")
 ]
 PACKAGES_MOD = ["tkinter", "hdbscan"]
