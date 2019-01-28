@@ -18,7 +18,7 @@ except ImportError:
 
 VERSION_NUMBER = {}
 with open("tagmaps/version.py") as fp:
-    exec(fp.read(), VERSION_NUMBER)
+    exec(fp.read(), VERSION_NUMBER)  # pylint: disable=W0122
 
 setup(name="tagmaps",
       version=VERSION_NUMBER['__version__'],
