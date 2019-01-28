@@ -4,7 +4,6 @@
 Module for compiling TagMaps results and writing output
 """
 
-import sys
 import fiona
 from fiona.crs import from_epsg
 import shapely.geometry as geometry
@@ -45,8 +44,11 @@ class Compile():
                               epsg_code):
         all_itemized_shapes = list()
         all_non_itemized_shapes = list()
+        contains_emoji_output = False
         for shapes, cls_type, itemized in shapes_and_meta_list:
             if itemized:
+                if cls_type == EMOJI:
+                    contains_emoji_output = True
                 # normalize types separately (e.g. emoji/tags)
                 global_weights = cls._get_weights(shapes, [6, 7, 8])
                 itemized_shapes = cls._getcompile_itemized_shapes(
@@ -62,11 +64,11 @@ class Compile():
         if all_itemized_shapes:
             cls._write_all(
                 all_itemized_shapes, True,
-                epsg_code)
+                contains_emoji_output, epsg_code)
         if all_non_itemized_shapes:
             cls._write_all(
                 all_non_itemized_shapes, False,
-                epsg_code)
+                contains_emoji_output, epsg_code)
 
     @staticmethod
     def _get_shape_schema(itemized):
@@ -128,26 +130,48 @@ class Compile():
 
     @classmethod
     def _write_all(cls, shapes, itemized,
-                   epsg_code):
+                   contains_emoji_output, epsg_code):
         schema = cls._get_shape_schema(itemized)
         # update for emoji only run
         if itemized:
             shapefile_name = "allTagCluster"
-            # sort shapelist by column,
+            # sort shapelist by firstg column,
             # in descending order
             # we want most important tags places first
-            # column 7 = weights1
-            shapes.sort(key=itemgetter(7), reverse=True)
+            shapes.sort(key=itemgetter(1), reverse=True)
         else:
             shapefile_name = "allLocationCluster"
             # sort ascending, we want smalles clusters places
             # first as small points, overlayed by larger ones
-            # column 1 = weights1
-            shapes.sort(key=itemgetter(2))
+            shapes.sort(key=itemgetter(1))
         with fiona.open(
                 f'02_Output/{shapefile_name}.shp', mode='w',
                 encoding='UTF-8', driver='ESRI Shapefile',
                 schema=schema, crs=from_epsg(epsg_code)) as shapefile:
+            cls._attach_emojitable_handler(
+                shapefile,
+                shapes,
+                contains_emoji_output,
+                itemized)
+
+    @classmethod
+    def _attach_emojitable_handler(cls, shapefile,
+                                   shapes,
+                                   contains_emoji_output,
+                                   itemized):
+        """If Emoji Output present, open csv for writing
+        Note: refactor as optional property!
+        """
+        if contains_emoji_output:
+            with open("02_Output/emojiTable.csv",
+                      "w", encoding='utf-8') as emoji_table:
+                emoji_table.write("FID,Emoji\n")
+                if itemized:
+                    cls._write_all_shapes(
+                        shapefile, shapes,
+                        emoji_table, itemized)
+
+        else:
             cls._write_all_shapes(
                 shapefile, shapes, None, itemized)
 
@@ -223,8 +247,6 @@ class Compile():
         shapelist = list()
         for alphashape_and_meta in shapes:
             h_imp = cls._get_himp(idx, shapes)
-            # if h_imp == 1 and cls_type == EMOJI:
-            #     input(f'{shapes[idx]}\n{shapes[idx-1]}')
             idx += 1
             item_shape = cls._getcompile_item_shape(
                 alphashape_and_meta,
@@ -242,12 +264,8 @@ class Compile():
         therefore a change means
         new item begins
         """
-        if ((idx == 0
-             or shapes[idx][4] != shapes[idx-1][4])
-                and not shapes[idx][3] == 1):
-            # if previous item is different
-            # to current item and
-            # usercount is not 1
+        if (idx == 0 or
+                shapes[idx][4] != shapes[idx-1][4]):
             h_imp = 1
         else:
             h_imp = 0
