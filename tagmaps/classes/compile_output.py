@@ -138,12 +138,12 @@ class Compile():
             # sort shapelist by firstg column,
             # in descending order
             # we want most important tags places first
-            shapes.sort(key=itemgetter(1), reverse=True)
+            shapes.sort(key=itemgetter(7), reverse=True)
         else:
             shapefile_name = "allLocationCluster"
             # sort ascending, we want smalles clusters places
             # first as small points, overlayed by larger ones
-            shapes.sort(key=itemgetter(1))
+            shapes.sort(key=itemgetter(2))
         with fiona.open(
                 f'02_Output/{shapefile_name}.shp', mode='w',
                 encoding='UTF-8', driver='ESRI Shapefile',
@@ -215,11 +215,10 @@ class Compile():
         # do not write emoji to shapefile directly
         # bug in Arcgis, needs to be imported
         # using join
-        # if is_emoji_record:
-        #    imptag = ""
-        # else:
-        #    imptag = shape[4]
-        imptag = shape[4]
+        if is_emoji_record:
+            imptag = ""
+        else:
+            imptag = shape[4]
         shapefile.write({
             'geometry': geometry.mapping(shape[0]),
             'properties': {'Join_Count': shape[1],
@@ -264,8 +263,12 @@ class Compile():
         therefore a change means
         new item begins
         """
-        if (idx == 0 or
-                shapes[idx][4] != shapes[idx-1][4]):
+        if ((idx == 0
+             or shapes[idx][4] != shapes[idx-1][4])
+                and not shapes[idx][2] == 1):
+            # if item is different to
+            # previous item and
+            # user count is not 1
             h_imp = 1
         else:
             h_imp = 0
@@ -315,7 +318,7 @@ class Compile():
             # imp_tag_text = ""
         else:
             emoji = 0
-        #    imp_tag_text = f'{alphashape_and_meta[4]}'
+            # imp_tag_text = f'{alphashape_and_meta[4]}'
         item_shape = (
             alphashape_and_meta[0],
             alphashape_and_meta[1],
