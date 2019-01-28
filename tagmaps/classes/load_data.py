@@ -267,7 +267,6 @@ class LoadData():
         total_location_count = LoadData._get_total_count(
             top_location_list, self.total_location_counter)
         self.prepared_data.top_locations_list = top_location_list
-        self.prepared_data.single_mostused_location = top_location_list[0]
         self.prepared_data.total_unique_locations = total_unique_locations
         self.prepared_data.total_location_count = total_location_count
         self.prepared_data.locid_locname_dict = self.locid_locname_dict
@@ -277,7 +276,6 @@ class LoadData():
             total_tag_count = LoadData._get_total_count(
                 top_tags_list, self.total_tag_counter)
             self.prepared_data.top_tags_list = top_tags_list
-            self.prepared_data.single_mostused_tag = top_tags_list[0]
             self.prepared_data.total_unique_tags = total_unique_tags
             self.prepared_data.total_tag_count = total_tag_count
 
@@ -285,7 +283,6 @@ class LoadData():
             total_emoji_count = LoadData._get_total_count(
                 top_emoji_list, self.total_emoji_counter)
             self.prepared_data.top_emoji_list = top_emoji_list
-            self.prepared_data.single_mostused_emoji = top_emoji_list[0]
             self.prepared_data.total_unique_emoji = total_unique_emoji
             self.prepared_data.total_emoji_count = total_emoji_count
 

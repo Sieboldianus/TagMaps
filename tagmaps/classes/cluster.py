@@ -51,6 +51,7 @@ class ClusterGen():
         self.cleaned_post_dict = cleaned_post_dict
         self.cleaned_post_list = cleaned_post_list
         self.top_list = top_list
+        self.top_item = top_list[0]
         self.total_distinct_locations = total_distinct_locations
         self.autoselect_clusters = False
         self.sel_colors = None
@@ -503,14 +504,14 @@ class ClusterGen():
         # get clusters for top item
         if self.local_saturation_check:
             self._get_update_clusters(
-                item=self.top_list[0])
-        self.tnum = 1
+                item=self.top_item)
+        self.tnum = 0
         # get remaining clusters
         for item in self.top_list:
             if (self.local_saturation_check and
-                    self.tnum == 1 and
-                    item[0] in self.clustered_items_dict):
-                # skip item if already
+                    self.tnum == 0 and
+                    self.top_item in self.clustered_items_dict):
+                # skip topitem if already
                 # clustered due to local saturation
                 continue
             self.tnum += 1
@@ -592,9 +593,9 @@ class ClusterGen():
             topitem_area: top item cluster area
         """
         local_saturation = item_area/(topitem_area/100)
-        # print("Local Saturation for Tag " + top_item[0] "
+        # print("Local Saturation for Tag " + self.top_item "
         #       "+ ": " + str(round(localSaturation,0)))
-        if local_saturation > 80:
+        if local_saturation > 60:
             return True
         else:
             return False
@@ -650,12 +651,12 @@ class ClusterGen():
             # calculate total area of Top1-Tag
             # for 80% saturation check for lower level tags
             topitem_area = self._get_item_clusterarea(
-                self.top_list[0])
+                self.top_item)
             if topitem_area == 0:
                 raise ValueError(
                     f'Something went wrong: '
                     f'Could not get area for Top item '
-                    f'{self.top_list[0]}')
+                    f'{self.top_item}')
         for item in self.top_list:
             tnum += 1
             shapes_tmp = self._get_item_shapeslist(
