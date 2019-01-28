@@ -77,68 +77,59 @@ class BaseConfig:
                             help="Specify source of data. "
                             "This is needed to read data.")
         parser.add_argument("-r",
-                            "--removeLongTail",
+                            "--disableRemoveLongTail",
                             action="store_true",
-                            default=True,
-                            help="Defaults to true. This will exclude"
-                            "any tags that are used by only a "
+                            help="This will disable exclusion"
+                            "of tags that are used by only a "
                             "small number of users")
         parser.add_argument("-e",
                             "--EPSG",
                             help="If provided, will overwrite "
                             "auto EPSG code")
-        parser.add_argument("-t", "--clusterTags",
+        parser.add_argument("-t", "--disableClusterTags",
                             action="store_true",
-                            default=True,
-                            help="Cluster tag locations"
-                            "Clusters will be generated per "
+                            help="Disable cluster tag locations"
+                            "No clusters will be generated per "
                             "distinct tag.")
         parser.add_argument("-p",
-                            "--clusterLocations",
+                            "--disableClusterLocations",
                             action="store_true",
-                            default=True,
-                            help="Cluster post locations "
-                            "(no filtering based on tags or emoji)"
+                            help="Disable cluster of post locations "
                             )
         parser.add_argument("-c",
                             "--localSaturationCheck",
                             action="store_true",
-                            default=False,
                             help="Will attempt to exclude any tags that "
                             "are (over)used at above a certain percentage "
                             "of locations in processing extent. This "
                             "may improve legibility of tag maps at "
                             "larger scales"
                             )
-        parser.add_argument("-j",
-                            "--tokenizeJapanese",
-                            action="store_true",
-                            default=False,
-                            help="Japanese language requires "
-                            "tokenization prior to clustering. "
-                            "Disabled by default. Note:"
-                            "Not fully implemented"
-                            )
+        # parser.add_argument("-j",
+        #                     "--tokenizeJapanese",
+        #                     action="store_true",
+        #                     help="Japanese language requires "
+        #                     "tokenization prior to clustering. "
+        #                     "Disabled by default. Note:"
+        #                     "Not fully implemented"
+        #                     )
         parser.add_argument("-o",
-                            "--clusterEmojis",
+                            "--disableClusterEmoji",
                             action="store_true",
-                            default=True,
-                            help="Defaults to True. Will cluster "
+                            help="Disable cluster of "
                             "emoji in addition to tags.")
         parser.add_argument("-m",
                             "--topicModeling",
                             action="store_true",
-                            default=False,
                             help="This will used topic modeling "
                             "to detect groups of tags (based on "
-                            "Latent Dirichlet Allocation). Note: "
-                            "Not fully implemented")
+                            "Latent Dirichlet Allocation). "
+                            "[Not implemented]")
         parser.add_argument("-w",
-                            "--writeCleanedData",
+                            "--disableWriteCleanedData",
                             action="store_true",
-                            default=True,
-                            help="Defaults to True. This will "
-                            "write out a file limited to the data "
+                            help="This will disable "
+                            "write out of a file limited to the data "
                             "that will be used for tag clustering "
                             "(filtered based on stoplists, clipped boundary, "
                             "minimum user threshold etc.)"
@@ -146,8 +137,7 @@ class BaseConfig:
         parser.add_argument("-i",
                             "--shapefileIntersect",
                             action="store_true",
-                            default=False,
-                            help="If set to true, clip "
+                            help="If set, clip "
                             "data to shapefile (specify path "
                             "with --shapefilePath)"
                             )
@@ -159,21 +149,18 @@ class BaseConfig:
         parser.add_argument("-is",
                             "--ignoreStoplists",
                             action="store_true",
-                            default=False,
                             help="If stoplist is available "
                             "ignore it."
                             )
         parser.add_argument("-ip",
                             "--ignorePlaceCorrections",
                             action="store_true",
-                            default=False,
                             help="If place corrections are available, "
                             "ignore them."
                             )
         parser.add_argument("-stat",
                             "--statisticsOnly",
                             action="store_true",
-                            default=False,
                             help="Do not cluster, only read input data"
                             " and calculate statistics."
                             )
@@ -184,7 +171,7 @@ class BaseConfig:
                             help="Remove all tags that are used by "
                             "less than x photographers. Defaults to 5.")
         parser.add_argument("-wG",
-                            "--writeGISCompLine",
+                            "--disableWriteGISCompLine",
                             action="store_true",
                             default=True,
                             help="Writes placeholder entry after headerline "
@@ -193,46 +180,45 @@ class BaseConfig:
         parser.add_argument("-aM",
                             "--autoMode",
                             action="store_true",
-                            default=False,
-                            help="If set to true, no user input will "
+                            help="If set, no user input will "
                             "be requested during processing.",
                             )
 
         args = parser.parse_args()
         if args.source:
             self.data_source = args.source
-        if args.clusterTags:
-            self.cluster_tags = args.clusterTags
-        if args.clusterLocations:
-            self.cluster_locations = args.clusterLocations
+        if args.disableClusterTags:
+            self.cluster_tags = False
+        if args.disableClusterLocations:
+            self.cluster_locations = False
         if args.EPSG is None:
             self.override_crs = None
         else:
             self.load_custom_crs(self.epsg)
-        if args.removeLongTail:
-            self.remove_long_tail = args.removeLongTail
-        if args.clusterEmojis:
-            self.cluster_emoji = args.clusterEmojis
+        if args.disableRemoveLongTail:
+            self.remove_long_tail = False
+        if args.disableClusterEmoji:
+            self.cluster_emoji = False
         if args.topicModeling:
-            self.topic_modeling = args.topicModeling
-        if args.writeCleanedData:
-            self.write_cleaned_data = args.writeCleanedData
+            self.topic_modeling = True
+        if args.disableWriteCleanedData:
+            self.write_cleaned_data = False
         if args.localSaturationCheck:
             self.local_saturation_check = True
         if args.shapefileIntersect:
-            self.shapefile_intersect = args.shapefileIntersect
+            self.shapefile_intersect = True
         if args.shapefilePath:
             self.shapefile_path = args.shapefilePath
         if args.ignoreStoplists:
-            self.ignore_stoplists = args.ignoreStoplists
+            self.ignore_stoplists = True
         if args.ignorePlaceCorrections:
-            self.ignore_place_corrections = args.ignorePlaceCorrections
+            self.ignore_place_corrections = True
         if args.statisticsOnly:
-            self.statistics_only = args.statisticsOnly
+            self.statistics_only = True
         if args.limitBottomUserCount:
             self.limit_bottom_user_count = int(args.limitBottomUserCount)
-        if args.writeGISCompLine:
-            self.write_gis_comp_line = args.writeGISCompLine
+        if args.disableWriteGISCompLine:
+            self.write_gis_comp_line = False
         if args.autoMode:
             self.auto_mode = args.autoMode
 
