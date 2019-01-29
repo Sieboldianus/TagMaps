@@ -16,7 +16,6 @@ import matplotlib
 import numpy as np
 import matplotlib.pyplot as plt
 from typing import List, Set, Dict, Tuple, Optional, TextIO
-import sklearn.datasets as data
 import traceback
 import shapely.geometry as geometry
 from tagmaps.classes.utils import Utils

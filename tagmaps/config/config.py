@@ -65,6 +65,7 @@ class BaseConfig:
         if self.shapefile_intersect:
             self.load_shapefile()
         self.source_map = self.load_sourcemapping()
+        self.set_glob_options()
 
     def parse_args(self):
         """Parse init args and set default values
@@ -354,6 +355,12 @@ class BaseConfig:
         source_config_py = ConfigMap(source_config)
         return source_config_py
 
+    @staticmethod
+    def set_glob_options():
+        """Includes global options in other packages to be set
+        prior execution"""
+        # unused
+
 
 class ConfigMap:
     """Retrieves python object from config.cfg"""
@@ -402,9 +409,3 @@ class ConfigMap:
         }
         quoting = quote_switch.get(quote_string)
         return quoting
-
-    @staticmethod
-    def set_glob_options():
-        """Includes global options in other packages to be set
-        prior execution"""
-        # empty so far
