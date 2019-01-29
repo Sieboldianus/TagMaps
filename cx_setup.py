@@ -34,11 +34,11 @@ INCLUDES_MOD = [
 INCLUDE_FOLDERS_FILES = [
     "C:/Python36/DLLs/tcl86t.dll",
     "C:/Python36/DLLs/tk86t.dll",
-    '01_Input/',
-    '00_Config/',
-    '00_generateClusters_OnlyEmoji.cmd',
-    '00_generateClusters_OnlyPhotoLocations.cmd',
-    '00_generateClusters_OnlyTags.cmd',
+    'resources/01_Input/',
+    'resources/00_Config/',
+    'resources/00_generateClusters_OnlyEmoji.cmd',
+    'resources/00_generateClusters_OnlyPhotoLocations.cmd',
+    'resources/00_generateClusters_OnlyTags.cmd',
     ('tagmaps/matplotlibrc',
      "matplotlibrc")
 ]

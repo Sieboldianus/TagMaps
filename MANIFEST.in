@@ -1,4 +1,4 @@
 include README.md
 include VERSION
 include tagmaps/classes/*
-include tagmaps/tests/*
+include tests/*
