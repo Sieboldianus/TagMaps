@@ -10,22 +10,26 @@ Afterwards, Alpha Shapes are generated as a means to 'soft' placement of tags on
 
 ## Installation
 
-1. The easiest way for Windows users is to download the Pre-compiled build that is available [here](https://cloudstore.zih.tu-dresden.de/index.php/s/8EFfeJcpNCStQ9X/download) (315MB!) and run `generateTagClusters.exe`
+1. The easiest way for Windows users is to download the pre-compiled build that is available [here](https://cloudstore.zih.tu-dresden.de/index.php/s/QhKT3Pj9fk4H9ns/download) (~200MB) and run `tagmaps.exe`
     - you can also compile the program yourself using the `setup.py` with [cx_Freeze](https://anthony-tuininga.github.io/cx_Freeze/): run `python cx_setup.py build`
     - or simple run `generateTagClusters.py` if you have Python and all dependencies installed
-2. Place geotagged photo data in `/01_Input` subfolder
-    - example files/format are available in the Pre-compiled build zip-file above
-3. Output files will be saved in `/02_Output` (2 Shapefiles in WGS1984 projection, one containing all Tag Cluster and one with the Photo Location Clusters)
-4. Visualize Shapefiles using ArcGIS (I haven't tried other GIS Software such as QGIS, but it should theoretically be possible..)
+2. If you have Python >3.6 you can also install with `pip install tagmaps`
+
+## Run
+
+1. Place geotagged data in `/01_Input` subfolder
+    - example files/format are available in the pre-compiled build zip-file above
+2. Output files will be saved in `/02_Output` (2 Shapefiles in WGS1984 projection, one containing all tag cluster and one with the overall location clusters)
+3. Visualize Shapefiles using ArcGIS (I haven't tried other GIS Software such as QGIS, but it should theoretically be possible..)
     - download `BasemapLayout_World.mxd` from [resources folder](/resources/BasemapLayout_World.mxd) and replace missing links with 2 resulting Shapefiles in `/02_Output`
-    - adjust minimum and maximum Font Sizes, Weighting Formula or other metrics to your needs. There are two Power Point files available which explain the complete process: [Tag Clustering](/resources/01_TagMaps.pptx) and [Photo Location Clustering](/resources/02_PhotoDensityMaps.pptx)
+    - adjust minimum and maximum Font Sizes, Weighting Formula or other metrics to your needs.
 
 ## Code
 
 The code has been completely refactored in January 2019, but there are still some missing pieces.
-The API (that is: `import tagmaps`) and pypi `pip install tagmaps` are not yet fully working.
-Some code parts don't follow all PEP conventions. However, the structure improved a lot compared
-to the original version and should be usable.
+Particularly the API (that is: `import tagmaps`) is not fully implemented. See method main() in __main__.py
+for examples on how to use tag maps package.
+
 
 ## Resources
 
@@ -36,6 +40,7 @@ to the original version and should be usable.
 
 ## Contributors
 
+Some future goals:
 * include topic modeling
 * improve automatic detection of general vs specific tags for an area
 * include mapping/visualization step (replace ArcGIS)
@@ -61,10 +66,10 @@ GNU GPLv3
 
 ## Changelog & Download
 
-2019-01-23: [**TagMaps v0.10.4**]()
+2019-01-23: [**TagMaps v0.11.1**](https://cloudstore.zih.tu-dresden.de/index.php/s/QhKT3Pj9fk4H9ns/download)
 
 * complete refactor of code with improved encapsulation and code, following most PEP conventions
-* bugfix: emoji handling now accurately recognizes grapheme clusters consisting of multiple unicode codepoints. This also fixes a display issue with shapefiles in ArcGIS.
+* bugfix: emoji handling now accurately recognizes grapheme clusters consisting of multiple unicode codepoints.  
 * interface: add feature to filter based on toplists for tags, emoji and locations
 
 2018-01-31: [**TagMaps v0.9.2**](https://cloudstore.zih.tu-dresden.de/index.php/s/8EFfeJcpNCStQ9X/download)
