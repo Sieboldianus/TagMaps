@@ -57,7 +57,10 @@ class ClusterGen():
         self.cleaned_post_dict = cleaned_post_dict
         self.cleaned_post_list = cleaned_post_list
         self.top_list = top_list
-        self.top_item = top_list[0]
+        if self.top_list:
+            self.top_item = top_list[0]
+        else:
+            self.top_item = None
         self.total_distinct_locations = total_distinct_locations
         self.autoselect_clusters = False
         self.sel_colors = None
