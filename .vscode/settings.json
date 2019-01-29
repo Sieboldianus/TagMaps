@@ -1,4 +1,5 @@
 {
     "python.linting.pylintEnabled": true,
     "python.linting.pep8Enabled": true,
+    "python.pythonPath": "C:\\Users\\AD\\.virtualenvs\\standalone_tag_cluster_hdbscan-lIc9RJNz\\Scripts\\python.exe",
 }
