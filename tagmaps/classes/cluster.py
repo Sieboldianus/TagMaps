@@ -297,7 +297,7 @@ class ClusterGen():
         df = pd.DataFrame(selected_posts_list)
         # converts pandas data to numpy array
         # (limit by list of column-names)
-        points = df.as_matrix(['lng', 'lat'])
+        points = df.values(['lng', 'lat'])
         # only return preview fig without clustering
         return points, selected_postguids_list
 
