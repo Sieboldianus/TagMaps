@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Setup config for cx_freeze (built)"""
+"""Setup config for cx_freeze (build)"""
 
 import distutils
 import os.path

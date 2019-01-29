@@ -254,7 +254,7 @@ class UserInterface():
         # str(len(sel_colors)) + " " + str(sel_colors[1]))
         # output/update matplotlib figures
         points = self._clst._get_np_points(item=sel_item[0], silent=True)
-        self._clst.cluster_points(
+        self._clst._cluster_points(
             points=points,
             preview_mode=True)
         mask_noisy = self._clst.mask_noisy
