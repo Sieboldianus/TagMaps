@@ -324,7 +324,7 @@ class ClusterGen():
         # cluster data
         # conversion to radians for HDBSCAN
         # (does not support decimal degrees)
-        tag_radians_data = np.radians(points)
+        tag_radians_data = np.radians(points)  # pylint: disable=E1111
         # for each tag in overallNumOfUsersPerTag_global.most_common(1000)
         # (descending), calculate HDBSCAN Clusters
         # min_cluster_size default - 5% optimum:
