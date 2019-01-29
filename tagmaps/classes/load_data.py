@@ -193,21 +193,27 @@ class LoadData():
         - initialize counter for user if not already done
         """
         if self.cfg.cluster_tags and lbsn_post.hashtags:
-            self.userdict_tagcounters_global[lbsn_post.user_guid].update(
+            self.userdict_tagcounters_global[
+                lbsn_post.user_guid].update(
                 lbsn_post.hashtags)
             self.total_tag_counter.update(lbsn_post.hashtags)
         if self.cfg.cluster_emoji and lbsn_post.emoji:
-            self.userdict_emojicounters_global[lbsn_post.user_guid].update(
+            self.userdict_emojicounters_global[
+                lbsn_post.user_guid].update(
                 lbsn_post.emoji)
-            self.total_emoji_counter.update(lbsn_post.emoji)
+            self.total_emoji_counter.update(
+                lbsn_post.emoji)
         if lbsn_post.loc_id:
             # update single item hack
             # there're more elegant ways to do this
-            self.userdict_locationcounters_global[lbsn_post.user_guid].update(
+            self.userdict_locationcounters_global[
+                lbsn_post.user_guid].update(
                 (lbsn_post.loc_id,))
-            self.total_location_counter.update((lbsn_post.loc_id,))
+            self.total_location_counter.update(
+                (lbsn_post.loc_id,))
 
-    def get_cleaned_post_dict(self) -> Dict[str, CleanedPost]:
+    def get_cleaned_post_dict(
+            self) -> Dict[str, CleanedPost]:
         """Output wrapper
 
         - calls loop user locations method
