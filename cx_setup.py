@@ -2,8 +2,13 @@
 
 """Setup config for cx_freeze (built)"""
 
+import distutils
 import os.path
-from cx_Freeze import setup, Executable
+import sys
+
+from cx_Freeze import Executable, setup
+
+import opcode
 
 # Derive Package Paths Dynamically
 PYTHON_INSTALL_DIR = os.path.dirname(
@@ -12,6 +17,11 @@ os.environ['TCL_LIBRARY'] = os.path.join(
     PYTHON_INSTALL_DIR, 'tcl', 'tcl8.6')
 os.environ['TK_LIBRARY'] = os.path.join(
     PYTHON_INSTALL_DIR, 'tcl', 'tk8.6')
+
+# opcode is not a virtualenv module,
+# so we can use it to find the stdlib; this is the same
+# trick used by distutils itself it installs itself into the virtualenv
+DISTUTILS_PATH = os.path.join(os.path.dirname(opcode.__file__), 'distutils')
 
 VERSION_DICT = {}
 with open("tagmaps/version.py") as fp:
@@ -28,12 +38,26 @@ INCLUDES_MOD = [
     'seaborn.cm',
     'scipy.sparse.csgraph',
     'argparse',
-    'scipy.sparse.csgraph._validation'
+    'scipy.sparse.csgraph._validation',
+    'numpy.core._dtype_ctypes',
+    'scipy._distributor_init',
+    'multiprocessing'
 ]
 
+# windows pipenv:
+# copy tcl86t.dll, tk86t.dll and sqlite3.dll
+# to venv_folder/DLLs/*
 INCLUDE_FOLDERS_FILES = [
-    "C:/Python36/DLLs/tcl86t.dll",
-    "C:/Python36/DLLs/tk86t.dll",
+    (DISTUTILS_PATH, 'distutils'),
+    (os.path.join(PYTHON_INSTALL_DIR, 'DLLs', 'tcl86t.dll'),
+     os.path.join('lib', 'tcl86t.dll'),
+     ),
+    (os.path.join(PYTHON_INSTALL_DIR, 'DLLs', 'tk86t.dll'),
+     os.path.join('lib', 'tk86t.dll'),
+     ),
+    (os.path.join(PYTHON_INSTALL_DIR, 'DLLs', 'sqlite3.dll'),
+     os.path.join('lib', 'sqlite3.dll'),
+     ),
     'resources/01_Input/',
     'resources/00_Config/',
     'resources/00_generateClusters_OnlyEmoji.cmd',
@@ -43,7 +67,9 @@ INCLUDE_FOLDERS_FILES = [
      "matplotlibrc")
 ]
 PACKAGES_MOD = ["tkinter", "hdbscan"]
-EXCLUDES_MOD = ["scipy.spatial.cKDTree"]
+EXCLUDES_MOD = [
+    "scipy.spatial.cKDTree",
+    "distutils"]
 
 
 # GUI applications require a different base on Windows
@@ -65,6 +91,6 @@ setup(name="tagmaps",
               'include_files': INCLUDE_FOLDERS_FILES,
               'packages': PACKAGES_MOD,
               'excludes': EXCLUDES_MOD,
-              'optimize': 2}
+              'optimize': 0}
       },
       executables=EXECUTABLES)
