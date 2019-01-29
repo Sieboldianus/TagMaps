@@ -17,7 +17,7 @@ Afterwards, Alpha Shapes are generated as a means to 'soft' placement of tags on
 
 1. Place geotagged data in `/01_Input` subfolder
     - example files/format are available in the pre-compiled build zip-file above
-2. Output files will be saved in `/02_Output` (2 Shapefiles in WGS1984 projection, one containing all tag cluster and one with the overall location clusters)
+2. Output files will be saved in `/02_Output` (2 Shapefiles in auto-selected UTM projection, one containing all tag cluster and one with the overall location clusters)
 3. Visualize Shapefiles using ArcGIS (I haven't tried other GIS Software such as QGIS, but it should theoretically be possible..)
     - download `BasemapLayout_World.mxd` from [resources folder](/resources/BasemapLayout_World.mxd) and replace missing links with 2 resulting Shapefiles in `/02_Output`
     - adjust minimum and maximum Font Sizes, Weighting Formula or other metrics to your needs.
