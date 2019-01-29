@@ -8,6 +8,7 @@ for (optional) user input
 
 import sys
 import tkinter as tk
+from tkinter import TclError
 import logging
 from tkinter.messagebox import showerror
 import tkinter.messagebox
@@ -221,7 +222,7 @@ class UserInterface():
                 # try inserting emoji first,
                 # some emoji can be printed
                 listbox.insert(tk.END, f'{item_name} ({item[1]} user)')
-            except tk.TclError:
+            except TclError:
                 # replace emoji by unicode name
                 emoji = Utils._get_emojiname(item_name)
                 listbox.insert(tk.END, f'{emoji} ({item[1]} user)')
