@@ -10,7 +10,7 @@ Afterwards, Alpha Shapes are generated as a means to 'soft' placement of tags on
 
 ## Installation
 
-1. The easiest way for Windows users is to download the newest pre-compiled build from [releases](/releases) and run `tagmaps.exe`
+1. The easiest way for Windows users is to download the newest pre-compiled build from [releases](../../releases) and run `tagmaps.exe`
 2. For all other OS, the reccommended way is to install with `pip install tagmaps`
 
 ## Run
