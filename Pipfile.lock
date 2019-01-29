@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "5a5d68c3f88f04f1698b21b3a1fe738c4f5e148f694adc32abff8dd0e799db88"
+            "sha256": "7353c989a688d169a2d74aec3d5028c94e81c8745ef274d9bc5e1ce754ca4a40"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -124,6 +124,14 @@
             ],
             "path": "C:/temp/Fiona-1.8.4-cp36-cp36m-win_amd64.whl",
             "version": "==1.8.4"
+        },
+        "gdal": {
+            "hashes": [
+                "sha256:1fa83637b56c4e956a85c088044a112fafe294174c57be4f2d4d0a50ed2e5cd3",
+                "sha256:c9ef05eb457706b3aa0299f3ec468cdf7eb5c47635c9cf236ee1862009b0b30e"
+            ],
+            "path": "C:/temp/GDAL-2.3.3-cp36-cp36m-win_amd64.whl",
+            "version": "==2.3.3"
         },
         "gitdb2": {
             "hashes": [
