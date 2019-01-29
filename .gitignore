@@ -15,8 +15,6 @@ pytest-env
 .vscode/
 emojifile.txt
 tagmaps.egg-info
-tagmaps.pyproj
 tagmaps/tests/pytest-env/
 tagmaps/.pytest_cache/
-tagmaps.sln
 Pipfile
