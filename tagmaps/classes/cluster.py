@@ -12,7 +12,6 @@ from multiprocessing.pool import ThreadPool
 from typing import Any, Dict, List, Optional, Set, TextIO, Tuple
 
 import fiona
-import hdbscan
 import numpy as np
 import pandas as pd
 import pyproj
@@ -24,6 +23,13 @@ from tagmaps.classes.shared_structure import (EMOJI, LOCATIONS, TAGS,
                                               AnalysisBounds, CleanedPost,
                                               ClusterType, PreparedData)
 from tagmaps.classes.utils import Utils
+
+with warnings.catch_warnings():
+    # disable:
+    # parallel.py:268: DeprecationWarning:
+    # check_pickle is deprecated in joblib 0.12
+    warnings.filterwarnings("ignore", category=DeprecationWarning)
+    import hdbscan
 
 pool = ThreadPool(processes=1)
 sns.set_context('poster')
