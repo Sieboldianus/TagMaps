@@ -90,10 +90,10 @@ class AnalysisBounds():
 
         (lat, lng coordinates)
         """
-        self.lim_lat_min = None
-        self.lim_lat_max = None
-        self.lim_lng_min = None
-        self.lim_lng_max = None
+        self.lim_lat_min = 0
+        self.lim_lat_max = 0
+        self.lim_lng_min = 0
+        self.lim_lng_max = 0
 
     def _upd_latlng_bounds(self, lat, lng):
         """Update lat/lng bounds based on coordinate pair."""

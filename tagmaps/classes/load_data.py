@@ -110,6 +110,7 @@ class LoadData():
     def _parse_postlist(self, post_reader: TextIO):
         """Process posts according to specifications"""
         # row_num = 0
+        msg = None
         for post in post_reader:
             # row_num += 1
             lbsn_post = self._parse_post(post)
@@ -129,7 +130,8 @@ class LoadData():
             # modulo: print only once every 10 iterations
             print(msg, end='\r')
         # log last message to file, clean stdout
-        print(" " * len(msg), end='\r')
+        if msg:
+            print(" " * len(msg), end='\r')
         sys.stdout.flush()
         self.log.info(msg)
 
