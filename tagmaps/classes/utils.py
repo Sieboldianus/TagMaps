@@ -307,6 +307,8 @@ class Utils():
                 if emoji_name:
                     break
         if not emoji_name:
+            emoji_name = emoji.demojize(emoji_string)
+        if not emoji_name:
             raise ValueError(f'No name found for {emoji_string}')
         return emoji_name
 
