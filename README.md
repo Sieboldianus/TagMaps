@@ -58,6 +58,9 @@ This project includes and makes use of several other projects/libraries/framewor
 >[*SciPy and Convex Hull*](https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.ConvexHull.html#scipy.spatial.ConvexHull)
 >> Simple shapes for point clusters are generated using SciPy's excellent Convex Hull functions  
 
+>[*Fiona*](https://github.com/Toblerity/Fiona)
+>> OGR’s neat and nimble API for Python programmers.
+
 ## License
 
 GNU GPLv3
@@ -66,9 +69,10 @@ GNU GPLv3
 
 2019-01-23: [**TagMaps v0.11.1**](https://cloudstore.zih.tu-dresden.de/index.php/s/QhKT3Pj9fk4H9ns/download)
 
-* complete refactor of code with improved encapsulation and code, following most PEP conventions
+* complete refactor of code with improved encapsulation, code now largely follows PEP conventions
 * bugfix: emoji handling now accurately recognizes grapheme clusters consisting of multiple unicode codepoints.  
 * interface: add feature to filter based on toplists for tags, emoji and locations
+* added sample CC-BY dataset
 
 2018-01-31: [**TagMaps v0.9.2**](https://cloudstore.zih.tu-dresden.de/index.php/s/8EFfeJcpNCStQ9X/download)
 
