@@ -140,7 +140,10 @@ class ClusterGen():
 
         cleaned posts list."""
         df = pd.DataFrame(self.cleaned_post_list)
-        points = df.as_matrix(['lng', 'lat'])
+        # get columns lng, lat
+        # convert to numpy ndarray
+        # (List of [lng, lat] lists)
+        points = df.loc[:, ['lng', 'lat']].to_numpy()
         (self.bounds.lim_lat_min,
          self.bounds.lim_lat_max,
          self.bounds.lim_lng_min,
@@ -297,7 +300,7 @@ class ClusterGen():
         df = pd.DataFrame(selected_posts_list)
         # converts pandas data to numpy array
         # (limit by list of column-names)
-        points = df.values(['lng', 'lat'])
+        points = df.loc[:, ['lng', 'lat']].to_numpy()
         # only return preview fig without clustering
         return points, selected_postguids_list
 
