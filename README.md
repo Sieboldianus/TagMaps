@@ -10,10 +10,8 @@ Afterwards, Alpha Shapes are generated as a means to 'soft' placement of tags on
 
 ## Installation
 
-1. The easiest way for Windows users is to download the pre-compiled build that is available [here](https://cloudstore.zih.tu-dresden.de/index.php/s/QhKT3Pj9fk4H9ns/download) (~200MB) and run `tagmaps.exe`
-    - you can also compile the program yourself using the `setup.py` with [cx_Freeze](https://anthony-tuininga.github.io/cx_Freeze/): run `python cx_setup.py build`
-    - or simple run `generateTagClusters.py` if you have Python and all dependencies installed
-2. If you have Python >3.6 you can also install with `pip install tagmaps`
+1. The easiest way for Windows users is to download the newest pre-compiled build from [releases](/releases) and run `tagmaps.exe`
+2. For all other OS, the reccommended way is to install with `pip install tagmaps`
 
 ## Run
 
