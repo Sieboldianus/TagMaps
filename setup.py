@@ -45,7 +45,6 @@ setup(name="tagmaps",
           'seaborn',
           'descartes',
           'regex'
-
       ],
       entry_points={
           'console_scripts': [
