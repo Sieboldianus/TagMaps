@@ -46,6 +46,8 @@ class Compile():
         all_non_itemized_shapes = list()
         contains_emoji_output = False
         for shapes, cls_type, itemized in shapes_and_meta_list:
+            if not shapes:
+                continue
             if itemized:
                 if cls_type == EMOJI:
                     contains_emoji_output = True
