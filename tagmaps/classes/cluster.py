@@ -319,11 +319,11 @@ class ClusterGen():
         if len(points) > 0:
             return points
 
-    def cluster_points(self, points,
-                       min_span_tree: bool = None,
-                       preview_mode: bool = None,
-                       min_cluster_size: int = None,
-                       allow_single_cluster: bool = True):
+    def _cluster_points(self, points,
+                        min_span_tree: bool = None,
+                        preview_mode: bool = None,
+                        min_cluster_size: int = None,
+                        allow_single_cluster: bool = True):
         if min_span_tree is None:
             min_span_tree = False
         if preview_mode is None:
@@ -370,7 +370,7 @@ class ClusterGen():
             # disable joblist multithread warning
             warnings.simplefilter('ignore', UserWarning)
             async_result = pool.apply_async(
-                ClusterGen.fit_cluster, (self.clusterer, tag_radians_data))
+                ClusterGen._fit_cluster, (self.clusterer, tag_radians_data))
             self.clusterer = async_result.get()
             # clusterer.fit(tagRadiansData)
             # updateNeeded = False
@@ -414,7 +414,7 @@ class ClusterGen():
         selected_post_guids = result[1]
         if len(selected_post_guids) < 2:
             return
-        clusters = self.cluster_points(
+        clusters = self._cluster_points(
             points=points, preview_mode=False)
         return clusters, selected_post_guids
 
@@ -428,7 +428,7 @@ class ClusterGen():
         # do not allow clusters with one item
         if len(selected_post_guids) < 2:
             return
-        clusters = self.cluster_points(
+        clusters = self._cluster_points(
             points=points, preview_mode=False,
             min_cluster_size=2, allow_single_cluster=False)
         return clusters, selected_post_guids
@@ -649,7 +649,8 @@ class ClusterGen():
         calculate boundary shape and
         add statistics (HImpTag etc.)
 
-        Returns results as shapes_and_meta = list()
+        Returns results as shapes_and_meta
+        = list(), ClusterType, itemized = bool
         """
         itemized = True
         saturation_exclude_count = 0
@@ -686,7 +687,7 @@ class ClusterGen():
         return shapes_and_meta, self.cls_type, itemized
 
     @staticmethod
-    def fit_cluster(clusterer, data):
+    def _fit_cluster(clusterer, data):
         """Perform HDBSCAN clustering from features or distance matrix.
 
         Args:

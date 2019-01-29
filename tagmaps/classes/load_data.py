@@ -137,9 +137,9 @@ class LoadData():
         """Method will union all tags of a single user for each location
 
         - further information is derived from the first
-        image for each user-location
-        - the result is a cleaned output containing only
-        the information that is necessary
+        post for each user-location
+        - the result is a cleaned output containing
+        reduced information that is necessary for tag maps
         """
         # create userid_loc_id
         post_locid_userid = f'{lbsn_post.loc_id}::{lbsn_post.user_guid}'

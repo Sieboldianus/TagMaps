@@ -237,10 +237,15 @@ class UserInterface():
         return item_name
 
     def start(self):
-        # this is the mainloop for the interface
-        # once it is destroyed, the regular process will continue
+        """Start up user interface after initialization
+
+        this is the mainloop for the interface
+        once it is destroyed, the regular process
+        will continue
+        """
         self.app.mainloop()
-        # end of tkinter loop, welcome back to command line interface
+        # end of tkinter loop,
+        # welcome back to console
         plt.close("all")
 
     def _cluster_preview(self, sel_item: Tuple[str, int]):
