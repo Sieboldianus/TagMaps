@@ -94,3 +94,10 @@ setup(name="tagmaps",
               'optimize': 0}
       },
       executables=EXECUTABLES)
+
+# open issue Windows:
+# after build, rename
+# \lib\multiprocessing\Pool.pyc
+# to pool.pyc
+# see:
+# https://github.com/anthony-tuininga/cx_Freeze/issues/353
