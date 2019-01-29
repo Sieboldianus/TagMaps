@@ -152,24 +152,35 @@ class LoadData():
         if (lbsn_post.loc_name and
                 lbsn_post.loc_id not in self.locid_locname_dict):
             # add locname to dict
-            self.locid_locname_dict[lbsn_post.loc_id] = lbsn_post.loc_name
+            self.locid_locname_dict[
+                lbsn_post.loc_id] = lbsn_post.loc_name
         if lbsn_post.user_guid not in \
                 self.locations_per_userid_dict or \
                 lbsn_post.loc_id not in \
-                self.locations_per_userid_dict[lbsn_post.user_guid]:
+                self.locations_per_userid_dict[
+                    lbsn_post.user_guid]:
             # Bit wise or and assignment in one step.
-            # -> assign locID to UserDict list if not already contained
-            self.locations_per_userid_dict[lbsn_post.user_guid] |= {
+            # -> assign locID to UserDict list
+            # if not already contained
+            self.locations_per_userid_dict[
+                lbsn_post.user_guid] |= {
                 lbsn_post.loc_id}
             self.stats.count_loc += 1
-            self.userlocations_firstpost_dict[post_locid_userid] = lbsn_post
+            self.userlocations_firstpost_dict[
+                post_locid_userid] = lbsn_post
         # union tags/emoji per userid/unique location
-        self.userlocation_taglist_dict[post_locid_userid] |= lbsn_post.hashtags
-        self.userlocation_emojilist_dict[post_locid_userid] |= lbsn_post.emoji
+        if self.cfg.cluster_tags:
+            self.userlocation_taglist_dict[
+                post_locid_userid] |= lbsn_post.hashtags
+        if self.cfg.cluster_emoji:
+            self.userlocation_emojilist_dict[
+                post_locid_userid] |= lbsn_post.emoji
         # get cleaned wordlist for topic modeling
-        cleaned_wordlist = self._get_cleaned_wordlist(lbsn_post.post_body)
+        cleaned_wordlist = self._get_cleaned_wordlist(
+            lbsn_post.post_body)
         # union words per userid/unique location
-        self.userlocation_wordlist_dict[post_locid_userid] |= set(
+        self.userlocation_wordlist_dict[
+            post_locid_userid] |= set(
             cleaned_wordlist)
         self.stats.count_glob += 1
         self._update_toplists(lbsn_post)
@@ -181,11 +192,11 @@ class LoadData():
           tag/emojicount for this user,
         - initialize counter for user if not already done
         """
-        if lbsn_post.hashtags:
+        if self.cfg.cluster_tags and lbsn_post.hashtags:
             self.userdict_tagcounters_global[lbsn_post.user_guid].update(
                 lbsn_post.hashtags)
             self.total_tag_counter.update(lbsn_post.hashtags)
-        if lbsn_post.emoji:
+        if self.cfg.cluster_emoji and lbsn_post.emoji:
             self.userdict_emojicounters_global[lbsn_post.user_guid].update(
                 lbsn_post.emoji)
             self.total_emoji_counter.update(lbsn_post.emoji)
