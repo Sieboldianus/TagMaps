@@ -34,7 +34,17 @@ setup(name="tagmaps",
       install_requires=[
           'shapely',
           'emoji',
-          'hdbscan'
+          'hdbscan',
+          'fiona',
+          'numpy',
+          'pandas',
+          'attr',
+          'pyproj',
+          'matplotlib',
+          'seaborn',
+          'descartes',
+          'regex'
+
       ],
       entry_points={
           'console_scripts': [
