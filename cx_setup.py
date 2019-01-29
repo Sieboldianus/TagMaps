@@ -4,7 +4,6 @@
 
 import distutils
 import os.path
-import sys
 
 from cx_Freeze import Executable, setup
 
