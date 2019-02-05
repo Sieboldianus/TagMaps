@@ -132,7 +132,7 @@ class PrepareData():
         - optionally initializes output to file
         """
         if self.cfg.write_cleaned_data:
-            with open(f'{self.cfg.output_folder}/Output_cleaned.csv', 'w',
+            with open(self.cfg.output_folder / 'Output_cleaned.csv', 'w',
                       encoding='utf8') as csvfile:
                 # get headerline from class structure
                 headerline = ','.join(CleanedPost._fields)
@@ -191,7 +191,6 @@ class PrepareData():
             self.prepared_data.emax = self.cfg.tmax
 
         # collect stats in prepared_data
-
         # if self.cfg.cluster_locations:
         total_location_count = PrepareData._get_total_count(
             top_location_list, self.total_location_counter)
@@ -256,9 +255,9 @@ class PrepareData():
         top_list_store = ''.join(
             "%s,%i" % v + '\n' for v in top_list)
         # overwrite, if exists:
-        with open(f'{self.cfg.output_folder}/'
-                  f'Output_top{list_name}.txt', 'w',
-                  encoding='utf8') as out_file:
+        with open(
+                self.cfg.output_folder / f'Output_top{list_name}.txt',
+                'w', encoding='utf8') as out_file:
             out_file.write(f'{list_name}, usercount\n')
             out_file.write(top_list_store)
 
@@ -389,12 +388,11 @@ class PrepareData():
         - original output
         """
         headerline = "topics,post_ids,user_ids\n"
-        with open(f'{self.cfg.output_folder}/'
-                  f'"Output_usertopics_anonymized.csv', 'w',
-                  encoding='utf8') as csvfile_anon, \
-            open(f'{self.cfg.output_folder}/'
-                 f'"Output_usertopics.csv', 'w',
-                 encoding='utf8') as csvfile:
+        with open(
+            self.cfg.output_folder / 'Output_usertopics_anonymized.csv',
+                'w', encoding='utf8') as csvfile_anon, open(
+                    self.cfg.output_folder / 'Output_usertopics.csv',
+                    'w', encoding='utf8') as csvfile:
             dw_list = list()
             for cfile in (csvfile, csvfile_anon):
                 cfile.write(headerline)
