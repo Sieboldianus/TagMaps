@@ -22,6 +22,7 @@ from tagmaps.classes.cluster import ClusterGen
 from tagmaps.classes.compile_output import Compile
 from tagmaps.classes.interface import UserInterface
 from tagmaps.classes.load_data import LoadData
+from tagmaps.classes.prepare_data import PrepareData
 from tagmaps.classes.shared_structure import EMOJI, LOCATIONS, TAGS
 from tagmaps.classes.utils import Utils
 
@@ -35,7 +36,9 @@ def main():
 
     # initialize logger and config
     cfg, log = Utils.init_main()
-    lbsn_data = LoadData(cfg)
+    # lbsn_data = LoadData(cfg)
+    lbsn_data = PrepareData(cfg)
+    input_data = LoadData(cfg)
 
     print('\n')
     log.info(
@@ -43,30 +46,33 @@ def main():
         "STEP 1 of 6: Data Cleanup "
         "##########")
 
-    lbsn_data.parse_input_records()
+    with input_data as records:
+        for record in records:
+            lbsn_data.add_record(record)
+
+        log.info(
+            f'\nTotal user count (UC): '
+            f'{len(lbsn_data.locations_per_userid_dict)}')
+        log.info(
+            f'Total user post locations (UPL): '
+            f'{len(lbsn_data.distinct_userlocations_set)}')
+        log.info(
+            f'Total post count (PC): '
+            f'{input_data.stats.count_glob:02d}')
+        log.info(
+            f'Total tag count (PTC): '
+            f'{input_data.stats.count_tags_global}')
+        log.info(
+            f'Total emoji count (PEC): '
+            f'{input_data.stats.count_emojis_global}')
+        log.info(
+            input_data.bounds.get_bound_report())
+
     # get current time
     now = time.time()
     # get cleaned data for use in clustering
     cleaned_post_dict = lbsn_data.get_cleaned_post_dict()
     cleaned_post_list = list(cleaned_post_dict.values())
-    # status report
-    log.info(
-        f'\nTotal user count (UC): '
-        f'{len(lbsn_data.locations_per_userid_dict)}')
-    log.info(
-        f'Total post count (PC): '
-        f'{lbsn_data.stats.count_glob:02d}')
-    log.info(
-        f'Total tag count (PTC): '
-        f'{lbsn_data.stats.count_tags_global}')
-    log.info(
-        f'Total emoji count (PEC): '
-        f'{lbsn_data.stats.count_emojis_global}')
-    log.info(
-        f'Total user post locations (UPL): '
-        f'{len(lbsn_data.distinct_userlocations_set)}')
-    log.info(
-        lbsn_data.bounds.get_bound_report())
 
     # get prepared data for statistics and clustering
     prepared_data = lbsn_data.get_prepared_data()
@@ -78,7 +84,7 @@ def main():
             "##########")
 
         location_name_count = len(
-            prepared_data.locid_locname_dict)
+            lbsn_data.locid_locname_dict)
         if location_name_count > 0:
             log.info(
                 f"Number of locations with names: "
@@ -139,7 +145,7 @@ def main():
         if not cfg.auto_mode:
             user_intf = UserInterface(
                 clusterer_list,
-                prepared_data.locid_locname_dict)
+                lbsn_data.locid_locname_dict)
             user_intf.start()
 
         if cfg.auto_mode or user_intf.abort is False:
