@@ -82,6 +82,8 @@ EXECUTABLES = [
                targetName="tagmaps.exe")
 ]
 
+BUILD_NAME = f'TagMaps-Win-{VERSION}'
+
 setup(name="tagmaps",
       version=VERSION,
       description="Tag Clustering for Tag Maps",
@@ -93,7 +95,7 @@ setup(name="tagmaps",
               'excludes': EXCLUDES_MOD,
               'optimize': 0,
               'build_exe': (
-                  Path.cwd() / 'build' / f'tagmaps-{VERSION}-win-amd64-3.6')
+                  Path.cwd() / 'build' / BUILD_NAME)
           }
       },
       executables=EXECUTABLES)
@@ -106,7 +108,7 @@ setup(name="tagmaps",
 # see:
 # https://github.com/anthony-tuininga/cx_Freeze/issues/353
 BUILD_PATH_POOL = (
-    Path.cwd() / 'build' / f'tagmaps-{VERSION}-win-amd64-3.6' /
+    Path.cwd() / 'build' / BUILD_NAME /
     'lib' / 'multiprocessing')
 Path(BUILD_PATH_POOL / 'Pool.pyc').rename(
     BUILD_PATH_POOL / 'pool.pyc')
