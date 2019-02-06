@@ -48,6 +48,7 @@ class LoadData():
         self.append_to_already_exist = False  # unused?
         self.shape_exclude_locid_hash = set()
         self.shape_included_locid_hash = set()
+        self.filter_origin = cfg.filter_origin
         self.cfg = cfg
         self.log = logging.getLogger("tagmaps")
         self.bounds = AnalysisBounds()
@@ -151,10 +152,16 @@ class LoadData():
             return None
         else:
             self.guid_hash.add(post_guid)
+        origin_id = post.get(self.cfg.source_map.originid_col)
+        if (self.filter_origin and
+                not origin_id == self.filter_origin):
+                # optional exclude origin
+            self.stats.skipped_count += 1
+            return None
         # Continue Parse Post
         lbsn_post = PostStructure()
         lbsn_post.guid = post_guid  # guid
-        lbsn_post.origin_id = post.get(self.cfg.source_map.originid_col)
+        lbsn_post.origin_id = origin_id
         lbsn_post.user_guid = post.get(self.cfg.source_map.user_guid_col)
         lbsn_post.post_url = post.get(self.cfg.source_map.post_url_col)
         lbsn_post.post_publish_date = \

@@ -42,6 +42,7 @@ class BaseConfig:
         self.write_gis_comp_line = True
         self.auto_mode = False
         self.max_items = 1000
+        self.filter_origin = ""
 
         # additional auto settings
         self.sort_out_always_set = set()
@@ -184,6 +185,13 @@ class BaseConfig:
                             help="If set, no user input will "
                             "be requested during processing.",
                             )
+        parser.add_argument("-fO",
+                            "--filterOrigin",
+                            type=str,
+                            default="",
+                            help="If provided, will filter input data "
+                            "based on origin_id column.",
+                            )
 
         args = parser.parse_args()
         if args.source:
@@ -222,6 +230,8 @@ class BaseConfig:
             self.write_gis_comp_line = False
         if args.autoMode:
             self.auto_mode = args.autoMode
+        if args.filterOrigin:
+            self.filter_origin = args.filterOrigin
 
     def load_filterlists(self):
         """Load filterlists for filtering terms (instring and full match)
