@@ -1,3 +1,5 @@
+[![PyPI version](https://badge.fury.io/py/tagmaps.svg)](https://pypi.org/project/tagmaps/)
+
 Tag Maps
 =============
 Spatio-Temporal Tag and Photo Location Clustering for generating Tag Maps
