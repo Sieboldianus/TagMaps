@@ -131,31 +131,25 @@ class Utils():
         """Initializing main procedure
         if package is executed directly
 
-        To_Do:
+        TODO:
         - disables fiona logging, as it (somehow)
           interferes with tag maps logging
           (find better solution)
         """
-
         # set console view parameters
         # stretch console
         os.system('mode con: cols=197 lines=40')
-        # initialize logger
-        log = cls._set_logger()
-
         logging.getLogger("fiona.collection").disabled = True
         cfg = BaseConfig()
-        return cfg, log
+        return cfg
 
-    @classmethod
-    def _set_logger(cls):
+    @staticmethod
+    def _set_logger(output_folder):
         """ Set logging handler manually,
         so we can also print to console while logging to file
         """
-        # create output dir if not exists
-        cls._init_output_dir()
-        pathname = Path.cwd()
-        __log_file = pathname / "02_Output" / "log.txt"
+        # input(f'{type(output_folder)}')
+        __log_file = output_folder / 'log.txt'
 
         # Set Output to Replace in case of
         # encoding issues (console/windows)
@@ -173,13 +167,11 @@ class Utils():
         return log
 
     @staticmethod
-    def _init_output_dir():
+    def _init_output_dir(output_folder):
         """Creates local output dir if not exists"""
-
-        pathname = Path.cwd()
-        if not os.path.exists(pathname / "02_Output"):
-            os.makedirs(pathname / "02_Output")
-            print("Folder /02_Output was created")
+        if not output_folder.exists():
+            output_folder.mkdir()
+            print(f'Folder {output_folder.name}/ was created')
 
     @staticmethod
     def query_yes_no(question, default="yes"):

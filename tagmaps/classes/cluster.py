@@ -21,7 +21,7 @@ import shapely.geometry as geometry
 from tagmaps.classes.alpha_shapes import AlphaShapes
 from tagmaps.classes.shared_structure import (EMOJI, LOCATIONS, TAGS,
                                               AnalysisBounds, CleanedPost,
-                                              ClusterType, PreparedData)
+                                              ClusterType, PreparedStats)
 from tagmaps.classes.utils import Utils
 
 with warnings.catch_warnings():
@@ -88,7 +88,7 @@ class ClusterGen():
                       bounds: AnalysisBounds,
                       cleaned_post_dict: Dict[str, CleanedPost],
                       cleaned_post_list: List[CleanedPost],
-                      prepared_data: PreparedData,
+                      cleaned_stats: PreparedStats,
                       local_saturation_check: bool):
         """Create new clusterer from type and input data
 
@@ -103,11 +103,11 @@ class ClusterGen():
             clusterer (ClusterGen): A new clusterer of ClusterType
         """
         if clusterer_type == TAGS:
-            top_list = prepared_data.top_tags_list
+            top_list = cleaned_stats.top_tags_list
         elif clusterer_type == EMOJI:
-            top_list = prepared_data.top_emoji_list
+            top_list = cleaned_stats.top_emoji_list
         elif clusterer_type == LOCATIONS:
-            top_list = prepared_data.top_locations_list
+            top_list = cleaned_stats.top_locations_list
         else:
             raise ValueError("Cluster Type unknown.")
 
@@ -116,7 +116,7 @@ class ClusterGen():
             cleaned_post_dict=cleaned_post_dict,
             cleaned_post_list=cleaned_post_list,
             top_list=top_list,
-            total_distinct_locations=prepared_data.total_unique_locations,
+            total_distinct_locations=cleaned_stats.total_unique_locations,
             cluster_type=clusterer_type,
             local_saturation_check=local_saturation_check)
         return clusterer

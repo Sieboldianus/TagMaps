@@ -123,7 +123,7 @@ class AnalysisBounds():
 
 
 @attr.s
-class PreparedData():
+class PreparedStats():
     """Class storing what is needed for running tag cluster"""
     top_tags_list = attr.ib(init=False)
     top_emoji_list = attr.ib(init=False)

@@ -4,9 +4,8 @@
 overall statistics.
 
 Returns:
-    PreparedData: Cleaned list of posts and statistics
-                  prepared for Tag Maps clustering
-
+    PreparedStats: Statistics prepared for Tag Maps clustering
+    self.cleaned_post_dict: Cleaned list of posts
 """
 
 
@@ -32,7 +31,9 @@ from shapely.geometry import shape
 from shapely.geometry import Point
 from tagmaps.classes.utils import Utils
 from tagmaps.classes.shared_structure import (
-    PostStructure, CleanedPost, AnalysisBounds, PreparedData)
+    EMOJI, LOCATIONS, TAGS, ClusterType)
+from tagmaps.classes.shared_structure import (
+    PostStructure, CleanedPost, AnalysisBounds, PreparedStats)
 
 
 class PrepareData():
@@ -43,22 +44,33 @@ class PrepareData():
     - will generate statistics
     """
 
-    def __init__(self, cfg):
+    def __init__(
+            self, cluster_types, write_cleaned_data, max_items,
+            output_folder, remove_long_tail, limit_bottom_user_count,
+            topic_modeling):
         """Initializes Prepare Data structure"""
-        self.cfg = cfg
+        # global settings
+        self.cluster_types = cluster_types
+        self.write_cleaned_data = write_cleaned_data
+        self.max_items = max_items
+        self.output_folder = output_folder
+        self.remove_long_tail = remove_long_tail
+        self.limit_bottom_user_count = limit_bottom_user_count
+        self.topic_modeling = topic_modeling
+        # global vars
         self.count_glob = 0
         self.bounds = AnalysisBounds()
         self.log = logging.getLogger("tagmaps")
         self.total_tag_counter = collections.Counter()
         self.total_emoji_counter = collections.Counter()
         self.total_location_counter = collections.Counter()
-        self.prepared_data = PreparedData()
+        self.cleaned_stats = PreparedStats()
         # Hashsets:
         self.locations_per_userid_dict = defaultdict(set)
         self.userlocation_taglist_dict = defaultdict(set)
         self.userlocation_emojilist_dict = defaultdict(set)
         self.locid_locname_dict: Dict[str, str] = dict()  # nopep8
-        if cfg.topic_modeling:
+        if self.topic_modeling:
             self.user_topiclist_dict = defaultdict(set)
             self.user_post_ids_dict = defaultdict(set)
             self.userpost_first_thumb_dict = defaultdict(str)
@@ -74,14 +86,20 @@ class PrepareData():
         self.distinct_userlocations_set = set()
 
     def add_record(self, lbsn_post: PostStructure):
-        """Method will union all tags of a single user for each location
+        """Method will merge all tags/emoji/terms
+        of a single user for each location (Metric 'UPL') to
+        produce a cleaned version of input data
+
 
         - further information is derived from the first
         post for each user-location
         - the result is a cleaned output containing
         reduced information that is necessary for tag maps
+        - get cleaned output with get_prepared_data()
         """
-        # create userid_loc_id
+        self.count_glob += 1
+        # create userid_loc_id, this is used as the base
+        # for clustering data (metric UPL)
         post_locid_userid = f'{lbsn_post.loc_id}::{lbsn_post.user_guid}'
         self.distinct_locations_set.add(lbsn_post.loc_id)
         # print(f'Added: {photo_locID} to distinct_locations_set '
@@ -109,10 +127,10 @@ class PrepareData():
             self.userlocations_firstpost_dict[
                 post_locid_userid] = lbsn_post
         # union tags/emoji per userid/unique location
-        if self.cfg.cluster_tags:
+        if TAGS in self.cluster_types:
             self.userlocation_taglist_dict[
                 post_locid_userid] |= lbsn_post.hashtags
-        if self.cfg.cluster_emoji:
+        if EMOJI in self.cluster_types:
             self.userlocation_emojilist_dict[
                 post_locid_userid] |= lbsn_post.emoji
         # get cleaned wordlist for topic modeling
@@ -131,8 +149,8 @@ class PrepareData():
         - calls loop user locations method
         - optionally initializes output to file
         """
-        if self.cfg.write_cleaned_data:
-            with open(self.cfg.output_folder / 'Output_cleaned.csv', 'w',
+        if self.write_cleaned_data:
+            with open(self.output_folder / 'Output_cleaned.csv', 'w',
                       encoding='utf8') as csvfile:
                 # get headerline from class structure
                 headerline = ','.join(CleanedPost._fields)
@@ -144,75 +162,76 @@ class PrepareData():
                 cleaned_post_dict = self._loop_loc_per_userid(datawriter)
         else:
             cleaned_post_dict = self._loop_loc_per_userid(None)
-        if self.cfg.topic_modeling:
+        if self.topic_modeling:
             self._write_topic_models()
         return cleaned_post_dict
 
-    def get_prepared_data(self) -> 'PreparedData':
+    def _get_item_stats(self) -> 'PreparedStats':
         """After data is loaded, this collects data and stats
+        for distribution of tags, emoji and locations
 
         - prepare data for tag maps clustering
         - store to self.data_prepared
         """
-        self._prepare_main_stats()
-        return self.prepared_data
+        self._prepare_item_stats()
+        return self.cleaned_stats
 
-    def _prepare_main_stats(self):
+    def _prepare_item_stats(self):
         """Calculate overall tag and emoji statistics
 
         - write results (optionally) to file
         """
         # top lists and unique
         tag_stats = self._get_top_list(
-            self.userdict_tagcounters_global, "tags")
+            self.userdict_tagcounters_global, TAGS)
         top_tags_list = tag_stats[0]
         total_unique_tags = tag_stats[1]
         tagscount_without_longtail = tag_stats[2]
 
         emoji_stats = self._get_top_list(
-            self.userdict_emojicounters_global, "emoji")
+            self.userdict_emojicounters_global, EMOJI)
         top_emoji_list = emoji_stats[0]
         total_unique_emoji = emoji_stats[1]
         emojicount_without_longtail = emoji_stats[2]
 
         location_stats = self._get_top_list(
-            self.userdict_locationcounters_global, "locations")
+            self.userdict_locationcounters_global, LOCATIONS)
         top_location_list = location_stats[0]
         total_unique_locations = location_stats[1]
 
         # update tmax and emax from optionally long tail removal
         if tagscount_without_longtail:
-            self.prepared_data.tmax = tagscount_without_longtail
+            self.cleaned_stats.tmax = tagscount_without_longtail
         else:
-            self.prepared_data.tmax = self.cfg.tmax
+            self.cleaned_stats.tmax = self.max_items
         if emojicount_without_longtail:
-            self.prepared_data.emax = emojicount_without_longtail
+            self.cleaned_stats.emax = emojicount_without_longtail
         else:
-            self.prepared_data.emax = self.cfg.tmax
+            self.cleaned_stats.emax = self.max_items
 
         # collect stats in prepared_data
         # if self.cfg.cluster_locations:
         total_location_count = PrepareData._get_total_count(
             top_location_list, self.total_location_counter)
-        self.prepared_data.top_locations_list = top_location_list
-        self.prepared_data.total_unique_locations = total_unique_locations
-        self.prepared_data.total_location_count = total_location_count
-        self.prepared_data.locid_locname_dict = self.locid_locname_dict
+        self.cleaned_stats.top_locations_list = top_location_list
+        self.cleaned_stats.total_unique_locations = total_unique_locations
+        self.cleaned_stats.total_location_count = total_location_count
+        self.cleaned_stats.locid_locname_dict = self.locid_locname_dict
 
-        if self.cfg.cluster_tags:
+        if TAGS in self.cluster_types:
             # top counts
             total_tag_count = PrepareData._get_total_count(
                 top_tags_list, self.total_tag_counter)
-            self.prepared_data.top_tags_list = top_tags_list
-            self.prepared_data.total_unique_tags = total_unique_tags
-            self.prepared_data.total_tag_count = total_tag_count
+            self.cleaned_stats.top_tags_list = top_tags_list
+            self.cleaned_stats.total_unique_tags = total_unique_tags
+            self.cleaned_stats.total_tag_count = total_tag_count
 
-        if self.cfg.cluster_emoji:
+        if EMOJI in self.cluster_types:
             total_emoji_count = PrepareData._get_total_count(
                 top_emoji_list, self.total_emoji_counter)
-            self.prepared_data.top_emoji_list = top_emoji_list
-            self.prepared_data.total_unique_emoji = total_unique_emoji
-            self.prepared_data.total_emoji_count = total_emoji_count
+            self.cleaned_stats.top_emoji_list = top_emoji_list
+            self.cleaned_stats.total_unique_emoji = total_unique_emoji
+            self.cleaned_stats.total_emoji_count = total_emoji_count
 
     def _update_toplists(self, lbsn_post):
         """Calculate toplists for emoji and tags
@@ -221,12 +240,12 @@ class PrepareData():
           tag/emojicount for this user,
         - initialize counter for user if not already done
         """
-        if self.cfg.cluster_tags and lbsn_post.hashtags:
+        if TAGS in self.cluster_types and lbsn_post.hashtags:
             self.userdict_tagcounters_global[
                 lbsn_post.user_guid].update(
                 lbsn_post.hashtags)
             self.total_tag_counter.update(lbsn_post.hashtags)
-        if self.cfg.cluster_emoji and lbsn_post.emoji:
+        if EMOJI in self.cluster_types and lbsn_post.emoji:
             self.userdict_emojicounters_global[
                 lbsn_post.user_guid].update(
                 lbsn_post.emoji)
@@ -256,13 +275,13 @@ class PrepareData():
             "%s,%i" % v + '\n' for v in top_list)
         # overwrite, if exists:
         with open(
-                self.cfg.output_folder / f'Output_top{list_name}.txt',
+                self.output_folder / f'Output_top{list_name}.txt',
                 'w', encoding='utf8') as out_file:
             out_file.write(f'{list_name}, usercount\n')
             out_file.write(top_list_store)
 
     def _get_top_list(self, userdict_tagemoji_counters,
-                      listname: str = "tags"):
+                      listtype: ClusterType = TAGS):
         """Get Top Tags on a per user basis, i.e.
 
         - the global number of distinct users who used each distinct tag
@@ -282,15 +301,16 @@ class PrepareData():
         total_unique = len(overall_usercount_perte)
         # get all items for "locations"
         # but clip list for tags and emoji
-        if listname in ("tags", "emoji"):
-            max_items = self.cfg.tmax
+        if listtype in (TAGS, EMOJI):
+            max_items = self.max_items
         else:
             max_items = None
         top_list = overall_usercount_perte.most_common(max_items)
-        if self.cfg.remove_long_tail is True:
-            total_without_longtail = self._remove_long_tail(top_list, listname)
-        max_to_write = min(1000, self.cfg.tmax)
-        self._write_toplist(top_list[:max_to_write], listname)
+        if self.remove_long_tail is True:
+            total_without_longtail = self._remove_long_tail(top_list, listtype)
+        # only ever write top 1000 to file
+        max_to_write = min(1000, self.max_items)
+        self._write_toplist(top_list[:max_to_write], listtype)
         return top_list, total_unique, total_without_longtail
 
     @staticmethod
@@ -310,7 +330,7 @@ class PrepareData():
 
     def _remove_long_tail(self,
                           top_list: List[Tuple[str, int]],
-                          listname: str
+                          listtype: ClusterType
                           ) -> int:
         """Removes all items from list that are used by less
 
@@ -319,17 +339,17 @@ class PrepareData():
             Note: since list is a mutable object, method
             will modify top_tags_list
         """
-        if listname == 'locations':
+        if listtype == LOCATIONS:
             # keep all locations
             return len(top_list)
-        elif listname == 'emoji':
+        elif listtype == EMOJI:
             # emoji use a smaller area than tags on the map
             # therefore we can keep more emoji
             # (e.g..: use 2 instead of 5)
             bottomuser_count = math.trunc(
-                self.cfg.limit_bottom_user_count/2)
+                self.limit_bottom_user_count/2)
         else:
-            bottomuser_count = self.cfg.limit_bottom_user_count
+            bottomuser_count = self.limit_bottom_user_count
         indexMin = next((i for i, (t1, t2) in enumerate(
             top_list) if t2 < bottomuser_count
         ), None)
@@ -344,7 +364,7 @@ class PrepareData():
             return len_after
         self.log.info(
             f'Long tail removal: Filtered {len_before - len_after} '
-            f'{listname} that were used by less than '
+            f'{listtype} that were used by less than '
             f'{bottomuser_count} users.')
         return len_after
 
@@ -368,17 +388,17 @@ class PrepareData():
                 # create tuple with cleaned photo data
                 cleaned_post_location = self._get_cleaned_location(
                     first_post, locid_userid, post_latlng, user_key)
-                # update boundary
-                self.bounds._upd_latlng_bounds(
-                    cleaned_post_location.lat, cleaned_post_location.lng)
                 if datawriter is not None:
                     PrepareData._write_location_tocsv(
                         datawriter, cleaned_post_location)
-                if self.cfg.topic_modeling:
+                if self.topic_modeling:
                     self._update_topic_models(
                         cleaned_post_location, user_key)
                 cleaned_post_dict[cleaned_post_location.guid] = \
                     cleaned_post_location
+                # update boundary
+                self.bounds._upd_latlng_bounds(
+                    cleaned_post_location.lat, cleaned_post_location.lng)
         return cleaned_post_dict
 
     def _write_topic_models(self):
@@ -389,9 +409,9 @@ class PrepareData():
         """
         headerline = "topics,post_ids,user_ids\n"
         with open(
-            self.cfg.output_folder / 'Output_usertopics_anonymized.csv',
+            self.output_folder / 'Output_usertopics_anonymized.csv',
                 'w', encoding='utf8') as csvfile_anon, open(
-                    self.cfg.output_folder / 'Output_usertopics.csv',
+                    self.output_folder / 'Output_usertopics.csv',
                     'w', encoding='utf8') as csvfile:
             dw_list = list()
             for cfile in (csvfile, csvfile_anon):

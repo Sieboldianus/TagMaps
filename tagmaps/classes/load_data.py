@@ -31,7 +31,7 @@ from shapely.geometry import shape
 from shapely.geometry import Point
 from tagmaps.classes.utils import Utils
 from tagmaps.classes.shared_structure import (
-    PostStructure, CleanedPost, AnalysisBounds, PreparedData)
+    PostStructure, CleanedPost, AnalysisBounds)
 
 
 class LoadData():
@@ -54,6 +54,13 @@ class LoadData():
         self.distinct_locations_set = set()
         # basic statistics collection
         self.stats = DataStats()
+        # get user input for max tags to process
+        # this is combined here with output reporting
+        # of how many files to process
+        # the user can start loading data with enter, or
+        # by adding a number (e.g. 100), which will
+        # later be used to remove the long tail for tags/emoji
+        self._get_imax()
 
     def __enter__(self):
         """Main pipeline for reading posts from file
@@ -75,8 +82,6 @@ class LoadData():
         """Loops input input filelist and
         returns opened file handles
         """
-        # get user input for max tags to process
-        self._get_tmax()
         for file_name in self.filelist:
             self.stats.partcount += 1
             return open(file_name, 'r', newline='', encoding='utf8')
@@ -307,7 +312,7 @@ class LoadData():
                 return True
         return False
 
-    def _get_tmax(self):
+    def _get_imax(self):
         """User Input to get number of tags to process"""
         if self.cfg.auto_mode:
             return
@@ -321,7 +326,18 @@ class LoadData():
                     or not inputtext.isdigit():
                 return
             else:
-                self.cfg.tmax = int(inputtext)
+                self.cfg.max_items = int(inputtext)
+
+    def input_stats_report(self):
+        self.log.info(
+            f'\nTotal post count (PC): '
+            f'{self.stats.count_glob:02d}')
+        self.log.info(
+            f'Total tag count (PTC): '
+            f'{self.stats.count_tags_global}')
+        self.log.info(
+            f'Total emoji count (PEC): '
+            f'{self.stats.count_emojis_global}')
 
 
 class DataStats():

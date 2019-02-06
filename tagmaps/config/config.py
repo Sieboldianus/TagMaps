@@ -41,6 +41,7 @@ class BaseConfig:
         self.limit_bottom_user_count = 5
         self.write_gis_comp_line = True
         self.auto_mode = False
+        self.max_items = 1000
 
         # additional auto settings
         self.sort_out_always_set = set()
@@ -53,7 +54,6 @@ class BaseConfig:
         self.correct_places = False
         self.correct_place_latlng_dict = dict()
         self.shp_geom = None
-        self.tmax = 1000  # default value before user query
 
         # initialization
         self.pathname = Path.cwd()
