@@ -9,6 +9,7 @@ pep8 = "*"
 autopep8 = "*"
 cx-freeze = "*"
 distutils = "*"
+radon = "*"
 
 [packages]
 numpy = "*"
