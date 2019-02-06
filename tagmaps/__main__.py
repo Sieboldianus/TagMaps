@@ -18,7 +18,7 @@ __license__ = "GNU GPLv3"
 import sys
 import time
 import logging
-from pathlib import Path, PurePath
+from pathlib import Path
 
 from tagmaps.classes.cluster import ClusterGen
 from tagmaps.classes.compile_output import Compile
@@ -41,7 +41,7 @@ def main():
     cfg = Utils.init_main()
 
     print('\n')
-    log = logging.getLogger("tagmaps")
+    log = Utils._set_logger(cfg.output_folder)
     log.info(
         "########## "
         "STEP 1 of 6: Data Cleanup "
@@ -123,10 +123,6 @@ def main():
              f'{seconds:05.2f} Seconds passed.')
     input("Press any key to exit...")
     sys.exit()
-
-
-if __name__ == "__main__":
-    main()
 
 
 class TagMaps():
@@ -225,7 +221,11 @@ class TagMaps():
         # create output dir if not exists
         Utils._init_output_dir(self.output_folder)
         # init logger (logging to console and file log.txt)
-        self.log = Utils._set_logger(self.output_folder)
+        tagmaps_logger = logging.getLogger("tagmaps")
+        if tagmaps_logger:
+            self.log = tagmaps_logger
+        else:
+            self.log = Utils._set_logger(self.output_folder)
         # data structures for clustering
         self.lbsn_data: PrepareData = None
         self.cleaned_post_dict = None
@@ -438,3 +438,7 @@ class TagMaps():
             bounds=self.lbsn_data.bounds,
             shapes_and_meta_list=shapelist
         )
+
+
+if __name__ == "__main__":
+    main()
