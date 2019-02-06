@@ -4,7 +4,7 @@
 
 import distutils
 import os.path
-
+from pathlib import Path
 from cx_Freeze import Executable, setup
 
 import opcode
@@ -25,6 +25,7 @@ DISTUTILS_PATH = os.path.join(os.path.dirname(opcode.__file__), 'distutils')
 VERSION_DICT = {}
 with open("tagmaps/version.py") as fp:
     exec(fp.read(), VERSION_DICT)  # pylint: disable=W0122
+VERSION = VERSION_DICT['__version__']
 
 # Dependencies are automatically detected,
 # but it might need fine tuning.
@@ -82,7 +83,7 @@ EXECUTABLES = [
 ]
 
 setup(name="tagmaps",
-      version=VERSION_DICT['__version__'],
+      version=VERSION,
       description="Tag Clustering for Tag Maps",
       options={
           'build_exe': {
@@ -90,9 +91,13 @@ setup(name="tagmaps",
               'include_files': INCLUDE_FOLDERS_FILES,
               'packages': PACKAGES_MOD,
               'excludes': EXCLUDES_MOD,
-              'optimize': 0}
+              'optimize': 0,
+              'build_exe': (
+                  Path.cwd() / 'build' / f'tagmaps-{VERSION}-win-amd64-3.6')
+          }
       },
       executables=EXECUTABLES)
+
 
 # open issue Windows:
 # after build, rename
@@ -100,3 +105,8 @@ setup(name="tagmaps",
 # to pool.pyc
 # see:
 # https://github.com/anthony-tuininga/cx_Freeze/issues/353
+BUILD_PATH_POOL = (
+    Path.cwd() / 'build' / f'tagmaps-{VERSION}-win-amd64-3.6' /
+    'lib' / 'multiprocessing')
+Path(BUILD_PATH_POOL / 'Pool.pyc').rename(
+    BUILD_PATH_POOL / 'pool.pyc')
