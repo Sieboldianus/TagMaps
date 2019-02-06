@@ -59,13 +59,19 @@ This project includes and makes use of several other projects/libraries/framewor
 >> Simple shapes for point clusters are generated using SciPy's excellent Convex Hull functions  
 
 >[*Fiona*](https://github.com/Toblerity/Fiona)
->> OGR’s neat and nimble API for Python programmers.
+>> OGR's neat and nimble API for Python programmers.
 
 ## License
 
 GNU GPLv3
 
 ## Changelog & Download
+
+2019-02-06: [**TagMaps v0.13.0**](https://cloudstore.zih.tu-dresden.de/index.php/s/IrV632Xc59ozqmG/download)
+
+* First version of public API, e.g. load tagmaps to other packages with `import tagmaps` or `from tagmaps import TagMaps`
+* LoadData with contextmanager/ pipeline generator
+* Refactor of LoadData and PrepareData in two separate classes
 
 2019-01-23: [**TagMaps v0.11.1**](https://cloudstore.zih.tu-dresden.de/index.php/s/QhKT3Pj9fk4H9ns/download)
 
