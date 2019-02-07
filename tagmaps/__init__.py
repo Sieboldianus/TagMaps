@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from .tagmaps_ import TagMaps
+from .config.config import BaseConfig
 from .classes.load_data import LoadData
 from .classes.prepare_data import PrepareData
 from .classes.interface import UserInterface
