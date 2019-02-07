@@ -13,21 +13,27 @@ Afterwards, Alpha Shapes are generated as a means to 'soft' placement of tags on
 ## Installation
 
 1. The easiest way for Windows users is to download the newest pre-compiled build from [releases](../../releases) and run `tagmaps.exe`
-2. For all other OS, the reccommended way is to install with `pip install tagmaps`
+2. For all other OS, the recommended way is to install with `pip install tagmaps`
 
-## Run
+## Quickstart
 
 1. Place geotagged data in `/01_Input` subfolder
     - example files/format are available in the pre-compiled build zip-file above
 2. Output files will be saved in `/02_Output` (2 Shapefiles in auto-selected UTM projection, one containing all tag cluster and one with the overall location clusters)
-3. Visualize Shapefiles using ArcGIS (I haven't tried other GIS Software such as QGIS, but it should theoretically be possible..)
+3. Visualize Shapefiles, e.g. using ESRI ArcGIS (I haven't tried other GIS Software such as QGIS, but it should theoretically be possible..)
     - download `BasemapLayout_World.mxd` from [resources folder](/resources/BasemapLayout_World.mxd) and replace missing links with 2 resulting Shapefiles in `/02_Output`
     - adjust minimum and maximum Font Sizes, Weighting Formula or other metrics to your needs.
+
+## Tutorial
+
+There's a tutorial available [here](https://ad.vgiscience.org/tagmaps_tutorial) that guides though the process of generating Tag Maps.
+Please bring your own data or use a sample from the [YFCC100M Flickr Commons Dataset](https://multimediacommons.wordpress.com/yfcc100m-core-dataset/).
+
 
 ## Code
 
 The code has been completely refactored in January 2019, but there are still some missing pieces.
-Particularly the API (that is: `import tagmaps`) is not fully implemented. See method main() in __main__.py
+Particularly the API (that is: `import tagmaps`) is still in an early stage. See method main() in [__main__.py](/tagmaps/__main__.py)
 for examples on how to use tag maps package.
 
 
@@ -72,8 +78,7 @@ GNU GPLv3
 2019-02-06: [**TagMaps v0.13.0**](https://cloudstore.zih.tu-dresden.de/index.php/s/IrV632Xc59ozqmG/download)
 
 * First version of public API, e.g. load tagmaps to other packages with `import tagmaps` or `from tagmaps import TagMaps`
-* LoadData with contextmanager/ pipeline generator
-* Refactor of LoadData and PrepareData in two separate classes
+* Refactor of LoadData and PrepareData in separate classes, use of contextmanager/ pipeline generator
 
 2019-01-23: [**TagMaps v0.11.1**](https://cloudstore.zih.tu-dresden.de/index.php/s/QhKT3Pj9fk4H9ns/download)
 
