@@ -26,7 +26,6 @@ from datetime import timedelta
 from typing import List, Set, Dict, Tuple, Optional, TextIO, Iterable
 from math import radians, cos, sin, asin, sqrt
 from descartes import PolygonPatch
-from tagmaps.config.config import BaseConfig
 from tagmaps.classes.shared_structure import CleanedPost, AnalysisBounds
 
 
@@ -126,8 +125,8 @@ class Utils():
         except ValueError:
             return False
 
-    @classmethod
-    def init_main(cls):
+    @staticmethod
+    def init_main():
         """Initializing main procedure
         if package is executed directly
 
@@ -140,14 +139,14 @@ class Utils():
         # stretch console
         os.system('mode con: cols=197 lines=40')
         logging.getLogger("fiona.collection").disabled = True
-        cfg = BaseConfig()
-        return cfg
 
     @staticmethod
-    def _set_logger(output_folder):
+    def _set_logger(output_folder, logging_level=None):
         """ Set logging handler manually,
         so we can also print to console while logging to file
         """
+        if logging_level is None:
+            logging_level = logging.INFO
         if output_folder is not None:
             # input(f'{type(output_folder)}')
             __log_file = output_folder / 'log.txt'
@@ -160,7 +159,7 @@ class Utils():
         log = logging.getLogger("tagmaps")
         log.format = '%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s'
         log.datefmt = '%H:%M:%S'
-        log.setLevel(logging.DEBUG)
+        log.setLevel(logging_level)
         if output_folder is not None:
             log.addHandler(logging.FileHandler(__log_file, 'w', 'utf-8'))
         log.addHandler(logging.StreamHandler())

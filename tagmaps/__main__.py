@@ -9,7 +9,7 @@ and output shapefile containing Alpha Shapes
 and statistics.
 
 Package can be executed directly (__main__) or
-imported using from tagmaps import tagmaps.TagMaps as TM
+imported using from tagmaps import TagMaps as TM
 """
 
 __author__ = "Alexander Dunkel"
@@ -23,6 +23,7 @@ from pathlib import Path
 from .tagmaps_ import TagMaps
 from .classes.load_data import LoadData
 from .classes.utils import Utils
+from .config.config import BaseConfig
 
 
 def main():
@@ -40,15 +41,19 @@ def main():
     """
 
     # initialize config from args
-    cfg = Utils.init_main()
+    cfg = BaseConfig()
+    # init main procedure settings
+    Utils.init_main()
 
     print('\n')
-    log = Utils._set_logger(cfg.output_folder)
+    # set logger with file pointer
+    log = Utils._set_logger(cfg.output_folder, cfg.logging_level)
     log.info(
         "########## "
         "STEP 1 of 6: Data Cleanup "
         "##########")
-    input_data = LoadData(cfg)
+    input_data = LoadData(
+        cfg, user_variety_input=True, console_reporting=True)
     # initialize tag maps
     tagmaps = TagMaps(
         cfg.cluster_tags, cfg.cluster_emoji,

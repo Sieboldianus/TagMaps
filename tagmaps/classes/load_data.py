@@ -41,8 +41,14 @@ class LoadData():
     - Returns CleanedPost
     """
 
-    def __init__(self, cfg):
+    def __init__(
+            self, cfg, user_variety_input=None,
+            console_reporting=None):
         """Initializes Load Data structure"""
+        if user_variety_input is None:
+            user_variety_input = False
+        if console_reporting is None:
+            console_reporting = False
         self.filelist = self._read_local_files(cfg)
         self.guid_hash = set()  # global list of guids
         self.append_to_already_exist = False  # unused?
@@ -50,18 +56,20 @@ class LoadData():
         self.shape_included_locid_hash = set()
         self.filter_origin = cfg.filter_origin
         self.cfg = cfg
+        self.console_reporting = console_reporting
         self.log = logging.getLogger("tagmaps")
         self.bounds = AnalysisBounds()
         self.distinct_locations_set = set()
         # basic statistics collection
         self.stats = DataStats()
-        # get user input for max tags to process
-        # this is combined here with output reporting
-        # of how many files to process
-        # the user can start loading data with enter, or
-        # by adding a number (e.g. 100), which will
-        # later be used to remove the long tail for tags/emoji
-        self._get_imax()
+        if user_variety_input:
+            # get user input for max tags to process
+            # this is combined here with output reporting
+            # of how many files to process
+            # the user can start loading data with enter, or
+            # by adding a number (e.g. 100), which will
+            # later be used to remove the long tail for tags/emoji
+            self._get_imax()
 
     def __enter__(self):
         """Main pipeline for reading posts from file
@@ -105,7 +113,7 @@ class LoadData():
         return post_reader
 
     def _parse_postlist(self, post_reader: TextIO,
-                        reporting: bool = True):
+                        reporting: bool = False):
         """Process posts according to specifications
 
         Returns generator for single record
@@ -123,10 +131,11 @@ class LoadData():
                 msg = self._report_progress()
                 # if (row_num % 10 == 0):
                 # modulo: print only once every 10 iterations
-                print(msg, end='\r')
+                if self.console_reporting:
+                    print(msg, end='\r')
             yield lbsn_post
         # log last message to file, clean stdout
-        if msg:
+        if msg and self.console_reporting:
             print(" " * len(msg), end='\r')
         sys.stdout.flush()
         self.log.info(msg)
@@ -155,7 +164,7 @@ class LoadData():
         origin_id = post.get(self.cfg.source_map.originid_col)
         if (self.filter_origin and
                 not origin_id == self.filter_origin):
-                # optional exclude origin
+            # optional exclude origin
             self.stats.skipped_count += 1
             return None
         # Continue Parse Post
@@ -229,7 +238,7 @@ class LoadData():
             raise ValueError(
                 f'No input files *.'
                 f'{config.source_map.file_extension} '
-                f'found.')
+                f'in ./{input_path.name}/ found.')
         else:
             return filelist
 
