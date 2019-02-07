@@ -11,6 +11,7 @@ import configparser
 import csv
 import fiona
 import pyproj
+import logging
 from pathlib import Path
 from shapely.geometry import Polygon
 from shapely.geometry import shape
@@ -43,6 +44,7 @@ class BaseConfig:
         self.auto_mode = False
         self.max_items = 1000
         self.filter_origin = ""
+        self.logging_level = logging.INFO
 
         # additional auto settings
         self.sort_out_always_set = set()
@@ -58,6 +60,9 @@ class BaseConfig:
 
         # initialization
         self.pathname = Path.cwd()
+        config_path = Path.cwd() / "00_Config"
+        if not config_path.exists():
+            raise ValueError("Folder /00_Config/ not found.")
         self.config_folder = Path.cwd() / "00_Config"
         self.input_folder = Path.cwd() / "01_Input"
         self.output_folder = Path.cwd() / "02_Output"
@@ -192,8 +197,13 @@ class BaseConfig:
                             help="If provided, will filter input data "
                             "based on origin_id column.",
                             )
+        parser.add_argument("-v", "--verbose",
+                            help="Increase output verbosity",
+                            action="store_true")
 
         args = parser.parse_args()
+        if args.verbose:
+            self.logging_level = logging.DEBUG
         if args.source:
             self.data_source = args.source
         if args.disableClusterTags:
