@@ -12,9 +12,9 @@ Afterwards, Alpha Shapes are generated as a means to 'soft' placement of tags on
 
 Based on the papers:
 
->Dunkel, A. (2015). Visualizing the perceived environment using crowdsourced photo geodata. Landscape and Urban Planning, 142. http://doi.org/10.1016/j.landurbplan.2015.02.022
+>Dunkel, A. (2015). Visualizing the perceived environment using crowdsourced photo geodata. Landscape and Urban Planning, 142. [DOI](http://doi.org/10.1016/j.landurbplan.2015.02.022) [Author PDF](http://alexanderdunkel.com/AuthorManuscript_Visualizing%20the%20perceived%20environment.pdf)
 
->Dunkel, A. (2016). Assessing the perceived environment through crowdsourced spatial photo content for application to the fields of landscape and urban planning. Thesis, TU Dresden Landscape and Environmental Planning.
+>Dunkel, A. (2016). Assessing the perceived environment through crowdsourced spatial photo content for application to the fields of landscape and urban planning. Thesis, TU Dresden Landscape and Environmental Planning. [PDF](http://alexanderdunkel.com/Dissertation_AlexanderDunkel.pdf)
 
 
 ## Installation
