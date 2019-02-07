@@ -5,6 +5,7 @@ Module for compiling TagMaps results and writing output
 """
 
 import fiona
+from pathlib import Path
 from fiona.crs import from_epsg
 import shapely.geometry as geometry
 from typing import List, Set, Dict, Tuple, Optional, TextIO
@@ -20,7 +21,8 @@ class Compile():
     @classmethod
     def write_shapes(cls,
                      bounds: AnalysisBounds,
-                     shapes_and_meta_list):
+                     shapes_and_meta_list,
+                     output_folder: Path):
         """Main wrapper for writing
         all results to output
 
@@ -31,6 +33,7 @@ class Compile():
           (overall clusters)
         - List[] contains clustered shapes from ClusterGen and
             attached statistic information
+        TODO: refactor into compile & write shapes; update output_folder
         """
         bound_points_shapely = Utils._get_shapely_bounds(
             bounds)

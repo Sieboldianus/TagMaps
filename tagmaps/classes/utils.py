@@ -148,8 +148,9 @@ class Utils():
         """ Set logging handler manually,
         so we can also print to console while logging to file
         """
-        # input(f'{type(output_folder)}')
-        __log_file = output_folder / 'log.txt'
+        if output_folder is not None:
+            # input(f'{type(output_folder)}')
+            __log_file = output_folder / 'log.txt'
 
         # Set Output to Replace in case of
         # encoding issues (console/windows)
@@ -160,7 +161,8 @@ class Utils():
         log.format = '%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s'
         log.datefmt = '%H:%M:%S'
         log.setLevel(logging.DEBUG)
-        log.addHandler(logging.FileHandler(__log_file, 'w', 'utf-8'))
+        if output_folder is not None:
+            log.addHandler(logging.FileHandler(__log_file, 'w', 'utf-8'))
         log.addHandler(logging.StreamHandler())
         # flush once to clear console
         sys.stdout.flush()
@@ -169,7 +171,7 @@ class Utils():
     @staticmethod
     def _init_output_dir(output_folder):
         """Creates local output dir if not exists"""
-        if not output_folder.exists():
+        if output_folder is not None and not output_folder.exists():
             output_folder.mkdir()
             print(f'Folder {output_folder.name}/ was created')
 

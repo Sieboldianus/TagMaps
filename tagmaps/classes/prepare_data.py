@@ -310,7 +310,8 @@ class PrepareData():
             total_without_longtail = self._remove_long_tail(top_list, listtype)
         # only ever write top 1000 to file
         max_to_write = min(1000, self.max_items)
-        self._write_toplist(top_list[:max_to_write], listtype)
+        if self.write_cleaned_data:
+            self._write_toplist(top_list[:max_to_write], listtype)
         return top_list, total_unique, total_without_longtail
 
     @staticmethod
