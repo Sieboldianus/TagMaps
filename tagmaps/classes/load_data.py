@@ -112,8 +112,7 @@ class LoadData():
                 file_handle.read())
         return post_reader
 
-    def _parse_postlist(self, post_reader: TextIO,
-                        reporting: bool = False):
+    def _parse_postlist(self, post_reader: TextIO):
         """Process posts according to specifications
 
         Returns generator for single record
@@ -127,7 +126,6 @@ class LoadData():
                 continue
             else:
                 self.stats.count_glob += 1
-            if reporting:
                 msg = self._report_progress()
                 # if (row_num % 10 == 0):
                 # modulo: print only once every 10 iterations

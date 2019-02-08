@@ -95,7 +95,8 @@ class TagMaps():
             location_cluster=True, write_cleaned_data=False,
             output_folder=None, remove_long_tail=True,
             limit_bottom_user_count=5, topic_modeling=False,
-            local_saturation_check=False, max_items=None):
+            local_saturation_check=False, max_items=None,
+            logging_level=None):
         """Init settings for Tag Maps Clustering"""
         self.write_cleaned_data = write_cleaned_data
         self.output_folder = output_folder
@@ -117,11 +118,9 @@ class TagMaps():
         # create output dir if not exists
         Utils._init_output_dir(self.output_folder)
         # init logger (logging to console and file log.txt)
-        tagmaps_logger = logging.getLogger("tagmaps")
-        if tagmaps_logger:
-            self.log = tagmaps_logger
-        else:
-            self.log = Utils._set_logger(self.output_folder)
+        if logging_level is None:
+            logging_level = logging.INFO
+        self.log = Utils._set_logger(self.output_folder, logging_level)
         # data structures for clustering
         self.lbsn_data: PrepareData = None
         self.cleaned_post_dict = None

@@ -47,6 +47,7 @@ def main():
 
     print('\n')
     # set logger with file pointer
+
     log = Utils._set_logger(cfg.output_folder, cfg.logging_level)
     log.info(
         "########## "
@@ -61,7 +62,7 @@ def main():
         cfg.output_folder, cfg.remove_long_tail,
         cfg.limit_bottom_user_count,
         cfg.topic_modeling, cfg.local_saturation_check,
-        cfg.max_items)
+        cfg.max_items, cfg.logging_level)
     # read input records from csv
     with input_data as records:
         for record in records:

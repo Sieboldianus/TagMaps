@@ -17,6 +17,7 @@ import logging
 import pyproj
 import fiona
 import regex
+from importlib import reload
 import shapely.geometry as geometry
 import matplotlib.pyplot as plt
 from fiona.crs import from_epsg
@@ -145,24 +146,40 @@ class Utils():
         """ Set logging handler manually,
         so we can also print to console while logging to file
         """
+        # reset logging in case Jupyter Notebook has
+        # captured stdout
+        reload(logging)
+        # Create or get logger with specific name
+        log = logging.getLogger("tagmaps")
+        if len(log.handlers):
+            # only add log handlers once
+            return log
         if logging_level is None:
             logging_level = logging.INFO
         if output_folder is not None:
             # input(f'{type(output_folder)}')
             __log_file = output_folder / 'log.txt'
-
+        log.format = '%(message)s'
+        log.datefmt = ''
+        log.setLevel(logging_level)
         # Set Output to Replace in case of
         # encoding issues (console/windows)
-        sys.stdout = io.TextIOWrapper(
-            sys.stdout.detach(), sys.stdout.encoding, 'replace')
-        # Create logger with specific name
-        log = logging.getLogger("tagmaps")
-        log.format = '%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s'
-        log.datefmt = '%H:%M:%S'
-        log.setLevel(logging_level)
-        if output_folder is not None:
-            log.addHandler(logging.FileHandler(__log_file, 'w', 'utf-8'))
-        log.addHandler(logging.StreamHandler())
+        if type(sys.stdout) == io.TextIOWrapper:
+            # only for console output (not Juypter Notebook stream)
+            sys.stdout = io.TextIOWrapper(
+                sys.stdout.detach(), sys.stdout.encoding, 'replace')
+            log.addHandler(logging.StreamHandler())
+            if output_folder is not None:
+                # only log to file in console mode
+                log.addHandler(
+                    logging.FileHandler(__log_file, 'w', 'utf-8'))
+        else:
+            # log to stdout, not stderr in Jupyter Mode to prevent
+            # log.Info messages appear as red boxes
+            logging.basicConfig(
+                stream=sys.stdout, format=log.format,
+                level=logging_level, datefmt=None)
+            # log.stream = sys.stdout
         # flush once to clear console
         sys.stdout.flush()
         return log
