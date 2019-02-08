@@ -10,6 +10,7 @@ import sys
 import time
 import logging
 from pathlib import Path
+from typing import List, Set, Dict, Tuple, Optional, TextIO, Any, NamedTuple
 
 from .classes.cluster import ClusterGen
 from .classes.compile_output import Compile
@@ -126,7 +127,7 @@ class TagMaps():
         self.cleaned_post_dict = None
         self.cleaned_post_list = None
         self.cleaned_stats: PreparedStats = None
-        self.clusterer_list = list()
+        self.clusterer: Dict[ClusterType, ClusterGen] = dict()
         self.itemized_cluster_shapes = list()
         self.global_cluster_centroids = list()
 
@@ -204,7 +205,7 @@ class TagMaps():
             f'Total distinct locations (DLC): '
             f'{self.cleaned_stats.total_unique_locations}')
         self.log.info(
-            f'Total tags count for the '
+            f'Total tag count for the '
             f'{self.cleaned_stats.tmax} '
             f'most used tags in selected area: '
             f'{self.cleaned_stats.total_tag_count}.')
@@ -233,7 +234,7 @@ class TagMaps():
                 cleaned_stats=self.cleaned_stats,
                 local_saturation_check=self.local_saturation_check
             )
-            self.clusterer_list.append(clusterer)
+            self.clusterer[cls_type] = clusterer
 
     def user_interface(self):
         """Opens interface for optional user input to:
@@ -243,11 +244,11 @@ class TagMaps():
         Returns False or True, depending on optional user Quit()
         """
         # init list of clusterers
-        if not self.clusterer_list:
+        if not self.clusterer:
             self._init_cluster()
         # init user interface
         user_intf = UserInterface(
-            self.clusterer_list,
+            self.clusterer.values(),
             self.lbsn_data.locid_locname_dict)
         # start user interface
         user_intf.start()
@@ -271,20 +272,24 @@ class TagMaps():
 
     def _cluster(self, cluster_type: ClusterType,
                  itemized=True):
-        """Run all clusterer (itermize dor global) based on type"""
+        """Run clusterer based on type and output
+
+        Itemized:  Gets clusters for each item
+        otherwise: Gets global clusters for all
+                   locations.
+        """
         # prepare stats
         if self.cleaned_stats is None:
             self.prepare_stats()
         # add clusterer
-        if not self.clusterer_list:
+        if not self.clusterer:
             self._init_cluster()
-        for clusterer in self.clusterer_list:
-            if clusterer.cls_type == cluster_type:
-                self.log.info(f'{cluster_type.rstrip("s")} clustering: ')
-                if itemized:
-                    clusterer.get_itemized_clusters()
-                else:
-                    clusterer.get_overall_clusters()
+        clusterer = self.clusterer.get(cluster_type)
+        self.log.info(f'{cluster_type.rstrip("s")} clustering: ')
+        if itemized:
+            clusterer.get_itemized_clusters()
+        else:
+            clusterer.get_overall_clusters()
 
     def gen_location_centroids(self):
         """Generate centroids for location clusters
@@ -301,18 +306,16 @@ class TagMaps():
 
     def _alpha_shapes(self, cluster_type):
         """Calculates alpha shapes for clustered data"""
-        for clusterer in self.clusterer_list:
-            if clusterer.cls_type == cluster_type:
-                cluster_shapes = clusterer.get_cluster_shapes()
-                # store results for tags and emoji in one list
-                self.itemized_cluster_shapes.append(cluster_shapes)
+        clusterer = self.clusterer.get(cluster_type)
+        cluster_shapes = clusterer.get_cluster_shapes()
+        # store results for tags and emoji in one list
+        self.itemized_cluster_shapes.append(cluster_shapes)
 
     def _cluster_centroids(self, cluster_type):
         """Calculates cluster centroids"""
-        for clusterer in self.clusterer_list:
-            if clusterer.cls_type == cluster_type:
-                cluster_shapes = clusterer.get_cluster_centroids()
-                self.global_cluster_centroids.append(cluster_shapes)
+        clusterer = self.clusterer.get(cluster_type)
+        cluster_shapes = clusterer.get_cluster_centroids()
+        self.global_cluster_centroids.append(cluster_shapes)
 
     def write_tagemoji_shapes(self):
         """Write tag and emoji cluster shapes to shapefile"""
