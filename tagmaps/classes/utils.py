@@ -569,3 +569,17 @@ class Utils():
                 photo_tags_filtered.add(tag)
         return (photo_tags_filtered,
                 count_tags, count_skipped)
+
+    @staticmethod
+    def _get_index_of_tup(
+            l: List[Tuple[str, int]], index: int, value: str) -> int:
+        """Get index pos from list of tuples.
+
+        Stops iterating through the list as
+        soon as it finds the value
+        """
+        for pos, t in enumerate(l):
+            if t[index] == value:
+                return pos
+        # Matches behavior of list.index
+        raise ValueError("list.index(x): x not in list")

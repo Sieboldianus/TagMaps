@@ -567,10 +567,6 @@ class UserInterface():
         self.app.quit()
 
     def _proceed_with_cluster(self):
-        # def vis_tag(item):
-            # tkinter.messagebox.showinfo("Proceed", "Proceed")
-            # if plt.figure(1):
-            #    plt.figure(1).clf()
         self.app.update()
         self.app.destroy()
         self.app.quit()
@@ -621,7 +617,6 @@ class UserInterface():
         sel_index = w.curselection()[0]
         # value = w.get(index)
         # tkinter.messagebox.showinfo("You selected ", value)
-        self._clst.tnum = 1
         if (self.gen_preview_map.get() == 1 and
                 len(w.curselection()) == 1):
             # generate only preview map

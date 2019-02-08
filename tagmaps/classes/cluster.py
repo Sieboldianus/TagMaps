@@ -49,7 +49,6 @@ class ClusterGen():
                  # topitem: Tuple[str, int] = None,
                  local_saturation_check: bool = True):
         self.cls_type = cluster_type
-        self.tnum = 0
         self.tmax = len(top_list)
         self.bounds = bounds
         self.cluster_distance = ClusterGen._init_cluster_dist(
@@ -254,11 +253,21 @@ class ClusterGen():
         if perc_oftotal_locations >= 1:
             perc_text = (f'(found in {perc_oftotal_locations:.0f}% '
                          f'of DLC in area)')
-        print(f'({self.tnum} of {self.tmax}) '
+        item_index_pos = self._get_toplist_index(item) + 1
+        print(f'({item_index_pos} of {self.tmax}) '
               f'Found {len(selected_postguids_list)} posts (UPL) '
               f'for {type_text} \'{item_text}\' '
               f'{perc_text}', end=" ")
         return selected_postguids_list
+
+    def _get_toplist_index(self, item_text: str) -> int:
+        """Get Position of Item in Toplist"""
+        try:
+            index_pos = Utils._get_index_of_tup(
+                self.top_list, 0, item_text)
+        except ValueError:
+            index_pos = 0
+        return index_pos
 
     def _getselect_posts(self,
                          selected_postguids_list: List[str]
@@ -517,16 +526,15 @@ class ClusterGen():
         if self.local_saturation_check:
             self._get_update_clusters(
                 item=self.top_item)
-        self.tnum = 0
+        tnum = 0
         # get remaining clusters
         for item in self.top_list:
             if (self.local_saturation_check and
-                    self.tnum == 0 and
-                    self.top_item in self.clustered_items_dict):
+                    tnum == 0):
                 # skip topitem if already
                 # clustered due to local saturation
                 continue
-            self.tnum += 1
+            tnum += 1
             self._get_update_clusters(
                 item=item)
         # logging.getLogger("tagmaps").info(
