@@ -341,3 +341,11 @@ class TagMaps():
             shapes_and_meta_list=shapelist,
             output_folder=self.output_folder
         )
+
+    def get_selection_figure(self, cls_type: ClusterType, item):
+        """Return plt.figure for item selection."""
+        # add clusterer
+        if not self.clusterer:
+            self._init_cluster()
+        fig = self.clusterer[cls_type]._get_sel_preview(item)
+        return fig

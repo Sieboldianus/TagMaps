@@ -55,14 +55,7 @@ class UserInterface():
         self.abort = False
         # self.floater_x = 0
         # self.floater_y = 0
-        self.plot_kwds = {'alpha': 0.5, 's': 10, 'linewidths': 0}
-        self.distYLat = (
-            self._clst.bounds.lim_lat_max - self._clst.bounds.lim_lat_min)
-        self.distXLng = (
-            self._clst.bounds.lim_lng_max - self._clst.bounds.lim_lng_min)
-        # distYLat = Utils.haversine(limXMin,limYMax,limXMin,limYMin)
-        # distXLng = Utils.haversine(limXMax,limYMin,limXMin,limYMin)
-        self.img_ratio = self.distXLng/(self.distYLat*2)
+        self.img_ratio = Utils._get_img_ratio(self._clst.bounds)
         self.auto_select_clusters = False
         self.current_display_item = None
         # Initialize TKinter Interface
@@ -263,10 +256,10 @@ class UserInterface():
         if self.fig1:
             plt.figure(1).clf()
             # plt references the last figure accessed
-            self._set_plt_suptitle(plt, sel_item[0])
+            self._set_plt_suptitle(sel_item[0])
             ax = plt.scatter(
                 points.T[0], points.T[1], color=sel_colors,
-                **self.plot_kwds)
+                **Utils.PLOT_KWDS)
             self.fig1 = plt.figure(num=1, figsize=(
                 11, int(11*self.img_ratio)), dpi=80)
             self.fig1.canvas.set_window_title('Cluster Preview')
@@ -286,11 +279,11 @@ class UserInterface():
                      verticalalignment='top', fontweight='bold')
         else:
             plt.scatter(points.T[0], points.T[1],
-                        c=sel_colors, **self.plot_kwds)
+                        c=sel_colors, **Utils.PLOT_KWDS)
             self.fig1 = plt.figure(num=1, figsize=(
                 11, int(11*self.img_ratio)), dpi=80)
             self.fig1.canvas.set_window_title('Cluster Preview')
-            self._set_plt_suptitle(plt, sel_item[0])
+            self._set_plt_suptitle(sel_item[0])
             distText = ''
             if self.auto_select_clusters is False:
                 distText = '@ ' + str(self._clst.cluster_distance) + 'm'
@@ -312,7 +305,7 @@ class UserInterface():
         # if len(tagRadiansData) < 10000:
         if self.fig2:
             plt.figure(2).clf()
-            self._set_plt_suptitle(plt, sel_item[0])
+            self._set_plt_suptitle(sel_item[0])
             # plt.title('Condensed Tree', fontsize=12,loc='center')
             self._clst.clusterer.condensed_tree_.plot(
                 select_clusters=False, selection_palette=sel_colors
@@ -338,11 +331,11 @@ class UserInterface():
             #   selection_palette=self._clst.sel_colors,
             #   label_clusters=True)
             # plt.title('Condensed Tree', fontsize=12,loc='center')
-            self._set_plt_suptitle(plt, sel_item[0])
+            self._set_plt_suptitle(sel_item[0])
         plt.tick_params(labelsize=10)
         if self.fig3:
             plt.figure(3).clf()
-            self._set_plt_suptitle(plt, sel_item[0])
+            self._set_plt_suptitle(sel_item[0])
             plt.title('Single Linkage Tree', fontsize=12,
                       loc='center')
             # clusterer.single_linkage_tree_.plot(
@@ -377,7 +370,7 @@ class UserInterface():
             self.fig3 = self._clst.clusterer.single_linkage_tree_.plot(
                 truncate_mode='lastp',
                 p=max(50, min(number_of_clusters*10, 256)))
-            self._set_plt_suptitle(plt, sel_item[0])
+            self._set_plt_suptitle(sel_item[0])
             plt.title('Single Linkage Tree',
                       fontsize=12, loc='center')
             # tkinter.messagebox.showinfo("messagr", str(type(fig3)))
@@ -399,7 +392,7 @@ class UserInterface():
         if self.create_min_spanning_tree:
             if self.fig4:
                 plt.figure(4).clf()
-                self._set_plt_suptitle(plt, sel_item[0])
+                self._set_plt_suptitle(sel_item[0])
                 # plt.title('Single Linkage Tree', fontsize=12,loc='center')
                 # clusterer.single_linkage_tree_.plot(truncate_mode='lastp',p=50)
                 ax = self._clst.clusterer.minimum_spanning_tree_.plot(
@@ -431,7 +424,7 @@ class UserInterface():
                     node_size=10,
                     edge_linewidth=1)
                 # tkinter.messagebox.showinfo("messagr", str(type(ax)))
-                self._set_plt_suptitle(plt, sel_item[0])
+                self._set_plt_suptitle(sel_item[0])
                 plt.title(
                     f'Minimum Spanning Tree @ {self._clst.cluster_distance}m',
                     fontsize=12, loc='center')
@@ -452,33 +445,45 @@ class UserInterface():
         plt.tick_params(labelsize=10)
         self._update_scalebar()
 
-    def _set_plt_suptitle(self, plt, item: str):
+    def _set_plt_suptitle(self, item: str):
+        """Sets suptitle for plot (plt) and Cluster Type"""
+        self._set_pltspec_suptitle(
+            plt, item, self._clst.cls_type)
+
+    def _set_pltspec_suptitle(self, plt, item: str, cls_type=None):
         """Sets suptitle for plot (plt)"""
-        title = self._get_plt_suptitle(item)
-        if self._clst.cls_type == EMOJI:
+        title = self._get_pltspec_suptitle(item, cls_type)
+        if cls_type and cls_type == EMOJI:
             plt.rcParams['font.family'] = 'DejaVu Sans'
         else:
             plt.rcParams['font.family'] = 'sans-serif'
+        UserInterface._set_plt_suptitle_st(plt, title)
+
+    @staticmethod
+    def _set_plt_suptitle_st(plt, title: str):
+        """Set title of plt"""
         plt.suptitle(title,
                      fontsize=18, fontweight='bold')
 
-    def _get_plt_suptitle(self, item: str) -> str:
+    def _get_pltspec_suptitle(self, item: str, cls_type=None) -> str:
         """Gets formatted suptitle for plot
 
         - depending on clusterer type
         """
+        if cls_type is None:
+            cls_type = TAGS
         title = ""
-        if self._clst.cls_type == LOCATIONS:
+        if cls_type == LOCATIONS:
             title = UserInterface._get_locname(
                 item, self.location_names_dict).upper()
-        elif self._clst.cls_type == EMOJI:
+        elif cls_type == EMOJI:
             emoji_name = Utils._get_emojiname(item)
             title = f'{item} ({emoji_name})'
         else:
             title = item.upper()
         return title
 
-    def _selection_preview(self, sel_item: Tuple[str, int]):
+    def _intf_selection_preview(self, sel_item: Tuple[str, int]):
         """Update preview map based on item selection"""
         # tkinter.messagebox.showinfo("Proceed", f'{sel_item}')
         points = self._clst._get_np_points(
@@ -490,36 +495,15 @@ class UserInterface():
                 "All locations for given item have been removed.")
             return
         if self.fig1:
-            plt.figure(1).clf()  # clear figure 1
-            # earth = Basemap()
-            # earth.bluemarble(alpha=0.42)
-            # earth.drawcoastlines(color='#555566', linewidth=1)
-            self._set_plt_suptitle(plt, sel_item[0])
-            # reuse window of figure 1 for new figure
-            plt.scatter(points.T[0], points.T[1],
-                        color='red', **self.plot_kwds)
-            self.fig1 = plt.figure(num=1, figsize=(
-                11, int(11*self.img_ratio)), dpi=80)
-            self.fig1.canvas.set_window_title('Preview Map')
-            # displayImgPath = pathname +
-            # '/Output/ClusterImg/00_displayImg.png'
-            # fig1.figure.savefig(displayImgPath)
-        else:
-            self._set_plt_suptitle(plt, sel_item[0])
-            plt.scatter(points.T[0], points.T[1],
-                        color='red', **self.plot_kwds)
-            self.fig1 = plt.figure(num=1, figsize=(
-                11, int(11*self.img_ratio)), dpi=80)
-            # earth = Basemap()
-            # earth.bluemarble(alpha=0.42)
-            # earth.drawcoastlines(color='#555566', linewidth=1)
-            self.fig1.canvas.set_window_title('Preview Map')
-        plt.gca().set_xlim(
-            [self._clst.bounds.lim_lng_min, self._clst.bounds.lim_lng_max])
-        plt.gca().set_ylim(
-            [self._clst.bounds.lim_lat_min, self._clst.bounds.lim_lat_max])
-        plt.tick_params(labelsize=10)
+            # clear figure 1
+            plt.figure(1).clf()
+        self._intf_plot_points(sel_item[0], points)
         self.current_display_item = sel_item
+
+    def _intf_plot_points(self, item_name: str, points):
+        self._set_plt_suptitle(item_name)
+        self.fig1 = Utils._get_fig_points(
+            points, self.img_ratio, self._clst.bounds)
 
     def _report_callback_exception(self, exc, val, tb):
         """Override for error reporting during tkinter mode"""
@@ -622,7 +606,7 @@ class UserInterface():
             # generate only preview map
             # only if selection box is checked
             # and only if one item is checked
-            self._selection_preview(
+            self._intf_selection_preview(
                 self._clst.top_list[sel_index])
             # plt.close('all')
 
@@ -673,7 +657,7 @@ class UserInterface():
                 logfile_a.write(scalecalc)
         plt.figure(1).clf()
         # plt references the last figure accessed
-        self._set_plt_suptitle(plt, sel_item[0])
+        self._set_plt_suptitle(sel_item[0])
         self.fig1 = plt.figure(num=1, figsize=(
             11, int(11*self.img_ratio)), dpi=80)
         self.fig1.canvas.set_window_title('Cluster Preview')

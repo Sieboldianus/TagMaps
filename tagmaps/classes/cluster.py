@@ -711,3 +711,11 @@ class ClusterGen():
 
         clusterer.fit(data)
         return clusterer
+
+    def _get_sel_preview(self, item):
+        """Returns plt map for item selection preview"""
+        points = self._get_np_points(
+            item=item,
+            silent=True)
+        fig = Utils._get_sel_preview(points, item, self.bounds)
+        return fig

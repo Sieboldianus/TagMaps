@@ -35,6 +35,7 @@ class Utils():
 
     Primarily @classmethods and @staticmethods
     """
+    PLOT_KWDS = {'alpha': 0.5, 's': 10, 'linewidths': 0}
 
     @staticmethod
     def _get_shapely_bounds(
@@ -583,3 +584,52 @@ class Utils():
                 return pos
         # Matches behavior of list.index
         raise ValueError("list.index(x): x not in list")
+
+    @staticmethod
+    def _get_xy_dists(
+            bounds: AnalysisBounds) -> Tuple[float, float]:
+        """Get X/Y Distances from Analysis Bounds"""
+        dist_y_lat = (
+            bounds.lim_lat_max - bounds.lim_lat_min)
+        dist_x_lng = (
+            bounds.lim_lng_max - bounds.lim_lng_min)
+        return dist_y_lat, dist_x_lng
+
+    @staticmethod
+    def _get_img_ratio(bounds: AnalysisBounds
+                       ) -> float:
+        """Gets [img] ratio form bounds."""
+        dists = Utils._get_xy_dists(bounds)
+        dist_y_lat = dists[0]
+        dist_x_lng = dists[1]
+        # distYLat = Utils.haversine(limXMin,limYMax,limXMin,limYMin)
+        # distXLng = Utils.haversine(limXMax,limYMin,limXMin,limYMin)
+        img_ratio = dist_x_lng/(dist_y_lat*2)
+        return img_ratio
+
+    @staticmethod
+    def _plt_setxy_lim(plt, bounds: AnalysisBounds):
+        """Set global plotting bounds basedon Analysis Bounds"""
+        plt.gca().set_xlim(
+            [bounds.lim_lng_min, bounds.lim_lng_max])
+        plt.gca().set_ylim(
+            [bounds.lim_lat_min, bounds.lim_lat_max])
+
+    @staticmethod
+    def _get_fig_points(points, img_ratio, bounds):
+        plt.scatter(points.T[0], points.T[1],
+                    color='red', **Utils.PLOT_KWDS)
+        fig = plt.figure(num=1, figsize=(
+            11, int(11*img_ratio)), dpi=80)
+        fig.canvas.set_window_title('Preview Map')
+        Utils._plt_setxy_lim(plt, bounds)
+        plt.tick_params(labelsize=10)
+        return fig
+
+    @staticmethod
+    def _get_sel_preview(points, item, bounds):
+        """Returns plt map for item selection preview"""
+        img_ratio = Utils._get_img_ratio(bounds)
+        fig = Utils._get_fig_points(points, img_ratio, bounds)
+        plt.suptitle(item, fontsize=18, fontweight='bold')
+        return fig
