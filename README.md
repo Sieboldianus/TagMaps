@@ -21,6 +21,7 @@ Based on the papers:
 
 1. The easiest way for Windows users is to download the newest pre-compiled build from [releases](../../releases) and run `tagmaps.exe`
 2. For all other OS, the recommended way is to install with `pip install tagmaps`
+3. For devs, if conda package manager is available, use `conda env create -f environment.yml`
 
 ## Quickstart
 
