@@ -1,0 +1,17 @@
+# This file may be used to create an environment using:
+# $ conda create --name <env> --file <this file>
+# platform: win-64
+shapely
+emoji
+hdbscan
+gdal
+fiona
+numpy
+pandas>=0.24.0
+attr
+pyproj
+matplotlib
+seaborn
+descartes
+regex
+scipy

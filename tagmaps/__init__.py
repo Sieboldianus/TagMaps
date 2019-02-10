@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""TagMaps package import specifications"""
 from .tagmaps_ import TagMaps
 from .classes.load_data import LoadData
 from .classes.prepare_data import PrepareData

@@ -1,4 +1,4 @@
-[![PyPI version](https://badge.fury.io/py/tagmaps.svg)](https://pypi.org/project/tagmaps/)
+![PyPI version](https://ad.vgiscience.org/TagCluster/pypi.svg) ![pylint](https://ad.vgiscience.org/TagCluster/pylint.svg) ![pipeline](https://ad.vgiscience.org/TagCluster/pipeline.svg)
 
 Tag Maps
 =============

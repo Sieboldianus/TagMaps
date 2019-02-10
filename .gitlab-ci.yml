@@ -1,0 +1,35 @@
+test:
+  image: continuumio/miniconda3:latest
+  before_script:
+      - conda config --add channels conda-forge 
+      - conda env create -f environment_test.yml
+      - source activate tagmaps
+  stage: test
+  script:
+    - pylint --output-format=text tagmaps | tee pylint.txt || pylint-exit $?
+    - score=$(sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p' pylint.txt)
+    - echo "Pylint score was $score"
+    - anybadge -l pylint --value=$score --file=pylint.svg 2=red 4=orange 9=yellow 10=green
+    - anybadge -l pipeline --value=passing --file=pipeline.svg passing=green failing=red
+    - pypiversion=$(pip search tagmaps | cut -d "(" -f2 | cut -d ")" -f1)
+    - anybadge -l "pypi package" --value=$pypiversion --file=pypi.svg passing=green failing=red
+  artifacts:
+    paths:
+      - pylint.svg
+      - pypi.svg
+      - pipeline.svg
+
+pages:
+  stage: deploy
+  script:
+    - mkdir .public
+    - cp pylint.svg .public
+    - cp pipeline.svg .public
+    - cp pypi.svg .public
+    - mv .public public
+  artifacts:
+    paths:
+    - public
+  only:
+  - master
+
