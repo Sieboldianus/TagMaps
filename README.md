@@ -63,19 +63,19 @@ Some future goals:
 This project includes and makes use of several other projects/libraries/frameworks:
 
 >[*Alpha Shapes*](http://blog.thehumangeo.com/2014/05/12/drawing-boundaries-in-python/) Kevin Dwyer/ Sean Gillies
->>Generating Concave Hull for Point Clouds
+>Generating Concave Hull for Point Clouds
 
 >[*HDBSCAN*](https://github.com/scikit-learn-contrib/hdbscan) McInnes, J. Healy, S. Astels - BSD licensed
->> A high performance implementation of HDBSCAN clustering.
+>A high performance implementation of HDBSCAN clustering.
 
 >[*Shapely*](https://github.com/Toblerity/Shapely)
->> Manipulation and analysis of geometric objects
+>Manipulation and analysis of geometric objects
 
 >[*SciPy and Convex Hull*](https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.ConvexHull.html#scipy.spatial.ConvexHull)
->> Simple shapes for point clusters are generated using SciPy's excellent Convex Hull functions  
+>Simple shapes for point clusters are generated using SciPy's excellent Convex Hull functions  
 
 >[*Fiona*](https://github.com/Toblerity/Fiona)
->> OGR's neat and nimble API for Python programmers.
+>OGR's neat and nimble API for Python programmers.
 
 ## License
 
