@@ -2,7 +2,7 @@ test:
   image: continuumio/miniconda3:latest
   before_script:
       - conda config --add channels conda-forge 
-      - conda env create -f environment_test.yml
+      - conda env create -f environment_ci.yml
       - source activate tagmaps
   stage: test
   script:
