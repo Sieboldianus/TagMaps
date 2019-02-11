@@ -21,6 +21,7 @@ dependencies:
   - shapely=1.6.4
   - regex=2019.02.07
   - bitarray
+  - pyproj
   - pip:
     - attr==0.3.1
     - cython==0.29.5
@@ -28,5 +29,4 @@ dependencies:
     - pylint
     - anybadge
     - pylint-exit
-    - pyproj
 
