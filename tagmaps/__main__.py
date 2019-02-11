@@ -92,11 +92,12 @@ def main():
             "Location Clustering "
             "##########")
         # get user input for cluster distances
+        continue_proc = True
         if not cfg.auto_mode:
             # open user interface for optional user input
             continue_proc = tagmaps.user_interface()
 
-        if cfg.auto_mode or continue_proc is True:
+        if continue_proc is True:
             tagmaps.cluster_tags()
             tagmaps.cluster_emoji()
             log.info(
@@ -129,8 +130,9 @@ def main():
     log.info(f'\nDone.\n{int(hours):0>2} Hours '
              f'{int(minutes):0>2} Minutes and '
              f'{seconds:05.2f} Seconds passed.')
-    input("Press any key to exit...")
-    sys.exit()
+    if not cfg.auto_mode:
+        input("Press any key to exit...")
+    sys.exit(0)
 
 
 if __name__ == "__main__":

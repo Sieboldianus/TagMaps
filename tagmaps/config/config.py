@@ -200,6 +200,10 @@ class BaseConfig:
         parser.add_argument("-v", "--verbose",
                             help="Increase output verbosity",
                             action="store_true")
+        parser.add_argument("-mI", "--maxItems",
+                            help="Number of distinct items to process",
+                            default=1000,
+                            type=int)
 
         args = parser.parse_args()
         if args.verbose:
@@ -242,6 +246,8 @@ class BaseConfig:
             self.auto_mode = args.autoMode
         if args.filterOrigin:
             self.filter_origin = args.filterOrigin
+        if args.maxItems:
+            self.max_items = args.maxItems
 
     def load_filterlists(self):
         """Load filterlists for filtering terms (instring and full match)

@@ -6,6 +6,8 @@ test:
       - source activate tagmaps
   stage: test
   script:
+    # run main test
+    - tagmaps --autoMode --maxItems 50
     - pylint --output-format=text tagmaps | tee pylint.txt || pylint-exit $?
     - score=$(sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p' pylint.txt)
     - echo "Pylint score was $score"
