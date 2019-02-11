@@ -16,7 +16,7 @@ test:
     - echo "Pylint score was $score"
     - anybadge -l pylint --value=$score --file=pylint.svg 2=red 4=orange 9=yellow 10=green
     - anybadge -l pipeline --value=passing --file=pipeline.svg passing=green failing=red
-    - pypi_version=$(pip search tagmaps | grep -Po "(?<=\().*?(?=\))")
+    - pypi_version=$(pip search tagmaps | cut -d "(" -f2 | cut -d ")" -f1 | sed -r "s/[latest]+//g")
     - echo "Pypi version was $pypi_version"
     - anybadge -l pypi --value="$pypi_version" --file=pypi.svg --color=green
   artifacts:
