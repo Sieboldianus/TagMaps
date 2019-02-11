@@ -20,10 +20,10 @@ dependencies:
   - seaborn=0.9.0
   - shapely=1.6.4
   - regex=2019.02.07
+  - pyproj
   - pip:
     - attr==0.3.1
     - cython==0.29.5
     - emoji==0.5.1
     - pylint
-    - pyproj
 

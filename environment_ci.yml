@@ -22,9 +22,9 @@ dependencies:
   - regex=2019.02.07
   - bitarray
   - pyproj
+  - cython
   - pip:
     - attr==0.3.1
-    - cython==0.29.5
     - emoji==0.5.1
     - pylint
     - anybadge

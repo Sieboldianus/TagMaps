@@ -20,10 +20,10 @@ import time
 import logging
 from pathlib import Path
 
-from .tagmaps_ import TagMaps
-from .classes.load_data import LoadData
-from .classes.utils import Utils
-from .config.config import BaseConfig
+from tagmaps.tagmaps_ import TagMaps
+from tagmaps.classes.load_data import LoadData
+from tagmaps.classes.utils import Utils
+from tagmaps.config.config import BaseConfig
 
 
 def main():

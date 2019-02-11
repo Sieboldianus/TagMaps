@@ -158,6 +158,8 @@ class Utils():
         if logging_level is None:
             logging_level = logging.INFO
         if output_folder is not None:
+            if not output_folder.exists():
+                Utils._init_output_dir(output_folder)
             # input(f'{type(output_folder)}')
             __log_file = output_folder / 'log.txt'
         log.format = '%(message)s'

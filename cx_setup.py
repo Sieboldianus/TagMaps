@@ -4,10 +4,9 @@
 
 import distutils
 import os.path
+import opcode
 from pathlib import Path
 from cx_Freeze import Executable, setup
-
-import opcode
 
 # Derive Package Paths Dynamically
 PYTHON_INSTALL_DIR = os.path.dirname(
@@ -16,6 +15,7 @@ os.environ['TCL_LIBRARY'] = os.path.join(
     PYTHON_INSTALL_DIR, 'tcl', 'tcl8.6')
 os.environ['TK_LIBRARY'] = os.path.join(
     PYTHON_INSTALL_DIR, 'tcl', 'tk8.6')
+
 
 # opcode is not a virtualenv module,
 # so we can use it to find the stdlib; this is the same
@@ -31,7 +31,6 @@ VERSION = VERSION_DICT['__version__']
 # but it might need fine tuning.
 INCLUDES_MOD = [
     "tkinter.filedialog",
-    'numpy.core._methods',
     'numpy.lib.format',
     'matplotlib.backends.backend_tkagg',
     'seaborn',
@@ -39,9 +38,10 @@ INCLUDES_MOD = [
     'scipy.sparse.csgraph',
     'argparse',
     'scipy.sparse.csgraph._validation',
-    'numpy.core._dtype_ctypes',
+    'numpy',
     'scipy._distributor_init',
-    'multiprocessing'
+    'multiprocessing',
+    'gdal'
 ]
 
 # windows pipenv:
@@ -58,6 +58,8 @@ INCLUDE_FOLDERS_FILES = [
     (os.path.join(PYTHON_INSTALL_DIR, 'DLLs', 'sqlite3.dll'),
      os.path.join('lib', 'sqlite3.dll'),
      ),
+    os.path.join(PYTHON_INSTALL_DIR, 'Library', 'bin', 'mkl_intel_thread.dll'),
+    # os.path.join(os.environ['GDAL_DATA'], 'gcs.csv'),
     'resources/01_Input/',
     'resources/00_Config/',
     'resources/00_generateClusters_OnlyEmoji.cmd',
