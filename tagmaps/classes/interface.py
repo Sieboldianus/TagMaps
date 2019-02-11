@@ -62,10 +62,9 @@ class UserInterface():
         self.app = App()
         # allow error reporting from console backend
         tk.Tk.report_callback_exception = self._report_callback_exception
-
         # definition of global vars for interface and graph design
-        self.canvas_width = 1320
-        self.canvas_height = 440
+        # self.canvas_width = 1320
+        # self.canvas_height = 440
         # Cluster preparation
         self.graph_frame = None
         self.gen_preview_map = tk.IntVar(value=0)
