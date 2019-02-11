@@ -17,7 +17,7 @@ test:
     - anybadge -l pylint --value=$score --file=pylint.svg 2=red 4=orange 9=yellow 10=green
     - anybadge -l pipeline --value=passing --file=pipeline.svg passing=green failing=red
     - pypiversion=$(pip search tagmaps | cut -d "(" -f2 | cut -d ")" -f1)
-    - anybadge -l pypi --value=$pypiversion --file=pypi.svg
+    - anybadge -l pypi --value=$pypiversion --file=pypi.svg --color=#97CA00
   artifacts:
     paths:
       - pylint.svg
