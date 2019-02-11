@@ -23,13 +23,7 @@ from tagmaps.classes.shared_structure import (EMOJI, LOCATIONS, TAGS,
                                               AnalysisBounds, CleanedPost,
                                               ClusterType, PreparedStats)
 from tagmaps.classes.utils import Utils
-
-with warnings.catch_warnings():
-    # disable:
-    # parallel.py:268: DeprecationWarning:
-    # check_pickle is deprecated in joblib 0.12
-    warnings.filterwarnings("ignore", category=DeprecationWarning)
-    import hdbscan
+import hdbscan
 
 pool = ThreadPool(processes=1)
 sns.set_context('poster')
