@@ -6,7 +6,6 @@ evoked with tagmaps --autoMode --maxItems 50
 
 import sys
 import os
-import tagmaps
 import argparse
 from pathlib import Path
 from tagmaps.__main__ import main as tm_main

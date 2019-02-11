@@ -6,6 +6,8 @@ test:
       - source activate tagmaps
   stage: test
   script:
+    # test dev install
+    - pip install -e . --no-dependencies
     # run main test
     - python tests/test_all.py --maxItems 50 --autoMode
     - pylint --output-format=text tagmaps | tee pylint.txt || pylint-exit $?
