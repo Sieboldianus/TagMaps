@@ -398,7 +398,7 @@ class Utils():
 
         emoji_split = Utils.split_count(string_with_emoji)
         emoji_list = [emoji for emoji in emoji_split]
-        flags_list = Utils.split_count(string_with_emoji)
+        flags_list = Utils.extract_flags(string_with_emoji)
         return emoji_list + flags_list
 
     @staticmethod

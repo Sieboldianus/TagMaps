@@ -59,14 +59,23 @@ class BaseConfig:
         self.shp_geom = None
 
         # initialization
+        resource_path = os.environ.get("TAGMAPS_RESOURCES")
+
         self.pathname = Path.cwd()
-        config_path = Path.cwd() / "00_Config"
-        if not config_path.exists():
-            raise ValueError("Folder /00_Config/ not found.")
-        self.config_folder = Path.cwd() / "00_Config"
-        self.input_folder = Path.cwd() / "01_Input"
+        if resource_path:
+            self.resource_path = Path(resource_path)
+        else:
+            self.resource_path = self.pathname
+        self.config_folder = self.resource_path / "00_Config"
+        self.input_folder = self.resource_path / "01_Input"
         self.output_folder = Path.cwd() / "02_Output"
         self.parse_args()
+
+        if not self.input_folder.exists():
+            raise ValueError(f"Folder {self.input_folder} not found.")
+        if not self.config_folder.exists():
+            raise ValueError(f"Folder {self.config_folder} not found.")
+
         self.load_filterlists()
         if self.shapefile_intersect:
             self.load_shapefile()
@@ -204,6 +213,18 @@ class BaseConfig:
                             help="Number of distinct items to process",
                             default=1000,
                             type=int)
+        parser.add_argument("-oF", "--outputFolder",
+                            help="Complete path for output folder",
+                            default="",
+                            type=str)
+        parser.add_argument("-iF", "--inputFolder",
+                            help="Complete path for input folder",
+                            default="",
+                            type=str)
+        parser.add_argument("-cF", "--configFolder",
+                            help="Complete path for config folder",
+                            default="",
+                            type=str)
 
         args = parser.parse_args()
         if args.verbose:
@@ -248,16 +269,22 @@ class BaseConfig:
             self.filter_origin = args.filterOrigin
         if args.maxItems:
             self.max_items = args.maxItems
+        if args.outputFolder:
+            self.output_folder = args.outputFolder
+        if args.inputFolder:
+            self.input_folder = args.inputFolder
+        if args.configFolder:
+            self.config_folder = args.configFolder
 
     def load_filterlists(self):
         """Load filterlists for filtering terms (instring and full match)
         and places, including place lat/lng corrections.
         """
         # locations for files
-        sort_out_always_file = "00_Config/SortOutAlways.txt"
-        sort_out_always_instr_file = "00_Config/SortOutAlways_inStr.txt"
-        sort_out_places_file = "00_Config/SortOutPlaces.txt"
-        correct_place_latlng_file = "00_Config/CorrectPlaceLatLng.txt"
+        sort_out_always_file = self.config_folder / "SortOutAlways.txt"
+        sort_out_always_instr_file = self.config_folder / "SortOutAlways_inStr.txt"
+        sort_out_places_file = self.config_folder / "SortOutPlaces.txt"
+        correct_place_latlng_file = self.config_folder / "CorrectPlaceLatLng.txt"
         # load lists
         self.sort_out_always_set = self.load_stoplists(sort_out_always_file)
         self.sort_out_always_instr_set = self.load_stoplists(
