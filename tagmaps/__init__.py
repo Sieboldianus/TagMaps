@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""TagMaps package import specifications"""
 from .tagmaps_ import TagMaps
 from .config.config import BaseConfig
 from .classes.load_data import LoadData

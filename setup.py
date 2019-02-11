@@ -44,7 +44,8 @@ setup(name="tagmaps",
           'matplotlib',
           'seaborn',
           'descartes',
-          'regex'
+          'regex',
+          'scipy'
       ],
       entry_points={
           'console_scripts': [

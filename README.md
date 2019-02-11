@@ -1,4 +1,4 @@
-[![PyPI version](https://badge.fury.io/py/tagmaps.svg)](https://pypi.org/project/tagmaps/)
+![PyPI version](https://ad.vgiscience.org/TagCluster/pypi.svg) ![pylint](https://ad.vgiscience.org/TagCluster/pylint.svg) ![pipeline](https://ad.vgiscience.org/TagCluster/pipeline.svg)
 
 Tag Maps
 =============
@@ -21,6 +21,7 @@ Based on the papers:
 
 1. The easiest way for Windows users is to download the newest pre-compiled build from [releases](../../releases) and run `tagmaps.exe`
 2. For all other OS, the recommended way is to install with `pip install tagmaps`
+3. For devs, if conda package manager is available, use `conda env create -f environment.yml`
 
 ## Quickstart
 
@@ -62,20 +63,20 @@ Some future goals:
 ## Built With
 This project includes and makes use of several other projects/libraries/frameworks:
 
->[*Alpha Shapes*](http://blog.thehumangeo.com/2014/05/12/drawing-boundaries-in-python/) Kevin Dwyer/ Sean Gillies
->>Generating Concave Hull for Point Clouds
+>[*Alpha Shapes*](http://blog.thehumangeo.com/2014/05/12/drawing-boundaries-in-python/) Kevin Dwyer/ Sean Gillies  
+>Generating Concave Hull for Point Clouds
 
->[*HDBSCAN*](https://github.com/scikit-learn-contrib/hdbscan) McInnes, J. Healy, S. Astels - BSD licensed
->> A high performance implementation of HDBSCAN clustering.
+>[*HDBSCAN*](https://github.com/scikit-learn-contrib/hdbscan) McInnes, J. Healy, S. Astels - BSD licensed  
+>A high performance implementation of HDBSCAN clustering.
 
->[*Shapely*](https://github.com/Toblerity/Shapely)
->> Manipulation and analysis of geometric objects
+>[*Shapely*](https://github.com/Toblerity/Shapely)  
+>Manipulation and analysis of geometric objects
 
->[*SciPy and Convex Hull*](https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.ConvexHull.html#scipy.spatial.ConvexHull)
->> Simple shapes for point clusters are generated using SciPy's excellent Convex Hull functions  
+>[*SciPy and Convex Hull*](https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.ConvexHull.html#scipy.spatial.ConvexHull)  
+>Simple shapes for point clusters are generated using SciPy's excellent Convex Hull functions  
 
->[*Fiona*](https://github.com/Toblerity/Fiona)
->> OGR's neat and nimble API for Python programmers.
+>[*Fiona*](https://github.com/Toblerity/Fiona)  
+>OGR's neat and nimble API for Python programmers.
 
 ## License
 
