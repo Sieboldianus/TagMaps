@@ -7,9 +7,21 @@ evoked with tagmaps --autoMode --maxItems 50
 import sys
 import os
 import argparse
+import traceback
 from pathlib import Path
 from tagmaps.__main__ import main as tm_main
 
-if __name__ == '__main__':
+
+def tagmaps_system_integration_test():
+    # override resource path
     os.environ["TAGMAPS_RESOURCES"] = str(Path.cwd() / "resources")
-    tm_main()
+    try:
+        tm_main()
+        sys.exit(0)
+    except Exception:
+        traceback.print_exc()
+        sys.exit(1)
+
+
+if __name__ == '__main__':
+    tagmaps_system_integration_test()
