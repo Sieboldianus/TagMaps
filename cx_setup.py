@@ -2,7 +2,6 @@
 
 """Setup config for cx_freeze (build)"""
 
-import distutils
 import os.path
 import opcode
 from pathlib import Path

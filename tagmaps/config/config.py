@@ -281,10 +281,14 @@ class BaseConfig:
         and places, including place lat/lng corrections.
         """
         # locations for files
-        sort_out_always_file = self.config_folder / "SortOutAlways.txt"
-        sort_out_always_instr_file = self.config_folder / "SortOutAlways_inStr.txt"
-        sort_out_places_file = self.config_folder / "SortOutPlaces.txt"
-        correct_place_latlng_file = self.config_folder / "CorrectPlaceLatLng.txt"
+        sort_out_always_file = (
+            self.config_folder / "SortOutAlways.txt")
+        sort_out_always_instr_file = (
+            self.config_folder / "SortOutAlways_inStr.txt")
+        sort_out_places_file = (
+            self.config_folder / "SortOutPlaces.txt")
+        correct_place_latlng_file = (
+            self.config_folder / "CorrectPlaceLatLng.txt")
         # load lists
         self.sort_out_always_set = self.load_stoplists(sort_out_always_file)
         self.sort_out_always_instr_set = self.load_stoplists(
