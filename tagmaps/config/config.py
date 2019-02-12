@@ -11,6 +11,7 @@ import configparser
 import csv
 import fiona
 import pyproj
+import logging
 from pathlib import Path
 from shapely.geometry import Polygon
 from shapely.geometry import shape
@@ -41,6 +42,9 @@ class BaseConfig:
         self.limit_bottom_user_count = 5
         self.write_gis_comp_line = True
         self.auto_mode = False
+        self.max_items = 1000
+        self.filter_origin = ""
+        self.logging_level = logging.INFO
 
         # additional auto settings
         self.sort_out_always_set = set()
@@ -53,14 +57,25 @@ class BaseConfig:
         self.correct_places = False
         self.correct_place_latlng_dict = dict()
         self.shp_geom = None
-        self.tmax = 1000  # default value before user query
 
         # initialization
+        resource_path = os.environ.get("TAGMAPS_RESOURCES")
+
         self.pathname = Path.cwd()
-        self.config_folder = Path.cwd() / "00_Config"
-        self.input_folder = Path.cwd() / "01_Input"
+        if resource_path:
+            self.resource_path = Path(resource_path)
+        else:
+            self.resource_path = self.pathname
+        self.config_folder = self.resource_path / "00_Config"
+        self.input_folder = self.resource_path / "01_Input"
         self.output_folder = Path.cwd() / "02_Output"
         self.parse_args()
+
+        if not self.input_folder.exists():
+            raise ValueError(f"Folder {self.input_folder} not found.")
+        if not self.config_folder.exists():
+            raise ValueError(f"Folder {self.config_folder} not found.")
+
         self.load_filterlists()
         if self.shapefile_intersect:
             self.load_shapefile()
@@ -184,8 +199,36 @@ class BaseConfig:
                             help="If set, no user input will "
                             "be requested during processing.",
                             )
+        parser.add_argument("-fO",
+                            "--filterOrigin",
+                            type=str,
+                            default="",
+                            help="If provided, will filter input data "
+                            "based on origin_id column.",
+                            )
+        parser.add_argument("-v", "--verbose",
+                            help="Increase output verbosity",
+                            action="store_true")
+        parser.add_argument("-mI", "--maxItems",
+                            help="Number of distinct items to process",
+                            default=1000,
+                            type=int)
+        parser.add_argument("-oF", "--outputFolder",
+                            help="Complete path for output folder",
+                            default="",
+                            type=str)
+        parser.add_argument("-iF", "--inputFolder",
+                            help="Complete path for input folder",
+                            default="",
+                            type=str)
+        parser.add_argument("-cF", "--configFolder",
+                            help="Complete path for config folder",
+                            default="",
+                            type=str)
 
         args = parser.parse_args()
+        if args.verbose:
+            self.logging_level = logging.DEBUG
         if args.source:
             self.data_source = args.source
         if args.disableClusterTags:
@@ -222,16 +265,30 @@ class BaseConfig:
             self.write_gis_comp_line = False
         if args.autoMode:
             self.auto_mode = args.autoMode
+        if args.filterOrigin:
+            self.filter_origin = args.filterOrigin
+        if args.maxItems:
+            self.max_items = args.maxItems
+        if args.outputFolder:
+            self.output_folder = args.outputFolder
+        if args.inputFolder:
+            self.input_folder = args.inputFolder
+        if args.configFolder:
+            self.config_folder = args.configFolder
 
     def load_filterlists(self):
         """Load filterlists for filtering terms (instring and full match)
         and places, including place lat/lng corrections.
         """
         # locations for files
-        sort_out_always_file = "00_Config/SortOutAlways.txt"
-        sort_out_always_instr_file = "00_Config/SortOutAlways_inStr.txt"
-        sort_out_places_file = "00_Config/SortOutPlaces.txt"
-        correct_place_latlng_file = "00_Config/CorrectPlaceLatLng.txt"
+        sort_out_always_file = (
+            self.config_folder / "SortOutAlways.txt")
+        sort_out_always_instr_file = (
+            self.config_folder / "SortOutAlways_inStr.txt")
+        sort_out_places_file = (
+            self.config_folder / "SortOutPlaces.txt")
+        correct_place_latlng_file = (
+            self.config_folder / "CorrectPlaceLatLng.txt")
         # load lists
         self.sort_out_always_set = self.load_stoplists(sort_out_always_file)
         self.sort_out_always_instr_set = self.load_stoplists(

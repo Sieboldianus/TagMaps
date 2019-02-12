@@ -21,14 +21,12 @@ import shapely.geometry as geometry
 from tagmaps.classes.alpha_shapes import AlphaShapes
 from tagmaps.classes.shared_structure import (EMOJI, LOCATIONS, TAGS,
                                               AnalysisBounds, CleanedPost,
-                                              ClusterType, PreparedData)
+                                              ClusterType, PreparedStats)
 from tagmaps.classes.utils import Utils
-
 with warnings.catch_warnings():
-    # disable:
-    # parallel.py:268: DeprecationWarning:
-    # check_pickle is deprecated in joblib 0.12
-    warnings.filterwarnings("ignore", category=DeprecationWarning)
+    # filter sklearn\externals\joblib\parallel.py:268:
+    # DeprecationWarning: check_pickle is deprecated
+    warnings.simplefilter("ignore", category=DeprecationWarning)
     import hdbscan
 
 pool = ThreadPool(processes=1)
@@ -49,7 +47,6 @@ class ClusterGen():
                  # topitem: Tuple[str, int] = None,
                  local_saturation_check: bool = True):
         self.cls_type = cluster_type
-        self.tnum = 0
         self.tmax = len(top_list)
         self.bounds = bounds
         self.cluster_distance = ClusterGen._init_cluster_dist(
@@ -57,7 +54,10 @@ class ClusterGen():
         self.cleaned_post_dict = cleaned_post_dict
         self.cleaned_post_list = cleaned_post_list
         self.top_list = top_list
-        self.top_item = top_list[0]
+        if self.top_list:
+            self.top_item = top_list[0]
+        else:
+            self.top_item = None
         self.total_distinct_locations = total_distinct_locations
         self.autoselect_clusters = False
         self.sel_colors = None
@@ -85,7 +85,7 @@ class ClusterGen():
                       bounds: AnalysisBounds,
                       cleaned_post_dict: Dict[str, CleanedPost],
                       cleaned_post_list: List[CleanedPost],
-                      prepared_data: PreparedData,
+                      cleaned_stats: PreparedStats,
                       local_saturation_check: bool):
         """Create new clusterer from type and input data
 
@@ -100,11 +100,11 @@ class ClusterGen():
             clusterer (ClusterGen): A new clusterer of ClusterType
         """
         if clusterer_type == TAGS:
-            top_list = prepared_data.top_tags_list
+            top_list = cleaned_stats.top_tags_list
         elif clusterer_type == EMOJI:
-            top_list = prepared_data.top_emoji_list
+            top_list = cleaned_stats.top_emoji_list
         elif clusterer_type == LOCATIONS:
-            top_list = prepared_data.top_locations_list
+            top_list = cleaned_stats.top_locations_list
         else:
             raise ValueError("Cluster Type unknown.")
 
@@ -113,7 +113,7 @@ class ClusterGen():
             cleaned_post_dict=cleaned_post_dict,
             cleaned_post_list=cleaned_post_list,
             top_list=top_list,
-            total_distinct_locations=prepared_data.total_unique_locations,
+            total_distinct_locations=cleaned_stats.total_unique_locations,
             cluster_type=clusterer_type,
             local_saturation_check=local_saturation_check)
         return clusterer
@@ -251,11 +251,21 @@ class ClusterGen():
         if perc_oftotal_locations >= 1:
             perc_text = (f'(found in {perc_oftotal_locations:.0f}% '
                          f'of DLC in area)')
-        print(f'({self.tnum} of {self.tmax}) '
+        item_index_pos = self._get_toplist_index(item) + 1
+        print(f'({item_index_pos} of {self.tmax}) '
               f'Found {len(selected_postguids_list)} posts (UPL) '
               f'for {type_text} \'{item_text}\' '
               f'{perc_text}', end=" ")
         return selected_postguids_list
+
+    def _get_toplist_index(self, item_text: str) -> int:
+        """Get Position of Item in Toplist"""
+        try:
+            index_pos = Utils._get_index_of_tup(
+                self.top_list, 0, item_text)
+        except ValueError:
+            index_pos = 0
+        return index_pos
 
     def _getselect_posts(self,
                          selected_postguids_list: List[str]
@@ -514,16 +524,15 @@ class ClusterGen():
         if self.local_saturation_check:
             self._get_update_clusters(
                 item=self.top_item)
-        self.tnum = 0
+        tnum = 0
         # get remaining clusters
         for item in self.top_list:
             if (self.local_saturation_check and
-                    self.tnum == 0 and
-                    self.top_item in self.clustered_items_dict):
+                    tnum == 0):
                 # skip topitem if already
                 # clustered due to local saturation
                 continue
-            self.tnum += 1
+            tnum += 1
             self._get_update_clusters(
                 item=item)
         # logging.getLogger("tagmaps").info(
@@ -700,3 +709,11 @@ class ClusterGen():
 
         clusterer.fit(data)
         return clusterer
+
+    def _get_sel_preview(self, item):
+        """Returns plt map for item selection preview"""
+        points = self._get_np_points(
+            item=item,
+            silent=True)
+        fig = Utils._get_sel_preview(points, item, self.bounds)
+        return fig

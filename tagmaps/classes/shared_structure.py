@@ -111,6 +111,11 @@ class AnalysisBounds():
             self.lim_lng_max = lng
 
     def get_bound_report(self):
+        if (self.lim_lat_min is None
+            or self.lim_lat_max is None
+            or self.lim_lng_min is None
+                or self.lim_lng_max is None):
+            return f'Bounds have not been initlialized'
         bound_report = f'Bounds are: ' \
             f'Min {float(self.lim_lng_min)} {float(self.lim_lat_min)} ' \
             f'Max {float(self.lim_lng_max)} {float(self.lim_lat_max)}'
@@ -118,7 +123,7 @@ class AnalysisBounds():
 
 
 @attr.s
-class PreparedData():
+class PreparedStats():
     """Class storing what is needed for running tag cluster"""
     top_tags_list = attr.ib(init=False)
     top_emoji_list = attr.ib(init=False)

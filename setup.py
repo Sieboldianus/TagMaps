@@ -27,7 +27,7 @@ setup(name="tagmaps",
       long_description_content_type='text/markdown',
       author='Alexander Dunkel',
       author_email='alexander.dunkel@tu-dresden.de',
-      url='https://gitlab.vgiscience.de/ad/TagCluster',
+      url='https://github.com/Sieboldianus/TagMaps',
       license='GNU GPLv3 or any higher',
       packages=['tagmaps'],
       include_package_data=True,
@@ -38,14 +38,14 @@ setup(name="tagmaps",
           'gdal',
           'fiona',
           'numpy',
-          'pandas',
+          'pandas>=0.24.0',
           'attr',
           'pyproj',
           'matplotlib',
           'seaborn',
           'descartes',
-          'regex'
-
+          'regex',
+          'scipy'
       ],
       entry_points={
           'console_scripts': [

@@ -1,3 +1,5 @@
+![PyPI version](https://ad.vgiscience.org/TagCluster/pypi.svg) ![pylint](https://ad.vgiscience.org/TagCluster/pylint.svg) ![pipeline](https://ad.vgiscience.org/TagCluster/pipeline.svg)
+
 Tag Maps
 =============
 Spatio-Temporal Tag and Photo Location Clustering for generating Tag Maps
@@ -8,34 +10,52 @@ Afterwards, Alpha Shapes are generated as a means to 'soft' placement of tags on
 
 ![Tag Map Example](/resources/img6.png?raw=true)
 
+Based on the papers:
+
+>Dunkel, A. (2015). Visualizing the perceived environment using crowdsourced photo geodata. Landscape and Urban Planning, 142. [DOI](http://doi.org/10.1016/j.landurbplan.2015.02.022) / [PDF](http://alexanderdunkel.com/AuthorManuscript_Visualizing%20the%20perceived%20environment.pdf)
+
+>Dunkel, A. (2016). Assessing the perceived environment through crowdsourced spatial photo content for application to the fields of landscape and urban planning. Thesis, TU Dresden Landscape and Environmental Planning. [PDF](http://alexanderdunkel.com/Dissertation_AlexanderDunkel.pdf)
+
+
 ## Installation
 
-1. The easiest way for Windows users is to download the Pre-compiled build that is available [here](https://cloudstore.zih.tu-dresden.de/index.php/s/8EFfeJcpNCStQ9X/download) (315MB!) and run `generateTagClusters.exe`
-    - you can also compile the program yourself using the `setup.py` with [cx_Freeze](https://anthony-tuininga.github.io/cx_Freeze/): run `python cx_setup.py build`
-    - or simple run `generateTagClusters.py` if you have Python and all dependencies installed
-2. Place geotagged photo data in `/01_Input` subfolder
-    - example files/format are available in the Pre-compiled build zip-file above
-3. Output files will be saved in `/02_Output` (2 Shapefiles in WGS1984 projection, one containing all Tag Cluster and one with the Photo Location Clusters)
-4. Visualize Shapefiles using ArcGIS (I haven't tried other GIS Software such as QGIS, but it should theoretically be possible..)
+1. The easiest way for Windows users is to download the newest pre-compiled build from [releases](../../releases) and run `tagmaps.exe`
+2. For all other OS, the recommended way is to install with `pip install tagmaps`
+3. For devs, if conda package manager is available, use `conda env create -f environment.yml`
+
+## Quickstart
+
+1. Place geotagged data in `/01_Input` subfolder
+    - example files/format are available in the pre-compiled build zip-file above
+2. Output files will be saved in `/02_Output` (2 Shapefiles in auto-selected UTM projection, one containing all tag cluster and one with the overall location clusters)
+3. Visualize Shapefiles, e.g. using ESRI ArcGIS (I haven't tried other GIS Software such as QGIS, but it should theoretically be possible..)
     - download `BasemapLayout_World.mxd` from [resources folder](/resources/BasemapLayout_World.mxd) and replace missing links with 2 resulting Shapefiles in `/02_Output`
-    - adjust minimum and maximum Font Sizes, Weighting Formula or other metrics to your needs. There are two Power Point files available which explain the complete process: [Tag Clustering](/resources/01_TagMaps.pptx) and [Photo Location Clustering](/resources/02_PhotoDensityMaps.pptx)
+    - adjust minimum and maximum Font Sizes, Weighting Formula or other metrics to your needs.
+
+## Tutorial
+
+There's a tutorial available [here](https://ad.vgiscience.org/tagmaps_tutorial) that guides though the process of generating Tag Maps.
+Please bring your own data or use a sample from the [YFCC100M Flickr Commons Dataset](https://multimediacommons.wordpress.com/yfcc100m-core-dataset/).
+
 
 ## Code
 
 The code has been completely refactored in January 2019, but there are still some missing pieces.
-The API (that is: `import tagmaps`) and pypi `pip install tagmaps` are not yet fully working.
-Some code parts don't follow all PEP conventions. However, the structure improved a lot compared
-to the original version and should be usable.
+Particularly the API (that is: `import tagmaps`) is still in an early stage. See method main() in [__main__.py](/tagmaps/__main__.py)
+for examples on how to use tag maps package.
+
 
 ## Resources
 
 * Check out [this album on Flickr](https://www.flickr.com/photos/64974314@N08/albums/72157628868173205) with some more Tag Maps examples 
 * There's also an semi-interactive interface to explore some Tag Maps [here](http://maps.alexanderdunkel.com/)
 * Check out my blog [here](http://blog.alexanderdunkel.com/) with some background information
+* A [Jekyll-Reveal presentation](https://ad.vgiscience.org/tagmaps_intro/) on theory & background
 
 
 ## Contributors
 
+Some future goals:
 * include topic modeling
 * improve automatic detection of general vs specific tags for an area
 * include mapping/visualization step (replace ArcGIS)
@@ -43,17 +63,20 @@ to the original version and should be usable.
 ## Built With
 This project includes and makes use of several other projects/libraries/frameworks:
 
->[*Alpha Shapes*](http://blog.thehumangeo.com/2014/05/12/drawing-boundaries-in-python/) Kevin Dwyer/ Sean Gillies
->>Generating Concave Hull for Point Clouds
+>[*Alpha Shapes*](http://blog.thehumangeo.com/2014/05/12/drawing-boundaries-in-python/) Kevin Dwyer/ Sean Gillies  
+>Generating Concave Hull for Point Clouds
 
->[*HDBSCAN*](https://github.com/scikit-learn-contrib/hdbscan) McInnes, J. Healy, S. Astels - BSD licensed
->> A high performance implementation of HDBSCAN clustering.
+>[*HDBSCAN*](https://github.com/scikit-learn-contrib/hdbscan) McInnes, J. Healy, S. Astels - BSD licensed  
+>A high performance implementation of HDBSCAN clustering.
 
->[*Shapely*](https://github.com/Toblerity/Shapely)
->> Manipulation and analysis of geometric objects
+>[*Shapely*](https://github.com/Toblerity/Shapely)  
+>Manipulation and analysis of geometric objects
 
->[*SciPy and Convex Hull*](https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.ConvexHull.html#scipy.spatial.ConvexHull)
->> Simple shapes for point clusters are generated using SciPy's excellent Convex Hull functions  
+>[*SciPy and Convex Hull*](https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.ConvexHull.html#scipy.spatial.ConvexHull)  
+>Simple shapes for point clusters are generated using SciPy's excellent Convex Hull functions  
+
+>[*Fiona*](https://github.com/Toblerity/Fiona)  
+>OGR's neat and nimble API for Python programmers.
 
 ## License
 
@@ -61,11 +84,17 @@ GNU GPLv3
 
 ## Changelog & Download
 
-2019-01-23: [**TagMaps v0.10.4**]()
+2019-02-06: [**TagMaps v0.13.0**](https://cloudstore.zih.tu-dresden.de/index.php/s/IrV632Xc59ozqmG/download)
 
-* complete refactor of code with improved encapsulation and code, following most PEP conventions
-* bugfix: emoji handling now accurately recognizes grapheme clusters consisting of multiple unicode codepoints. This also fixes a display issue with shapefiles in ArcGIS.
+* First version of public API, e.g. load tagmaps to other packages with `import tagmaps` or `from tagmaps import TagMaps`
+* Refactor of LoadData and PrepareData in separate classes, use of contextmanager/ pipeline generator
+
+2019-01-23: [**TagMaps v0.11.1**](https://cloudstore.zih.tu-dresden.de/index.php/s/QhKT3Pj9fk4H9ns/download)
+
+* complete refactor of code with improved encapsulation, code now largely follows PEP conventions
+* bugfix: emoji handling now accurately recognizes grapheme clusters consisting of multiple unicode codepoints.  
 * interface: add feature to filter based on toplists for tags, emoji and locations
+* added sample CC-BY dataset
 
 2018-01-31: [**TagMaps v0.9.2**](https://cloudstore.zih.tu-dresden.de/index.php/s/8EFfeJcpNCStQ9X/download)
 

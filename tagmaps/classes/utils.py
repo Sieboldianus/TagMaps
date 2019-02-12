@@ -17,6 +17,7 @@ import logging
 import pyproj
 import fiona
 import regex
+from importlib import reload
 import shapely.geometry as geometry
 import matplotlib.pyplot as plt
 from fiona.crs import from_epsg
@@ -26,7 +27,6 @@ from datetime import timedelta
 from typing import List, Set, Dict, Tuple, Optional, TextIO, Iterable
 from math import radians, cos, sin, asin, sqrt
 from descartes import PolygonPatch
-from tagmaps.config.config import BaseConfig
 from tagmaps.classes.shared_structure import CleanedPost, AnalysisBounds
 
 
@@ -35,6 +35,7 @@ class Utils():
 
     Primarily @classmethods and @staticmethods
     """
+    PLOT_KWDS = {'alpha': 0.5, 's': 10, 'linewidths': 0}
 
     @staticmethod
     def _get_shapely_bounds(
@@ -126,60 +127,72 @@ class Utils():
         except ValueError:
             return False
 
-    @classmethod
-    def init_main(cls):
+    @staticmethod
+    def init_main():
         """Initializing main procedure
         if package is executed directly
 
-        To_Do:
+        TODO:
         - disables fiona logging, as it (somehow)
           interferes with tag maps logging
           (find better solution)
         """
-
         # set console view parameters
         # stretch console
         os.system('mode con: cols=197 lines=40')
-        # initialize logger
-        log = cls._set_logger()
-
         logging.getLogger("fiona.collection").disabled = True
-        cfg = BaseConfig()
-        return cfg, log
 
-    @classmethod
-    def _set_logger(cls):
+    @staticmethod
+    def _set_logger(output_folder, logging_level=None):
         """ Set logging handler manually,
         so we can also print to console while logging to file
         """
-        # create output dir if not exists
-        cls._init_output_dir()
-        pathname = Path.cwd()
-        __log_file = pathname / "02_Output" / "log.txt"
-
+        # reset logging in case Jupyter Notebook has
+        # captured stdout
+        reload(logging)
+        # Create or get logger with specific name
+        log = logging.getLogger("tagmaps")
+        if len(log.handlers) > 0:
+            # only add log handlers once
+            return log
+        if logging_level is None:
+            logging_level = logging.INFO
+        if output_folder is not None:
+            if not output_folder.exists():
+                Utils._init_output_dir(output_folder)
+            # input(f'{type(output_folder)}')
+            __log_file = output_folder / 'log.txt'
+        log.format = '%(message)s'
+        log.datefmt = ''
+        log.setLevel(logging_level)
         # Set Output to Replace in case of
         # encoding issues (console/windows)
-        sys.stdout = io.TextIOWrapper(
-            sys.stdout.detach(), sys.stdout.encoding, 'replace')
-        # Create logger with specific name
-        log = logging.getLogger("tagmaps")
-        log.format = '%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s'
-        log.datefmt = '%H:%M:%S'
-        log.setLevel(logging.DEBUG)
-        log.addHandler(logging.FileHandler(__log_file, 'w', 'utf-8'))
-        log.addHandler(logging.StreamHandler())
+        if type(sys.stdout) == io.TextIOWrapper:
+            # only for console output (not Juypter Notebook stream)
+            sys.stdout = io.TextIOWrapper(
+                sys.stdout.detach(), sys.stdout.encoding, 'replace')
+            log.addHandler(logging.StreamHandler())
+            if output_folder is not None:
+                # only log to file in console mode
+                log.addHandler(
+                    logging.FileHandler(__log_file, 'w', 'utf-8'))
+        else:
+            # log to stdout, not stderr in Jupyter Mode to prevent
+            # log.Info messages appear as red boxes
+            logging.basicConfig(
+                stream=sys.stdout, format=log.format,
+                level=logging_level, datefmt=None)
+            # log.stream = sys.stdout
         # flush once to clear console
         sys.stdout.flush()
         return log
 
     @staticmethod
-    def _init_output_dir():
+    def _init_output_dir(output_folder):
         """Creates local output dir if not exists"""
-
-        pathname = Path.cwd()
-        if not os.path.exists(pathname / "02_Output"):
-            os.makedirs(pathname / "02_Output")
-            print("Folder /02_Output was created")
+        if output_folder is not None and not output_folder.exists():
+            output_folder.mkdir()
+            print(f'Folder {output_folder.name}/ was created')
 
     @staticmethod
     def query_yes_no(question, default="yes"):
@@ -385,7 +398,7 @@ class Utils():
 
         emoji_split = Utils.split_count(string_with_emoji)
         emoji_list = [emoji for emoji in emoji_split]
-        flags_list = Utils.split_count(string_with_emoji)
+        flags_list = Utils.extract_flags(string_with_emoji)
         return emoji_list + flags_list
 
     @staticmethod
@@ -559,3 +572,66 @@ class Utils():
                 photo_tags_filtered.add(tag)
         return (photo_tags_filtered,
                 count_tags, count_skipped)
+
+    @staticmethod
+    def _get_index_of_tup(
+            l: List[Tuple[str, int]], index: int, value: str) -> int:
+        """Get index pos from list of tuples.
+
+        Stops iterating through the list as
+        soon as it finds the value
+        """
+        for pos, t in enumerate(l):
+            if t[index] == value:
+                return pos
+        # Matches behavior of list.index
+        raise ValueError("list.index(x): x not in list")
+
+    @staticmethod
+    def _get_xy_dists(
+            bounds: AnalysisBounds) -> Tuple[float, float]:
+        """Get X/Y Distances from Analysis Bounds"""
+        dist_y_lat = (
+            bounds.lim_lat_max - bounds.lim_lat_min)
+        dist_x_lng = (
+            bounds.lim_lng_max - bounds.lim_lng_min)
+        return dist_y_lat, dist_x_lng
+
+    @staticmethod
+    def _get_img_ratio(bounds: AnalysisBounds
+                       ) -> float:
+        """Gets [img] ratio form bounds."""
+        dists = Utils._get_xy_dists(bounds)
+        dist_y_lat = dists[0]
+        dist_x_lng = dists[1]
+        # distYLat = Utils.haversine(limXMin,limYMax,limXMin,limYMin)
+        # distXLng = Utils.haversine(limXMax,limYMin,limXMin,limYMin)
+        img_ratio = dist_x_lng/(dist_y_lat*2)
+        return img_ratio
+
+    @staticmethod
+    def _plt_setxy_lim(plt, bounds: AnalysisBounds):
+        """Set global plotting bounds basedon Analysis Bounds"""
+        plt.gca().set_xlim(
+            [bounds.lim_lng_min, bounds.lim_lng_max])
+        plt.gca().set_ylim(
+            [bounds.lim_lat_min, bounds.lim_lat_max])
+
+    @staticmethod
+    def _get_fig_points(points, img_ratio, bounds):
+        plt.scatter(points.T[0], points.T[1],
+                    color='red', **Utils.PLOT_KWDS)
+        fig = plt.figure(num=1, figsize=(
+            11, int(11*img_ratio)), dpi=80)
+        fig.canvas.set_window_title('Preview Map')
+        Utils._plt_setxy_lim(plt, bounds)
+        plt.tick_params(labelsize=10)
+        return fig
+
+    @staticmethod
+    def _get_sel_preview(points, item, bounds):
+        """Returns plt map for item selection preview"""
+        img_ratio = Utils._get_img_ratio(bounds)
+        fig = Utils._get_fig_points(points, img_ratio, bounds)
+        plt.suptitle(item, fontsize=18, fontweight='bold')
+        return fig
