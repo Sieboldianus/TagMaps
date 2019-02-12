@@ -152,7 +152,7 @@ class Utils():
         reload(logging)
         # Create or get logger with specific name
         log = logging.getLogger("tagmaps")
-        if len(log.handlers):
+        if len(log.handlers) > 0:
             # only add log handlers once
             return log
         if logging_level is None:
