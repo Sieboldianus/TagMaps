@@ -610,7 +610,7 @@ class Utils():
         return img_ratio
 
     @staticmethod
-    def _plt_setxy_lim(plt, bounds: AnalysisBounds):
+    def plt_setxy_lim(plt, bounds: AnalysisBounds):
         """Set global plotting bounds basedon Analysis Bounds"""
         plt.gca().set_xlim(
             [bounds.lim_lng_min, bounds.lim_lng_max])
@@ -624,7 +624,7 @@ class Utils():
         fig = plt.figure(num=1, figsize=(
             11, int(11*img_ratio)), dpi=80)
         fig.canvas.set_window_title('Preview Map')
-        Utils._plt_setxy_lim(plt, bounds)
+        Utils.plt_setxy_lim(plt, bounds)
         plt.tick_params(labelsize=10)
         return fig
 
@@ -635,3 +635,46 @@ class Utils():
         fig = Utils._get_fig_points(points, img_ratio, bounds)
         plt.suptitle(item, fontsize=18, fontweight='bold')
         return fig
+
+    @staticmethod
+    def _get_cluster_preview(
+            points, sel_colors, item_text, bounds, mask_noisy,
+            cluster_distance, number_of_clusters, auto_select_clusters=None):
+        if auto_select_clusters is None:
+            auto_select_clusters = False
+        # create main cluster points map
+        plt.scatter(points.T[0], points.T[1],
+                    c=sel_colors, **Utils.PLOT_KWDS)
+        img_ratio = Utils._get_img_ratio(bounds)
+        fig1 = plt.figure(num=1, figsize=(
+            11, int(11*img_ratio)), dpi=80)
+        fig1.canvas.set_window_title('Cluster Preview')
+        Utils._set_plt_suptitle_st(plt, item_text)
+        dist_text = ''
+        if auto_select_clusters is False:
+            dist_text = '@ ' + str(cluster_distance) + 'm'
+        plt.title(f'Cluster Preview {dist_text}',
+                  fontsize=12, loc='center')
+        # xmax = fig1.get_xlim()[1]
+        # ymax = fig1.get_ylim()[1]
+        noisy_txt = '{} / {}'.format(mask_noisy.sum(), len(mask_noisy))
+        plt.text(bounds.lim_lng_max,
+                 bounds.lim_lat_max,
+                 f'{number_of_clusters} Clusters (Noise: {noisy_txt})',
+                 fontsize=10, horizontalalignment='right',
+                 verticalalignment='top', fontweight='bold')
+        # set plotting bounds
+        Utils.plt_setxy_lim(plt, bounds)
+        Utils.set_plt_tick_params(plt)
+        return fig1
+
+    @staticmethod
+    def set_plt_tick_params(plt):
+        """Sets common plt tick params"""
+        plt.tick_params(labelsize=10)
+
+    @staticmethod
+    def _set_plt_suptitle_st(plt, title: str):
+        """Set title of plt"""
+        plt.suptitle(title,
+                     fontsize=18, fontweight='bold')

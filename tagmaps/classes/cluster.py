@@ -59,7 +59,7 @@ class ClusterGen():
         else:
             self.top_item = None
         self.total_distinct_locations = total_distinct_locations
-        self.autoselect_clusters = False
+        self.autoselect_clusters = False  # no cluster distance needed
         self.sel_colors = None
         self.number_of_clusters = None
         self.mask_noisy = None
@@ -716,4 +716,18 @@ class ClusterGen():
             item=item,
             silent=True)
         fig = Utils._get_sel_preview(points, item, self.bounds)
+        return fig
+
+    def _get_cluster_preview(self, item):
+        """Returns plt map for item cluster preview"""
+        points = self._get_np_points(
+            item=item,
+            silent=True)
+        self._cluster_points(
+            points=points,
+            preview_mode=True)
+        fig = Utils._get_cluster_preview(
+            points, self.sel_colors, item, self.bounds, self.mask_noisy,
+            self.cluster_distance, self.number_of_clusters,
+            self.autoselect_clusters)
         return fig

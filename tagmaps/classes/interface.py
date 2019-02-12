@@ -56,7 +56,6 @@ class UserInterface():
         # self.floater_x = 0
         # self.floater_y = 0
         self.img_ratio = Utils._get_img_ratio(self._clst.bounds)
-        self.auto_select_clusters = False
         self.current_display_item = None
         # Initialize TKinter Interface
         self.app = App()
@@ -253,54 +252,12 @@ class UserInterface():
         number_of_clusters = self._clst.number_of_clusters
         sel_colors = self._clst.sel_colors
         if self.fig1:
-            plt.figure(1).clf()
             # plt references the last figure accessed
-            self._set_plt_suptitle(sel_item[0])
-            ax = plt.scatter(
-                points.T[0], points.T[1], color=sel_colors,
-                **Utils.PLOT_KWDS)
-            self.fig1 = plt.figure(num=1, figsize=(
-                11, int(11*self.img_ratio)), dpi=80)
-            self.fig1.canvas.set_window_title('Cluster Preview')
-            distText = ''
-            if self.auto_select_clusters is False:
-                distText = '@ ' + str(self._clst.cluster_distance) + 'm'
-            plt.title(f'Cluster Preview {distText}',
-                      fontsize=12, loc='center')
-            # plt.title('Cluster Preview')
-            # xmax = ax.get_xlim()[1]
-            # ymax = ax.get_ylim()[1]
-            noisy_txt = '{}/{}'.format(mask_noisy.sum(), len(mask_noisy))
-            plt.text(self._clst.bounds.lim_lng_max,
-                     self._clst.bounds.lim_lat_max,
-                     f'{number_of_clusters} Cluster (Noise: {noisy_txt})',
-                     fontsize=10, horizontalalignment='right',
-                     verticalalignment='top', fontweight='bold')
-        else:
-            plt.scatter(points.T[0], points.T[1],
-                        c=sel_colors, **Utils.PLOT_KWDS)
-            self.fig1 = plt.figure(num=1, figsize=(
-                11, int(11*self.img_ratio)), dpi=80)
-            self.fig1.canvas.set_window_title('Cluster Preview')
-            self._set_plt_suptitle(sel_item[0])
-            distText = ''
-            if self.auto_select_clusters is False:
-                distText = '@ ' + str(self._clst.cluster_distance) + 'm'
-            plt.title(f'Cluster Preview {distText}',
-                      fontsize=12, loc='center')
-            # xmax = fig1.get_xlim()[1]
-            # ymax = fig1.get_ylim()[1]
-            noisy_txt = '{} / {}'.format(mask_noisy.sum(), len(mask_noisy))
-            plt.text(self._clst.bounds.lim_lng_max,
-                     self._clst.bounds.lim_lat_max,
-                     f'{number_of_clusters} Clusters (Noise: {noisy_txt})',
-                     fontsize=10, horizontalalignment='right',
-                     verticalalignment='top', fontweight='bold')
-        plt.gca().set_xlim(
-            [self._clst.bounds.lim_lng_min, self._clst.bounds.lim_lng_max])
-        plt.gca().set_ylim(
-            [self._clst.bounds.lim_lat_min, self._clst.bounds.lim_lat_max])
-        plt.tick_params(labelsize=10)
+            plt.figure(1).clf()
+        self.fig1 = Utils._get_cluster_preview(
+            points, sel_colors, sel_item[0], self._clst.bounds, mask_noisy,
+            self._clst.cluster_distance, self._clst.number_of_clusters,
+            self._clst.autoselect_clusters)
         # if len(tagRadiansData) < 10000:
         if self.fig2:
             plt.figure(2).clf()
@@ -331,7 +288,7 @@ class UserInterface():
             #   label_clusters=True)
             # plt.title('Condensed Tree', fontsize=12,loc='center')
             self._set_plt_suptitle(sel_item[0])
-        plt.tick_params(labelsize=10)
+        Utils.set_plt_tick_params(plt)
         if self.fig3:
             plt.figure(3).clf()
             self._set_plt_suptitle(sel_item[0])
@@ -387,7 +344,7 @@ class UserInterface():
             vals = self.fig3.get_yticks()
             self.fig3.set_yticklabels(
                 [f'{Utils._get_meters_from_radians(x):3.1f}m' for x in vals])
-        plt.tick_params(labelsize=10)
+        Utils.set_plt_tick_params(plt)
         if self.create_min_spanning_tree:
             if self.fig4:
                 plt.figure(4).clf()
@@ -441,7 +398,7 @@ class UserInterface():
                 # cb.ax.set_yticklabels(
                 #   ['{:3.1f}m'.format(getMetersFromRadians(x)) for x in vals]
                 # )
-        plt.tick_params(labelsize=10)
+        Utils.set_plt_tick_params(plt)
         self._update_scalebar()
 
     def _set_plt_suptitle(self, item: str):
@@ -456,13 +413,7 @@ class UserInterface():
             plt.rcParams['font.family'] = 'DejaVu Sans'
         else:
             plt.rcParams['font.family'] = 'sans-serif'
-        UserInterface._set_plt_suptitle_st(plt, title)
-
-    @staticmethod
-    def _set_plt_suptitle_st(plt, title: str):
-        """Set title of plt"""
-        plt.suptitle(title,
-                     fontsize=18, fontweight='bold')
+        Utils._set_plt_suptitle_st(plt, title)
 
     def _get_pltspec_suptitle(self, item: str, cls_type=None) -> str:
         """Gets formatted suptitle for plot
@@ -661,7 +612,7 @@ class UserInterface():
             11, int(11*self.img_ratio)), dpi=80)
         self.fig1.canvas.set_window_title('Cluster Preview')
         dist_text = ''
-        if self.auto_select_clusters is False:
+        if self._clst.autoselect_clusters is False:
             dist_text = f'@ {self._clst.cluster_distance}m'
         plt.title(f'Cluster Preview {dist_text}', fontsize=12, loc='center')
         noisy_txt = f'{mask_noisy.sum()}/{len(mask_noisy)}'
