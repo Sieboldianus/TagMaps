@@ -1,0 +1,68 @@
+{% set name = "tagmaps" %}
+{% set version = "0.13.2" %}
+
+package:
+  name: "{{ name|lower }}"
+  version: "{{ version }}"
+
+source:
+  url: https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
+  sha256: ae2ed34f18f0f6f947075773c1e07d8d142fcb9f28d9c07aea41e09f15061766
+
+build:
+  number: 0
+  entry_points:
+    - tagmaps = tagmaps.__main__:main
+  script: "{{ PYTHON }} -m pip install . --no-deps --ignore-installed -vv "
+
+requirements:
+  host:
+    - attr
+    - descartes
+    - emoji
+    - fiona
+    - gdal
+    - hdbscan
+    - matplotlib
+    - numpy
+    - pandas
+    - pip
+    - pyproj
+    - python
+    - regex
+    - seaborn
+    - shapely
+  run:
+    - attr
+    - descartes
+    - emoji
+    - fiona
+    - gdal
+    - hdbscan
+    - matplotlib
+    - numpy
+    - pandas
+    - pyproj
+    - python
+    - regex
+    - seaborn
+    - shapely
+
+test:
+  imports:
+    - tagmaps
+  commands:
+    - tagmaps --help
+
+about:
+  home: https://github.com/Sieboldianus/TagMaps
+  license: GNU GPLv3 or any higher
+  license_family: GPL3
+  license_file: 
+  summary: Tag Clustering for Tag Maps
+  doc_url: 
+  dev_url: 
+
+extra:
+  recipe-maintainers:
+    - your-github-id-here
