@@ -32,6 +32,7 @@ VERSION = VERSION_DICT['__version__']
 INCLUDES_MOD = [
     "tkinter.filedialog",
     'numpy.lib.format',
+    'numpy.core._methods',
     'matplotlib.backends.backend_tkagg',
     'seaborn',
     'seaborn.cm',
