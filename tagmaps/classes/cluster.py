@@ -22,6 +22,7 @@ from tagmaps.classes.alpha_shapes import AlphaShapes
 from tagmaps.classes.shared_structure import (EMOJI, LOCATIONS, TAGS,
                                               AnalysisBounds, CleanedPost,
                                               ClusterType, PreparedStats)
+from tagmaps.classes.plotting import TPLT
 from tagmaps.classes.utils import Utils
 with warnings.catch_warnings():
     # filter sklearn\externals\joblib\parallel.py:268:
@@ -715,7 +716,7 @@ class ClusterGen():
         points = self._get_np_points(
             item=item,
             silent=True)
-        fig = Utils._get_sel_preview(points, item, self.bounds)
+        fig = TPLT._get_sel_preview(points, item, self.bounds)
         return fig
 
     def _get_cluster_preview(self, item):
@@ -726,7 +727,7 @@ class ClusterGen():
         self._cluster_points(
             points=points,
             preview_mode=True)
-        fig = Utils._get_cluster_preview(
+        fig = TPLT._get_cluster_preview(
             points, self.sel_colors, item, self.bounds, self.mask_noisy,
             self.cluster_distance, self.number_of_clusters,
             self.autoselect_clusters)

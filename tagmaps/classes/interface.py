@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 from typing import List, Set, Dict, Tuple, Optional, TextIO
 import traceback
 import shapely.geometry as geometry
+from tagmaps.classes.plotting import TPLT
 from tagmaps.classes.utils import Utils
 from tagmaps.classes.shared_structure import (
     CleanedPost, AnalysisBounds,
@@ -55,7 +56,7 @@ class UserInterface():
         self.abort = False
         # self.floater_x = 0
         # self.floater_y = 0
-        self.img_ratio = Utils._get_img_ratio(self._clst.bounds)
+        self.img_ratio = TPLT._get_img_ratio(self._clst.bounds)
         self.current_display_item = None
         # Initialize TKinter Interface
         self.app = App()
@@ -254,7 +255,7 @@ class UserInterface():
         if self.fig1:
             # plt references the last figure accessed
             plt.figure(1).clf()
-        self.fig1 = Utils._get_cluster_preview(
+        self.fig1 = TPLT._get_cluster_preview(
             points, sel_colors, sel_item[0], self._clst.bounds, mask_noisy,
             self._clst.cluster_distance, self._clst.number_of_clusters,
             self._clst.autoselect_clusters)
@@ -288,7 +289,7 @@ class UserInterface():
             #   label_clusters=True)
             # plt.title('Condensed Tree', fontsize=12,loc='center')
             self._set_plt_suptitle(sel_item[0])
-        Utils.set_plt_tick_params(plt)
+        TPLT.set_plt_tick_params(plt)
         if self.fig3:
             plt.figure(3).clf()
             self._set_plt_suptitle(sel_item[0])
@@ -344,7 +345,7 @@ class UserInterface():
             vals = self.fig3.get_yticks()
             self.fig3.set_yticklabels(
                 [f'{Utils._get_meters_from_radians(x):3.1f}m' for x in vals])
-        Utils.set_plt_tick_params(plt)
+        TPLT.set_plt_tick_params(plt)
         if self.create_min_spanning_tree:
             if self.fig4:
                 plt.figure(4).clf()
@@ -398,7 +399,7 @@ class UserInterface():
                 # cb.ax.set_yticklabels(
                 #   ['{:3.1f}m'.format(getMetersFromRadians(x)) for x in vals]
                 # )
-        Utils.set_plt_tick_params(plt)
+        TPLT.set_plt_tick_params(plt)
         self._update_scalebar()
 
     def _set_plt_suptitle(self, item: str):
@@ -413,7 +414,7 @@ class UserInterface():
             plt.rcParams['font.family'] = 'DejaVu Sans'
         else:
             plt.rcParams['font.family'] = 'sans-serif'
-        Utils._set_plt_suptitle_st(plt, title)
+        TPLT._set_plt_suptitle_st(plt, title)
 
     def _get_pltspec_suptitle(self, item: str, cls_type=None) -> str:
         """Gets formatted suptitle for plot
@@ -452,7 +453,7 @@ class UserInterface():
 
     def _intf_plot_points(self, item_name: str, points):
         self._set_plt_suptitle(item_name)
-        self.fig1 = Utils._get_fig_points(
+        self.fig1 = TPLT._get_fig_points(
             points, self.img_ratio, self._clst.bounds)
 
     def _report_callback_exception(self, exc, val, tb):
