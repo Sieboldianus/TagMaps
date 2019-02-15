@@ -91,6 +91,46 @@ class TagMaps():
         parameter to take effect.
     """
 
+    class TM_Dec():
+        """Decorators for checking states in TagMaps class"""
+        @staticmethod
+        def _init_data_check(func):
+            def _wrapper(self, *args, **kwargs):
+                # init lbsn data
+                if self.lbsn_data is None:
+                    self._init_lbsn_data()
+                return(func(self, *args, **kwargs))
+            return _wrapper
+
+        @staticmethod
+        def _prepare_clustering_check(func):
+            def _wrapper(self, *args, **kwargs):
+                # add clusterer
+                if not self.clusterer:
+                    self._init_cluster()
+                return(func(self, *args, **kwargs))
+            return _wrapper
+
+        @staticmethod
+        def _data_added_check(func):
+            def _wrapper(self):
+                # check if data has been added
+                if not self.lbsn_data or self.lbsn_data.count_glob == 0:
+                    raise ValueError(
+                        "No data records available."
+                        "Add records with tagmaps.add_record() first.")
+                return(func(self))
+            return _wrapper
+
+        @staticmethod
+        def _init_stats_check(func):
+            def _wrapper(self):
+                # prepare stats
+                if self.cleaned_stats is None:
+                    self.prepare_stats()
+                func(self)
+            return _wrapper
+
     def __init__(
             self, tag_cluster=True, emoji_cluster=True,
             location_cluster=True, write_cleaned_data=False,
@@ -131,6 +171,7 @@ class TagMaps():
         self.itemized_cluster_shapes = list()
         self.global_cluster_centroids = list()
 
+    @TM_Dec._init_data_check
     def add_record(self, record: PostStructure):
         """Adds record to input data
 
@@ -143,8 +184,6 @@ class TagMaps():
             reduced to CleanedPost structure for
             TagMaps clustering
         """
-        if self.lbsn_data is None:
-            self._init_lbsn_data()
         self.lbsn_data.add_record(record)
 
     def _init_lbsn_data(self):
@@ -154,11 +193,9 @@ class TagMaps():
             self.max_items, self.output_folder, self.remove_long_tail,
             self.limit_bottom_user_count, self.topic_modeling)
 
+    @TM_Dec._data_added_check
     def global_stats_report(self):
         """Report global stats after data has been read"""
-        if not self.lbsn_data:
-            raise ValueError(
-                "Add data some data first.")
         self.log.info(
             f'Total user count (UC): '
             f'{len(self.lbsn_data.locations_per_userid_dict)}')
@@ -166,13 +203,10 @@ class TagMaps():
             f'Total user post locations (UPL): '
             f'{len(self.lbsn_data.distinct_userlocations_set)}')
 
+    @TM_Dec._data_added_check
     def prepare_stats(self):
         """Prepare data and metrics for use in clustering
         """
-        if not self.lbsn_data or self.lbsn_data.count_glob == 0:
-            raise ValueError(
-                "No data records available."
-                "Add records with tagmaps.add_record() first.")
         # get cleaned data for use in clustering
         self.cleaned_post_dict = self.lbsn_data.get_cleaned_post_dict()
         # a list is faster for looping through,
@@ -182,13 +216,10 @@ class TagMaps():
         # get prepared data for statistics and clustering
         self.cleaned_stats = self.lbsn_data._get_item_stats()
 
+    @TM_Dec._data_added_check
+    @TM_Dec._init_stats_check
     def item_stats_report(self):
         """Stats reporting for tags, emoji (and locations)"""
-        if not self.lbsn_data:
-            raise ValueError(
-                'No data has been added (use .add_record(record))')
-        if self.cleaned_stats is None:
-            self.prepare_stats()
         location_name_count = len(
             self.lbsn_data.locid_locname_dict)
         if location_name_count > 0:
@@ -217,14 +248,11 @@ class TagMaps():
         self.log.info(
             self.lbsn_data.bounds.get_bound_report())
 
+    @TM_Dec._data_added_check
+    @TM_Dec._init_stats_check
     def _init_cluster(self):
         """Initialize clusterers after base data
         has been loaded"""
-        if not self.lbsn_data:
-            raise ValueError(
-                "No data has been added (use .add_record(record))")
-        if self.cleaned_stats is None:
-            self.prepare_stats()
         for cls_type in self.cluster_types:
             clusterer = ClusterGen.new_clusterer(
                 clusterer_type=cls_type,
@@ -236,6 +264,7 @@ class TagMaps():
             )
             self.clusterer[cls_type] = clusterer
 
+    @TM_Dec._prepare_clustering_check
     def user_interface(self):
         """Opens interface for optional user input to:
         - remove tags, emoji or locations prom processing list
@@ -243,9 +272,6 @@ class TagMaps():
 
         Returns False or True, depending on optional user Quit()
         """
-        # init list of clusterers
-        if not self.clusterer:
-            self._init_cluster()
         # init user interface
         user_intf = UserInterface(
             self.clusterer.values(),
@@ -270,6 +296,7 @@ class TagMaps():
         """Calculate overall location clusters"""
         self._cluster(LOCATIONS, itemized=False)
 
+    @TM_Dec._prepare_clustering_check
     def _cluster(self, cluster_type: ClusterType,
                  itemized=True):
         """Run clusterer based on type and output
@@ -278,12 +305,6 @@ class TagMaps():
         otherwise: Gets global clusters for all
                    locations.
         """
-        # prepare stats
-        if self.cleaned_stats is None:
-            self.prepare_stats()
-        # add clusterer
-        if not self.clusterer:
-            self._init_cluster()
         clusterer = self.clusterer.get(cluster_type)
         self.log.info(f'{cluster_type.rstrip("s")} clustering: ')
         if itemized:
@@ -342,18 +363,26 @@ class TagMaps():
             output_folder=self.output_folder
         )
 
+    @TM_Dec._prepare_clustering_check
     def get_selection_map(self, cls_type: ClusterType, item):
         """Return plt.figure for item selection."""
-        # add clusterer
-        if not self.clusterer:
-            self._init_cluster()
         fig = self.clusterer[cls_type]._get_sel_preview(item)
         return fig
 
+    @TM_Dec._prepare_clustering_check
     def get_cluster_map(self, cls_type: ClusterType, item):
         """Return plt.figure for item clusters."""
-        # add clusterer
-        if not self.clusterer:
-            self._init_cluster()
         fig = self.clusterer[cls_type]._get_cluster_preview(item)
+        return fig
+
+    @TM_Dec._prepare_clustering_check
+    def get_cluster_shapes_map(self, cls_type: ClusterType, item):
+        """Return plt.figure for item cluster shapes."""
+        fig = self.clusterer[cls_type]._get_clustershapes_preview(item)
+        return fig
+
+    @TM_Dec._prepare_clustering_check
+    def get_singlelinkagetree_preview(self, cls_type: ClusterType, item):
+        """Return plt.figure for item cluster shapes."""
+        fig = self.clusterer[cls_type].get_singlelinkagetree_preview(item)
         return fig
