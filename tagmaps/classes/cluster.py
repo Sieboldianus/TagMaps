@@ -17,6 +17,8 @@ import pandas as pd
 import pyproj
 import seaborn as sns
 import shapely.geometry as geometry
+from shapely.ops import transform
+from functools import partial
 
 from tagmaps.classes.alpha_shapes import AlphaShapes
 from tagmaps.classes.shared_structure import (EMOJI, LOCATIONS, TAGS,
@@ -61,9 +63,6 @@ class ClusterGen():
             self.top_item = None
         self.total_distinct_locations = total_distinct_locations
         self.autoselect_clusters = False  # no cluster distance needed
-        self.sel_colors = None
-        self.number_of_clusters = None
-        self.mask_noisy = None
         self.clusterer = None
         self.local_saturation_check = local_saturation_check
         # storing cluster results:
@@ -396,38 +395,58 @@ class ClusterGen():
         # exit function in case of
         # final processing loop (no figure generating)
         if not preview_mode:
-            return cluster_labels
+            return cluster_labels, None, None, None
         # verbose reporting if preview mode
-        self.mask_noisy = (cluster_labels == -1)
+        mask_noisy = (cluster_labels == -1)
         # len(sel_labels)
-        self.number_of_clusters = len(
-            np.unique(cluster_labels[~self.mask_noisy]))  # nopep8 false positive? pylint: disable=E1130
+        number_of_clusters = len(
+            np.unique(cluster_labels[~mask_noisy]))  # nopep8 false positive? pylint: disable=E1130
         # palette = sns.color_palette("hls", )
         # palette = sns.color_palette(None, len(sel_labels))
         # #sns.color_palette("hls", ) #sns.color_palette(None, 100)
-        palette = sns.color_palette("husl", self.number_of_clusters+1)
+        palette = sns.color_palette("husl", number_of_clusters+1)
         # clusterer.labels_ (best selection) or sel_labels (cut distance)
-        self.sel_colors = [palette[x] if x >= 0
-                           else (0.5, 0.5, 0.5)
-                           # for x in clusterer.labels_ ]
-                           for x in cluster_labels]
+        sel_colors = [palette[x] if x >= 0
+                      else (0.5, 0.5, 0.5)
+                      # for x in clusterer.labels_ ]
+                      for x in cluster_labels]
         # no need to return actual clusters if in manual mode
         # self.mask_noisy, self.number_of_clusters and
         # self.sel_colors will be used to gen preview map
-        return None
+        return cluster_labels, sel_colors, mask_noisy, number_of_clusters
 
-    def _cluster_item(self, sel_item: Tuple[str, int]):
-        """Cluster specific item"""
+    def _cluster_item(self, item: str, preview_mode=None):
+        """Cluster specific item
 
+        Args:
+            item (str): The item to select and cluster
+            preview_mode ([type], optional): Defaults to None. If True,
+                sel_colors, mask_noisy, number_of_clusters will be returned,
+                which can be used as additional information during plot
+
+        Returns:
+            clusters: The cluster labels returned from HDBSCAN
+            selected_post_guids: All selected post guids for item
+            points: numpy.ndarray of selected post coordinates (radians)
+            sel_colors: color codes assigned to points for plotting clusters
+            mask_noisy: number of clusters that were ambiguous (from HDBSCAN)
+            number_of_clusters: number of identified clusters (from HDBSCAN)
+        """
+
+        if preview_mode is None:
+            preview_mode = False
         result = self._get_np_points_guids(
-            item=sel_item[0], silent=False)
+            item=item, silent=preview_mode)
         points = result[0]
         selected_post_guids = result[1]
         if len(selected_post_guids) < 2:
             return
-        clusters = self._cluster_points(
-            points=points, preview_mode=False)
-        return clusters, selected_post_guids
+        (clusters, sel_colors,
+         mask_noisy, number_of_clusters) = self._cluster_points(
+            points=points, preview_mode=preview_mode)
+        return (
+            clusters, selected_post_guids,
+            points, sel_colors, mask_noisy, number_of_clusters)
 
     def _cluster_all_items(self):
         """Cluster all items (e.g. all locations)"""
@@ -439,7 +458,7 @@ class ClusterGen():
         # do not allow clusters with one item
         if len(selected_post_guids) < 2:
             return
-        clusters = self._cluster_points(
+        clusters, _, _, _ = self._cluster_points(
             points=points, preview_mode=False,
             min_cluster_size=2, allow_single_cluster=False)
         return clusters, selected_post_guids
@@ -477,7 +496,7 @@ class ClusterGen():
             # default
             itemized = True
         if itemized:
-            cluster_results = self._cluster_item(item)
+            cluster_results = self._cluster_item(item[0])
         else:
             cluster_results = self._cluster_all_items()
         if not cluster_results:
@@ -577,15 +596,17 @@ class ClusterGen():
 
     def _get_item_clustershapes(
             self,
-            item: Tuple[str, int]) -> Tuple[List[Tuple[Any]], float]:
+            item: Tuple[str, int],
+            cluster_guids=None) -> Tuple[List[Tuple[Any]], float]:
         """Get Cluster Shapes from a list of coordinates
         for a given item"""
-        clustered_post_guids = self.clustered_items_dict.get(
-            item[0], None)
-        if not clustered_post_guids:
+        if cluster_guids is None:
+            cluster_guids = self.clustered_items_dict.get(
+                item[0], None)
+        if not cluster_guids:
             return None, 0
         result = AlphaShapes.get_cluster_shape(
-            item, clustered_post_guids, self.cleaned_post_dict,
+            item, cluster_guids, self.cleaned_post_dict,
             self.crs_wgs, self.crs_proj, self.cluster_distance,
             self.local_saturation_check)
         cluster_shapes = result[0]
@@ -727,8 +748,51 @@ class ClusterGen():
         self._cluster_points(
             points=points,
             preview_mode=True)
+        (_, _, points, sel_colors,
+         mask_noisy, number_of_clusters) = self._cluster_item(
+            item=item,
+            preview_mode=True)
         fig = TPLT._get_cluster_preview(
-            points, self.sel_colors, item, self.bounds, self.mask_noisy,
-            self.cluster_distance, self.number_of_clusters,
+            points, sel_colors, item, self.bounds, mask_noisy,
+            self.cluster_distance, number_of_clusters,
             self.autoselect_clusters)
+        return fig
+
+    def _get_clustershapes_preview(self, item):
+        """Returns plt map for item cluster preview"""
+        # selected post guids: all posts for item
+        # points: numpy-points for plotting
+        # clusters: hdbscan labels for clustered items
+        (clusters, selected_post_guids, points, sel_colors,
+         mask_noisy, number_of_clusters) = self._cluster_item(
+            item=item,
+            preview_mode=True)
+        # cluster_guids: those guids that are clustered
+        cluster_guids, _ = self._get_cluster_guids(
+            clusters, selected_post_guids)
+        shapes, _ = self._get_item_clustershapes(item, cluster_guids)
+        # proj shapes back to WGS1984 for plotting in matplotlib
+        # simple list comprehension with projection:
+        project = partial(
+            pyproj.transform,
+            self.crs_proj,  # source coordinate system
+            self.crs_wgs)  # destination coordinate system
+        shapes_wgs = [transform(project, shape[0]) for shape in shapes]
+
+        fig = TPLT._get_cluster_preview(
+            points, sel_colors, item, self.bounds, mask_noisy,
+            self.cluster_distance, number_of_clusters,
+            self.autoselect_clusters, shapes_wgs)
+        return fig
+
+    def get_singlelinkagetree_preview(self, item):
+        (_, _, _, _, _, number_of_clusters) = self._cluster_item(
+            item=item,
+            preview_mode=True)
+        ax = self.clusterer.single_linkage_tree_.plot(
+            truncate_mode='lastp',
+            p=max(50, min(number_of_clusters*10, 256)))
+        fig = TPLT.get_single_linkage_tree_preview(
+            item, ax.figure, self.cluster_distance,
+            self.cls_type)
         return fig
