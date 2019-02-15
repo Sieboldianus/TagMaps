@@ -24,6 +24,8 @@ from tagmaps.classes.shared_structure import (
     CleanedPost, AnalysisBounds,
     ClusterType, TAGS, LOCATIONS, EMOJI)
 from tagmaps.classes.cluster import ClusterGen
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+from matplotlib.figure import Figure
 
 # enable interactive mode for pyplot
 plt.ion()
@@ -56,7 +58,6 @@ class UserInterface():
         self.abort = False
         # self.floater_x = 0
         # self.floater_y = 0
-        self.img_ratio = TPLT._get_img_ratio(self._clst.bounds)
         self.current_display_item = None
         # Initialize TKinter Interface
         self.app = App()
@@ -69,6 +70,7 @@ class UserInterface():
         self.graph_frame = None
         self.gen_preview_map = tk.IntVar(value=0)
         self.create_min_spanning_tree = False
+        self.create_condensed_tree = False
         self.tk_scalebar = None
         # definition of global figure for reusing windows
         self.fig1 = None
@@ -245,194 +247,108 @@ class UserInterface():
         # tkinter.messagebox.showinfo("Num of clusters: ",
         # str(len(sel_colors)) + " " + str(sel_colors[1]))
         # output/update matplotlib figures
-        points = self._clst._get_np_points(item=sel_item[0], silent=True)
-        self._clst._cluster_points(
-            points=points,
+        (_, _, points, sel_colors,
+         mask_noisy, number_of_clusters) = self._clst._cluster_item(
+            item=sel_item[0],
             preview_mode=True)
-        mask_noisy = self._clst.mask_noisy
-        number_of_clusters = self._clst.number_of_clusters
-        sel_colors = self._clst.sel_colors
-        if self.fig1:
+        #if self.fig1:
+            #self.fig1.clf()
             # plt references the last figure accessed
-            plt.figure(1).clf()
+            # plt.figure(1).clf()
+            # a new figure window
+        if not plt.fignum_exists(1):
+            self.fig1 = plt.figure(1)
+        else:
+            self.fig1.clf()
+        self.fig1.add_subplot(111)
+        #else:
+            #self.fig1.clf()
         self.fig1 = TPLT._get_cluster_preview(
             points, sel_colors, sel_item[0], self._clst.bounds, mask_noisy,
-            self._clst.cluster_distance, self._clst.number_of_clusters,
-            self._clst.autoselect_clusters)
+            self._clst.cluster_distance, number_of_clusters,
+            self._clst.autoselect_clusters, fig=self.fig1)
+        #self.fig1.canvas.draw()
+        self.fig1.canvas.draw_idle()
         # if len(tagRadiansData) < 10000:
-        if self.fig2:
-            plt.figure(2).clf()
-            self._set_plt_suptitle(sel_item[0])
-            # plt.title('Condensed Tree', fontsize=12,loc='center')
-            self._clst.clusterer.condensed_tree_.plot(
-                select_clusters=False, selection_palette=sel_colors
-            )
-            # ,label_clusters=False
-            # tkinter.messagebox.showinfo(
-            #   "Num of clusters: ",
-            #   str(len(sel_colors)) + " " + str(sel_colors[0])
-            #   )
+        #if plt.fignum_exists(2):
+        #    plt.close(2)
+        if not plt.fignum_exists(2):
+            self.fig2 = plt.figure(2)
         else:
-            plt.figure(2).canvas.set_window_title('Condensed Tree')
-            self.fig2 = self._clst.clusterer.condensed_tree_.plot(
-                select_clusters=False,
-                selection_palette=sel_colors
-            )
-            # ,label_clusters=False
-            # tkinter.messagebox.showinfo(
-            #   "Num of clusters: ",
-            #   str(len(self._clst.sel_colors)) + " "
-            #   "str(sel_colors[1]))
-            # fig2 = clusterer.condensed_tree_.plot(
+            self.fig2.clf()
+        ax = self.fig2.add_subplot(111)
+        #else:
+        #    self.fig3.clf()
+        
+        #ax = self.fig2.get_axes()[0]
+        #self.fig3 = plt.figure()
+        # clusterer.single_linkage_tree_.plot(
+        #   truncate_mode='lastp',p=50)
+        # p is the number of max count of leafs in the tree,
+        # this should at least be the number of clusters*10,
+        # not lower than 50 [but max 500 to not crash]
+        self._clst.clusterer.single_linkage_tree_.plot(
+            axis=ax,
+            truncate_mode='lastp',
+            p=max(50, min(number_of_clusters*10, 256)))
+        item_name = sel_item[0]
+        TPLT.get_single_linkage_tree_preview(
+            item_name, self.fig2, self._clst.cluster_distance,
+            self._clst.cls_type)
+        
+        # Unfixed issue:
+        # on consecutive updates
+        # the y axis labels are not scaled correctly
+        self.fig2.canvas.draw_idle()
+        if self.create_condensed_tree:
+            if not plt.fignum_exists(3):
+                self.fig3 = plt.figure(3)
+            else:
+                self.fig3.clf()
+            ax = self.fig3.add_subplot(111)
+            self._clst.clusterer.condensed_tree_.plot(
+                axis=ax,
+                log_size=True
+                )
+            self.fig3.canvas.set_window_title('Condensed Tree')
+            # with selected clusters:
+            # fig3 = clusterer.condensed_tree_.plot(
+            #   axis=ax
             #   select_clusters=False,
             #   selection_palette=self._clst.sel_colors,
             #   label_clusters=True)
-            # plt.title('Condensed Tree', fontsize=12,loc='center')
-            self._set_plt_suptitle(sel_item[0])
-        TPLT.set_plt_tick_params(plt)
-        if self.fig3:
-            plt.figure(3).clf()
-            self._set_plt_suptitle(sel_item[0])
-            plt.title('Single Linkage Tree', fontsize=12,
-                      loc='center')
-            # clusterer.single_linkage_tree_.plot(
-            #   truncate_mode='lastp',p=50)
-            # p is the number of max count of leafs in the tree,
-            # this should at least be the number of clusters*10,
-            # not lower than 50 [but max 500 to not crash]
-            ax = self._clst.clusterer.single_linkage_tree_.plot(
-                truncate_mode='lastp',
-                p=max(50, min(number_of_clusters*10, 256)))
-            # tkinter.messagebox.showinfo("messagr", str(type(ax)))
-            # plot cutting distance
-            y = Utils._get_radians_from_meters(
-                self._clst.cluster_distance)
-            xmin = ax.get_xlim()[0]
-            xmax = ax.get_xlim()[1]
-            line, = ax.plot(
-                [xmin, xmax], [y, y], color='k',
-                label=f'Cluster (Cut) Distance {self._clst.cluster_distance}m'
-            )
-            line.set_label(
-                f'Cluster (Cut) Distance {self._clst.cluster_distance}m')
-            ax.legend(fontsize=10)
-            vals = ax.get_yticks()
-            ax.set_yticklabels(
-                ['{:3.1f}m'.format(
-                    Utils._get_meters_from_radians(x)
-                ) for x in vals])
-        else:
-            plt.figure(3).canvas.set_window_title(
-                'Single Linkage Tree')
-            self.fig3 = self._clst.clusterer.single_linkage_tree_.plot(
-                truncate_mode='lastp',
-                p=max(50, min(number_of_clusters*10, 256)))
-            self._set_plt_suptitle(sel_item[0])
-            plt.title('Single Linkage Tree',
-                      fontsize=12, loc='center')
-            # tkinter.messagebox.showinfo("messagr", str(type(fig3)))
-            # plot cutting distance
-            y = Utils._get_radians_from_meters(self._clst.cluster_distance)
-            xmin = self.fig3.get_xlim()[0]
-            xmax = self.fig3.get_xlim()[1]
-            line, = self.fig3.plot(
-                [xmin, xmax], [y, y],
-                color='k',
-                label=f'Cluster (Cut) Distance {self._clst.cluster_distance}m')
-            line.set_label(
-                f'Cluster (Cut) Distance {self._clst.cluster_distance}m')
-            self.fig3.legend(fontsize=10)
-            vals = self.fig3.get_yticks()
-            self.fig3.set_yticklabels(
-                [f'{Utils._get_meters_from_radians(x):3.1f}m' for x in vals])
-        TPLT.set_plt_tick_params(plt)
+            TPLT._set_plt_suptitle(
+                self.fig3, sel_item[0], self._clst.cls_type)
+            TPLT.set_plt_tick_params(ax)
+            self.fig3.canvas.draw_idle()
         if self.create_min_spanning_tree:
-            if self.fig4:
-                plt.figure(4).clf()
-                self._set_plt_suptitle(sel_item[0])
-                # plt.title('Single Linkage Tree', fontsize=12,loc='center')
-                # clusterer.single_linkage_tree_.plot(truncate_mode='lastp',p=50)
-                ax = self._clst.clusterer.minimum_spanning_tree_.plot(
-                    edge_cmap='viridis', edge_alpha=0.6,
-                    node_size=10, edge_linewidth=1)
-                # tkinter.messagebox.showinfo("messagr", str(type(ax)))
-                self.fig4.canvas.set_window_title('Minimum Spanning Tree')
-                plt.title(
-                    f'Minimum Spanning Tree @ {self._clst.cluster_distance}m',
-                    fontsize=12, loc='center')
-                ax.legend(fontsize=10)
-                # ax=plt.gca()
-                # #plt.gca() for current axis, otherwise set appropriately.
-                # im=ax.images
-                # #this is a list of all images that have been plotted
-                # cb=im[0].colorbar
-                # ##in this case I assume to be interested to the last one
-                # plotted, otherwise use the appropriate index
-                # cb.ax.tick_params(labelsize=10)
-                # vals = cb.ax.get_yticks()
-                # cb.ax.set_yticklabels(
-                #   ['{:3.1f}m'.format(getMetersFromRadians(x)) for x in vals])
-            else:
-                plt.figure(4).canvas.set_window_title(
-                    'Minimum Spanning Tree')
-                self.fig4 = self._clst.clusterer.minimum_spanning_tree_.plot(
-                    edge_cmap='viridis',
-                    edge_alpha=0.6,
-                    node_size=10,
-                    edge_linewidth=1)
-                # tkinter.messagebox.showinfo("messagr", str(type(ax)))
-                self._set_plt_suptitle(sel_item[0])
-                plt.title(
-                    f'Minimum Spanning Tree @ {self._clst.cluster_distance}m',
-                    fontsize=12, loc='center')
-                self.fig4.legend(fontsize=10)
-                # ax=plt.gca()        #plt.gca() for current axis,
-                #   otherwise set appropriately.
-                # im=ax.images        #this is a list of all
-                #   images that have been plotted
-                # cb=im[0].colorbar
-                # ##in this case I assume to be interested
-                #   to the last one plotted,
-                #   otherwise use the appropriate index
-                # cb.ax.tick_params(labelsize=10)
-                # vals = cb.ax.get_yticks()
-                # cb.ax.set_yticklabels(
-                #   ['{:3.1f}m'.format(getMetersFromRadians(x)) for x in vals]
-                # )
-        TPLT.set_plt_tick_params(plt)
+            if not plt.fignum_exists(4):
+                self.fig4 = plt.figure(4)
+                self.fig4.add_subplot(111)
+            #else:
+            #    self.fig4.clf()
+            ax = self.fig4.get_axes()[0]
+            ax.clear()
+            self._clst.clusterer.minimum_spanning_tree_.plot(
+                axis=ax,
+                edge_cmap='viridis',
+                edge_alpha=0.6,
+                node_size=10,
+                edge_linewidth=1)
+            self.fig4.canvas.set_window_title(
+                'Minimum Spanning Tree')
+            # tkinter.messagebox.showinfo("messagr", str(type(ax)))
+            TPLT._set_plt_suptitle(
+                self.fig4, sel_item[0], self._clst.cls_type)
+            ax.set_title(
+                f'Minimum Spanning Tree @ {self._clst.cluster_distance}m',
+                fontsize=12, loc='center')
+            self.fig4.legend(fontsize=10)
+            self.fig4.canvas.draw()
+        TPLT.set_plt_tick_params(ax)
         self._update_scalebar()
 
-    def _set_plt_suptitle(self, item: str):
-        """Sets suptitle for plot (plt) and Cluster Type"""
-        self._set_pltspec_suptitle(
-            plt, item, self._clst.cls_type)
 
-    def _set_pltspec_suptitle(self, plt, item: str, cls_type=None):
-        """Sets suptitle for plot (plt)"""
-        title = self._get_pltspec_suptitle(item, cls_type)
-        if cls_type and cls_type == EMOJI:
-            plt.rcParams['font.family'] = 'DejaVu Sans'
-        else:
-            plt.rcParams['font.family'] = 'sans-serif'
-        TPLT._set_plt_suptitle_st(plt, title)
-
-    def _get_pltspec_suptitle(self, item: str, cls_type=None) -> str:
-        """Gets formatted suptitle for plot
-
-        - depending on clusterer type
-        """
-        if cls_type is None:
-            cls_type = TAGS
-        title = ""
-        if cls_type == LOCATIONS:
-            title = UserInterface._get_locname(
-                item, self.location_names_dict).upper()
-        elif cls_type == EMOJI:
-            emoji_name = Utils._get_emojiname(item)
-            title = f'{item} ({emoji_name})'
-        else:
-            title = item.upper()
-        return title
 
     def _intf_selection_preview(self, sel_item: Tuple[str, int]):
         """Update preview map based on item selection"""
@@ -445,16 +361,23 @@ class UserInterface():
                 "No locations found.",
                 "All locations for given item have been removed.")
             return
-        if self.fig1:
-            # clear figure 1
-            plt.figure(1).clf()
+        if not plt.fignum_exists(1):
+            self.fig1 = plt.figure(1)
+        else:
+            # clf() clears figure and subplots (axes)
+            self.fig1.clf()
+        self.fig1.add_subplot(111)
+        #print(f'self.fig1 {type(self.fig1)}')
         self._intf_plot_points(sel_item[0], points)
         self.current_display_item = sel_item
 
     def _intf_plot_points(self, item_name: str, points):
-        self._set_plt_suptitle(item_name)
+        #print(f'TWO self.fig1 {type(self.fig1)}')
         self.fig1 = TPLT._get_fig_points(
-            points, self.img_ratio, self._clst.bounds)
+            self.fig1,
+            points, self._clst.bounds)
+        TPLT._set_plt_suptitle(
+            self.fig1, item_name, self._clst.cls_type)
 
     def _report_callback_exception(self, exc, val, tb):
         """Override for error reporting during tkinter mode"""
@@ -608,9 +531,8 @@ class UserInterface():
                 logfile_a.write(scalecalc)
         plt.figure(1).clf()
         # plt references the last figure accessed
-        self._set_plt_suptitle(sel_item[0])
-        self.fig1 = plt.figure(num=1, figsize=(
-            11, int(11*self.img_ratio)), dpi=80)
+        self.fig1 = plt.figure()
+        TPLT._set_plt_suptitle(self.fig1, sel_item[0], self._clst.cls_type)
         self.fig1.canvas.set_window_title('Cluster Preview')
         dist_text = ''
         if self._clst.autoselect_clusters is False:

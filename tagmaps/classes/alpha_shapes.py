@@ -97,6 +97,7 @@ class AlphaShapes():
                           Decimal(location.split(':')[1]),
                           Decimal(location.split(':')[0])))
                       for location in distinct_locations]
+
             # get poly shape from points
             result = AlphaShapes._get_poly(points, cluster_distance)
             result_polygon = result[0]
