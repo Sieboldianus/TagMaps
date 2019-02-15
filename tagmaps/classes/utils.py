@@ -140,7 +140,7 @@ class Utils():
         logging.getLogger("fiona.collection").disabled = True
 
     @staticmethod
-    def _set_logger(output_folder, logging_level=None):
+    def set_logger(output_folder, logging_level=None):
         """ Set logging handler manually,
         so we can also print to console while logging to file
         """
@@ -156,7 +156,7 @@ class Utils():
             logging_level = logging.INFO
         if output_folder is not None:
             if not output_folder.exists():
-                Utils._init_output_dir(output_folder)
+                Utils.init_output_dir(output_folder)
             # input(f'{type(output_folder)}')
             __log_file = output_folder / 'log.txt'
         log.format = '%(message)s'
@@ -185,7 +185,7 @@ class Utils():
         return log
 
     @staticmethod
-    def _init_output_dir(output_folder):
+    def init_output_dir(output_folder):
         """Creates local output dir if not exists"""
         if output_folder is not None and not output_folder.exists():
             output_folder.mkdir()

@@ -48,7 +48,7 @@ def main():
     print('\n')
     # set logger with file pointer
 
-    log = Utils._set_logger(cfg.output_folder, cfg.logging_level)
+    log = Utils.set_logger(cfg.output_folder, cfg.logging_level)
     log.info(
         "########## "
         "STEP 1 of 6: Data Cleanup "
