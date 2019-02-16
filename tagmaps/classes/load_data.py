@@ -360,7 +360,6 @@ class DataStats():
     def __init__(self):
         """Initialize stats."""
         self.count_glob = 0
-        # self.count_loc = 0
         self.partcount = 0
         self.skipped_count = 0
         self.count_non_geotagged = 0

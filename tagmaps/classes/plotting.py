@@ -16,16 +16,18 @@ from tagmaps.classes.shared_structure import (
 class TPLT():
     """Tag Maps plotting Class
 
-    To remember (because mpl can be quite confusing):
+    To remember (because mpl/pyplot can be confusing):
         - The figure is the window that the plot is in.
-          It's the top-level container.
+          It's the top-level container. Each figure has a canvas
+          where things are painted on.
         - Each figure usually has one or more axes.
-          These are the plots/subplots.
+          These are the plots/subplots. Here, only one axes is used.
         - Colorbars and other stuff are also inside the figure.
-          Adding a colorbar creates a new axes (unless specified otherwise)
+          Adding a colorbar creates a new axe (unless specified otherwise)
         - two modes exist, OO (object oriented) and 
           pyplot("state-machine interface"),
-          use OO-Mode if possible because it is more flexible
+          use OO-Mode if possible because it is more flexible and works
+          better with Jupyter Mode
     for more information, see:
     https://stackoverflow.com/questions/19816820/how-to-retrieve-colorbar-instance-from-figure-in-matplotlib
     """
@@ -40,18 +42,6 @@ class TPLT():
         dist_x_lng = (
             bounds.lim_lng_max - bounds.lim_lng_min)
         return dist_y_lat, dist_x_lng
-
-    # @staticmethod
-    # def _get_img_ratio(bounds: AnalysisBounds
-    #                    ) -> float:
-    #     """Gets [img] ratio form bounds."""
-    #     dists = TPLT._get_xy_dists(bounds)
-    #     dist_y_lat = dists[0]
-    #     dist_x_lng = dists[1]
-    #     # distYLat = Utils.haversine(limXMin,limYMax,limXMin,limYMin)
-    #     # distXLng = Utils.haversine(limXMax,limYMin,limXMin,limYMin)
-    #     img_ratio = dist_x_lng/(dist_y_lat*2)
-    #     return img_ratio
 
     @staticmethod
     def plt_setxy_lim(ax, bounds: AnalysisBounds):
@@ -68,8 +58,6 @@ class TPLT():
             fig = plt.figure(1)
             fig.add_subplot(111)
         ax = fig.get_axes()[0]
-        # fig = plt.figure(num=1, figsize=(
-        #    11, int(11*img_ratio)), dpi=80)
         # only one subplot (nrows, ncols, axnum)
         ax.scatter(points.T[0], points.T[1],
                    color='red', **TPLT.PLOT_KWDS)
@@ -112,8 +100,6 @@ class TPLT():
             dist_text = '@ ' + str(int(cluster_distance)) + 'm'
         ax.set_title(f'Cluster Preview {dist_text}',
                      fontsize=12, loc='center')
-        # xmax = fig1.get_xlim()[1]
-        # ymax = fig1.get_ylim()[1]
         noisy_txt = '{} / {}'.format(mask_noisy.sum(), len(mask_noisy))
         ax.text(bounds.lim_lng_max,
                 bounds.lim_lat_max,
@@ -209,3 +195,15 @@ class TPLT():
                              ec='#000000', fill=True,
                              zorder=-1, alpha=0.7)
         return patch
+
+    # @staticmethod
+    # def _get_img_ratio(bounds: AnalysisBounds
+    #                    ) -> float:
+    #     """Gets [img] ratio form bounds."""
+    #     dists = TPLT._get_xy_dists(bounds)
+    #     dist_y_lat = dists[0]
+    #     dist_x_lng = dists[1]
+    #     # distYLat = Utils.haversine(limXMin,limYMax,limXMin,limYMin)
+    #     # distXLng = Utils.haversine(limXMax,limYMin,limXMin,limYMin)
+    #     img_ratio = dist_x_lng/(dist_y_lat*2)
+    #     return img_ratio
