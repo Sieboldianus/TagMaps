@@ -17,7 +17,7 @@ import shapely.geometry as geometry
 from descartes import PolygonPatch
 from fiona.crs import from_epsg
 from scipy.spatial import Delaunay  # pylint: disable=E0611
-from shapely.ops import cascaded_union, polygonize, transform
+from shapely.ops import cascaded_union, polygonize, transform, triangulate
 
 from tagmaps.classes.shared_structure import AnalysisBounds
 from tagmaps.classes.utils import Utils
@@ -102,6 +102,7 @@ class AlphaShapes():
             result = AlphaShapes._get_poly(points, cluster_distance)
             result_polygon = result[0]
             shapetype = result[1]
+
             # Geom, Join_Count, Views,  COUNT_User,ImpTag,TagCountG,HImpTag
             if result_polygon is not None and not result_polygon.is_empty:
                 if local_saturation_check:
@@ -177,8 +178,14 @@ class AlphaShapes():
         poly_shape = AlphaShapes.alpha_shape(
             points, alpha=cluster_distance/startalpha)
         shapetype = "Initial Alpha Shape + Buffer"
+        if poly_shape.is_empty:
+            # try again with centered axis reduced alpha
+            poly_shape = AlphaShapes.alpha_shape(
+                points, alpha=(cluster_distance/startalpha), centeraxis=True)
+        # if not poly_shape.is_empty:
+        # print("Success")
         # check type comparison here
-        if (type(poly_shape) is geometry.multipolygon.MultiPolygon
+        if (isinstance(poly_shape, geometry.multipolygon.MultiPolygon)
                 or isinstance(poly_shape, bool)):
             for i in range(1, 6):
                 # try decreasing alpha
@@ -193,8 +200,7 @@ class AlphaShapes():
                     shapetype = "Multipolygon Alpha Shape /" + \
                         str(alpha)
                     break
-            if (type(poly_shape) is
-                    geometry.multipolygon.MultiPolygon
+            if (isinstance(poly_shape, geometry.multipolygon.MultiPolygon)
                     or isinstance(poly_shape, bool)):
                 # try increasing alpha
                 for i in range(1, 6):
@@ -209,7 +215,7 @@ class AlphaShapes():
                         shapetype = "Multipolygon Alpha Shape /" + \
                             str(alpha)
                         break
-            if type(poly_shape) is geometry.multipolygon.MultiPolygon:
+            if isinstance(poly_shape, geometry.multipolygon.MultiPolygon):
                 shapetype = "Multipolygon Alpha Shape -> Convex Hull"
                 # if still of type multipolygon,
                 # try to remove holes and do a convex_hull
@@ -221,18 +227,37 @@ class AlphaShapes():
             # this branch is rarely executed
             # for large point clusters where
             # alpha is perhaps set too small
-            elif (isinstance(poly_shape, bool)
-                  or poly_shape.is_empty):
-                shapetype = "BoolAlpha -> Fallback "
-                "to PointCloud Convex Hull"
-                # convex hull
-                poly_shape = point_collection.convex_hull
+        if (isinstance(poly_shape, bool)
+                or poly_shape.is_empty or
+                AlphaShapes._few_polyinpoints(points, poly_shape)):
+            shapetype = "BoolAlpha/Empty -> Fallback "
+            "to PointCloud Convex Hull"
+            # convex hull
+            poly_shape = point_collection.convex_hull
         # Finally do a buffer to smooth alpha
         poly_shape = poly_shape.buffer(
             cluster_distance/4, resolution=3)
         # result_polygon = result_polygon.buffer(
         #   min(distXLng,distYLat)/100,resolution=3)
         return poly_shape, shapetype
+
+    @staticmethod
+    def _few_polyinpoints(points, poly):
+        """Check how many of original points are in Alpha
+
+        Because some QHull Delauney return a small Alpha Shape that
+        does not include most points, this is a fallback solution.
+        Better solution would be to revise QHull Delauney/Alpha,
+        but even with centered axis, this issue remains (see alpha_shape).
+        """
+        x = 1
+        for point in points:
+            if point.within(poly):
+                x += 1
+        perc = x/(len(points)/100)
+        if perc < 50:
+            return True
+        return False
 
     @staticmethod
     def _get_poly_one(
@@ -277,13 +302,15 @@ class AlphaShapes():
             poly_shape, shapetype = AlphaShapes._get_poly_one(
                 point_collection, cluster_distance)
         # final check for multipolygon
-        if type(poly_shape) is geometry.multipolygon.MultiPolygon:
+        if type(poly_shape) is geometry.multipolygon.MultiPolygon or poly_shape.is_empty:
             # usually not executed
             poly_shape = poly_shape.convex_hull
+            shapetype = "Convex Hull Final Fallback"
+
         return poly_shape, shapetype
 
     @staticmethod
-    def alpha_shape(points, alpha):
+    def alpha_shape(points, alpha, centeraxis=None):
         """
         Alpha Shapes Code by KEVIN DWYER, see
         http://blog.thehumangeo.com/2014/05/12/drawing-boundaries-in-python/
@@ -296,7 +323,16 @@ class AlphaShapes():
                 Too large, and you lose everything!
 
         with minor adaptions to Tag Maps clustering.
+
+        Notes:
+        see also floating point resolution issue:
+        https://stackoverflow.com/questions/8071382/points-left-out-when-nearby-in-scipy-spatial-delaunay
+
+        Consider replace with shapely.Delauney
+        http://kuanbutts.com/2017/08/17/delaunay-triangulation/
         """
+        if centeraxis is None:
+            centeraxis = False
         if len(points) < 4:
             # When you have a triangle,
             # there is no sense
@@ -317,14 +353,20 @@ class AlphaShapes():
         coords = np.array([point.coords[0]
                            for point in points])
 
-        # print(str(len(coords)))
-        # ,qhull_o}ptions = 'QJ')
+        # qhull_options = 'Qt'
         # #To avoid this error,
         # joggle the data by specifying the
         # 'QJ' option to the DELAUNAY function.see:
         # https://de.mathworks.com/matlabcentral/answers/94438-why-does-the-delaunay-function-in-matlab-7-0-r14-produce-an-error-when-passed-colinear-points?s_tid=gn_loc_drop
+
+        if centeraxis:
+            # Center axis for avoiding floating point precision issues
+            co = coords[0]
+            coords = coords - co
         tri = Delaunay(coords)
-        # tri = Delaunay(coords,{'QJ'})
+        # print problematic points:
+        # print(tri.coplanar)
+        # tri = Delaunay(coords,qhull_topions='QJ')
         # #Version 3.1 added triangulated output ('Qt').
         # It should be used for Delaunay triangulations
         # instead of using joggled input ('QJ').
@@ -357,6 +399,12 @@ class AlphaShapes():
                 add_edge(edges, edge_points, coords, ia, ib)
                 add_edge(edges, edge_points, coords, ib, ic)
                 add_edge(edges, edge_points, coords, ic, ia)
+
+        if centeraxis:
+            # return to original axis center
+            edge_points = [np.array(
+                [edgepoint[0]+co, edgepoint[1]+co]) for edgepoint in edge_points]
+
         m = geometry.MultiLineString(edge_points)
         triangles = list(polygonize(m))
         return cascaded_union(triangles)  # , edge_points

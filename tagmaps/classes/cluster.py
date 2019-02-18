@@ -757,10 +757,17 @@ class ClusterGen():
         # selected post guids: all posts for item
         # points: numpy-points for plotting
         # clusters: hdbscan labels for clustered items
-        (clusters, selected_post_guids, points, sel_colors,
-         mask_noisy, number_of_clusters) = self._cluster_item(
+        result = self._cluster_item(
             item=item,
             preview_mode=True)
+        if not result:
+            return print("No items found.")
+        clusters = result[0]
+        selected_post_guids = result[1]
+        points = result[2]
+        sel_colors = result[3]
+        mask_noisy = result[4]
+        number_of_clusters = result[5]
         # cluster_guids: those guids that are clustered
         cluster_guids, _ = self._get_cluster_guids(
             clusters, selected_post_guids)

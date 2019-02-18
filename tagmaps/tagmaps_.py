@@ -103,7 +103,7 @@ class TagMaps():
             return _wrapper
 
         @staticmethod
-        def _prepare_clustering_check(func):
+        def prepare_clustering_check(func):
             def _wrapper(self, *args, **kwargs):
                 # add clusterer
                 if not self.clusterer:
@@ -112,7 +112,7 @@ class TagMaps():
             return _wrapper
 
         @staticmethod
-        def _data_added_check(func):
+        def data_added_check(func):
             def _wrapper(self):
                 # check if data has been added
                 if not self.lbsn_data or self.lbsn_data.count_glob == 0:
@@ -123,7 +123,7 @@ class TagMaps():
             return _wrapper
 
         @staticmethod
-        def _init_stats_check(func):
+        def init_stats_check(func):
             def _wrapper(self):
                 # prepare stats
                 if self.cleaned_stats is None:
@@ -193,7 +193,7 @@ class TagMaps():
             self.max_items, self.output_folder, self.remove_long_tail,
             self.limit_bottom_user_count, self.topic_modeling)
 
-    @TMDec._data_added_check
+    @TMDec.data_added_check
     def global_stats_report(self):
         """Report global stats after data has been read"""
         self.log.info(
@@ -203,7 +203,7 @@ class TagMaps():
             f'Total user post locations (UPL): '
             f'{len(self.lbsn_data.distinct_userlocations_set)}')
 
-    @TMDec._data_added_check
+    @TMDec.data_added_check
     def prepare_stats(self):
         """Prepare data and metrics for use in clustering
         """
@@ -216,8 +216,8 @@ class TagMaps():
         # get prepared data for statistics and clustering
         self.cleaned_stats = self.lbsn_data._get_item_stats()
 
-    @TMDec._data_added_check
-    @TMDec._init_stats_check
+    @TMDec.data_added_check
+    @TMDec.init_stats_check
     def item_stats_report(self):
         """Stats reporting for tags, emoji (and locations)"""
         location_name_count = len(
@@ -248,8 +248,8 @@ class TagMaps():
         self.log.info(
             self.lbsn_data.bounds.get_bound_report())
 
-    @TMDec._data_added_check
-    @TMDec._init_stats_check
+    @TMDec.data_added_check
+    @TMDec.init_stats_check
     def init_cluster(self):
         """Initialize clusterers after base data
         has been loaded"""
@@ -264,10 +264,10 @@ class TagMaps():
             )
             self.clusterer[cls_type] = clusterer
 
-    @TMDec._prepare_clustering_check
+    @TMDec.prepare_clustering_check
     def user_interface(self):
         """Opens interface for optional user input to:
-        - remove tags, emoji or locations prom processing list
+        - remove tags, emoji or locations from processing list
         - adjust cluster distances
 
         Returns False or True, depending on optional user Quit()
@@ -296,7 +296,7 @@ class TagMaps():
         """Calculate overall location clusters"""
         self._cluster(LOCATIONS, itemized=False)
 
-    @TMDec._prepare_clustering_check
+    @TMDec.prepare_clustering_check
     def _cluster(self, cluster_type: ClusterType,
                  itemized=True):
         """Run clusterer based on type and output
@@ -363,25 +363,25 @@ class TagMaps():
             output_folder=self.output_folder
         )
 
-    @TMDec._prepare_clustering_check
+    @TMDec.prepare_clustering_check
     def get_selection_map(self, cls_type: ClusterType, item):
         """Return plt.figure for item selection."""
         fig = self.clusterer[cls_type]._get_sel_preview(item)
         return fig
 
-    @TMDec._prepare_clustering_check
+    @TMDec.prepare_clustering_check
     def get_cluster_map(self, cls_type: ClusterType, item):
         """Return plt.figure for item clusters."""
         fig = self.clusterer[cls_type]._get_cluster_preview(item)
         return fig
 
-    @TMDec._prepare_clustering_check
+    @TMDec.prepare_clustering_check
     def get_cluster_shapes_map(self, cls_type: ClusterType, item):
         """Return plt.figure for item cluster shapes."""
         fig = self.clusterer[cls_type]._get_clustershapes_preview(item)
         return fig
 
-    @TMDec._prepare_clustering_check
+    @TMDec.prepare_clustering_check
     def get_singlelinkagetree_preview(self, cls_type: ClusterType, item):
         """Return plt.figure for item cluster shapes."""
         fig = self.clusterer[cls_type].get_singlelinkagetree_preview(item)
