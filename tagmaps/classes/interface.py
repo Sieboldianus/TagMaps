@@ -56,18 +56,13 @@ class UserInterface():
         self._clst = self._clst_list[0]
         self.location_names_dict = location_names_dict
         self.abort = False
-        # self.floater_x = 0
-        # self.floater_y = 0
         self.current_display_item = None
         # Initialize TKinter Interface
         self.app = App()
         # allow error reporting from console backend
         tk.Tk.report_callback_exception = self._report_callback_exception
         # definition of global vars for interface and graph design
-        # self.canvas_width = 1320
-        # self.canvas_height = 440
         # Cluster preparation
-        self.graph_frame = None
         self.gen_preview_map = tk.IntVar(value=0)
         self.create_min_spanning_tree = False
         self.create_condensed_tree = False
@@ -118,10 +113,6 @@ class UserInterface():
                                f'and click on remove. Proceed if ready.',
                                background="gray7", fg="gray80")
         guide_label.pack(padx=10, pady=10)
-        # if cfg.data_source == "fromInstagram_PGlbsnEmoji":
-        #    listbox_font = ("twitter Color Emoji", 12, "bold")
-        #    #listbox_font = ("Symbola", 12, "bold")
-        # else:
         listbox_font = None
         listbox = tk.Listbox(canvas,
                              selectmode=tk.EXTENDED, bd=0, background="gray29",
@@ -216,7 +207,7 @@ class UserInterface():
                 # some emoji can be printed
                 listbox.insert(tk.END, f'{item_name} ({item[1]} user)')
             except TclError:
-                # replace emoji by unicode name
+                # replace emoji by unicode name on error
                 emoji = Utils._get_emojiname(item_name)
                 listbox.insert(tk.END, f'{emoji} ({item[1]} user)')
 
@@ -242,48 +233,30 @@ class UserInterface():
         # welcome back to console
         plt.close("all")
 
-    def _cluster_preview(self, sel_item: Tuple[str, int]):
-        """Cluster preview map based on tag selection"""
-        # tkinter.messagebox.showinfo("Num of clusters: ",
-        # str(len(sel_colors)) + " " + str(sel_colors[1]))
-        # output/update matplotlib figures
+    def _cluster_preview(self, sel_item: str):
+        """Show preview map(s) based on tag selection"""
+        # Get cluster data first
         (_, _, points, sel_colors,
          mask_noisy, number_of_clusters) = self._clst._cluster_item(
-            item=sel_item[0],
+            item=sel_item,
             preview_mode=True)
-        #if self.fig1:
-            #self.fig1.clf()
-            # plt references the last figure accessed
-            # plt.figure(1).clf()
-            # a new figure window
+        ## Cluster Map Plot ##
         if not plt.fignum_exists(1):
             self.fig1 = plt.figure(1)
         else:
             self.fig1.clf()
         self.fig1.add_subplot(111)
-        #else:
-            #self.fig1.clf()
         self.fig1 = TPLT._get_cluster_preview(
-            points, sel_colors, sel_item[0], self._clst.bounds, mask_noisy,
+            points, sel_colors, sel_item, self._clst.bounds, mask_noisy,
             self._clst.cluster_distance, number_of_clusters,
             self._clst.autoselect_clusters, fig=self.fig1)
-        #self.fig1.canvas.draw()
         self.fig1.canvas.draw_idle()
-        # if len(tagRadiansData) < 10000:
-        #if plt.fignum_exists(2):
-        #    plt.close(2)
+        ## Single Linkage Tree Plot ##
         if not plt.fignum_exists(2):
             self.fig2 = plt.figure(2)
         else:
             self.fig2.clf()
         ax = self.fig2.add_subplot(111)
-        #else:
-        #    self.fig3.clf()
-        
-        #ax = self.fig2.get_axes()[0]
-        #self.fig3 = plt.figure()
-        # clusterer.single_linkage_tree_.plot(
-        #   truncate_mode='lastp',p=50)
         # p is the number of max count of leafs in the tree,
         # this should at least be the number of clusters*10,
         # not lower than 50 [but max 500 to not crash]
@@ -291,16 +264,19 @@ class UserInterface():
             axis=ax,
             truncate_mode='lastp',
             p=max(50, min(number_of_clusters*10, 256)))
-        item_name = sel_item[0]
+        item_name = sel_item
         TPLT.get_single_linkage_tree_preview(
             item_name, self.fig2, self._clst.cluster_distance,
             self._clst.cls_type)
-        
-        # Unfixed issue:
-        # on consecutive updates
-        # the y axis labels are not scaled correctly
         self.fig2.canvas.draw_idle()
+        ## Condensed Tree Plot ##
         if self.create_condensed_tree:
+            # Unfixed issue:
+            # on consecutive updates
+            # the colorbar is added multiple times
+            # todo: resolve by retrieving only
+            # condensed data from hdbscan
+            # and create plot in tagmaps
             if not plt.fignum_exists(3):
                 self.fig3 = plt.figure(3)
             else:
@@ -311,24 +287,16 @@ class UserInterface():
                 log_size=True
                 )
             self.fig3.canvas.set_window_title('Condensed Tree')
-            # with selected clusters:
-            # fig3 = clusterer.condensed_tree_.plot(
-            #   axis=ax
-            #   select_clusters=False,
-            #   selection_palette=self._clst.sel_colors,
-            #   label_clusters=True)
             TPLT._set_plt_suptitle(
-                self.fig3, sel_item[0], self._clst.cls_type)
+                self.fig3, sel_item, self._clst.cls_type)
             TPLT.set_plt_tick_params(ax)
             self.fig3.canvas.draw_idle()
         if self.create_min_spanning_tree:
             if not plt.fignum_exists(4):
                 self.fig4 = plt.figure(4)
-                self.fig4.add_subplot(111)
-            #else:
-            #    self.fig4.clf()
-            ax = self.fig4.get_axes()[0]
-            ax.clear()
+            else:
+                self.fig4.clf()
+            ax = self.fig4.add_subplot(111)
             self._clst.clusterer.minimum_spanning_tree_.plot(
                 axis=ax,
                 edge_cmap='viridis',
@@ -339,7 +307,7 @@ class UserInterface():
                 'Minimum Spanning Tree')
             # tkinter.messagebox.showinfo("messagr", str(type(ax)))
             TPLT._set_plt_suptitle(
-                self.fig4, sel_item[0], self._clst.cls_type)
+                self.fig4, sel_item, self._clst.cls_type)
             ax.set_title(
                 f'Minimum Spanning Tree @ {self._clst.cluster_distance}m',
                 fontsize=12, loc='center')
@@ -350,11 +318,11 @@ class UserInterface():
 
 
 
-    def _intf_selection_preview(self, sel_item: Tuple[str, int]):
+    def _intf_selection_preview(self, sel_item: str):
         """Update preview map based on item selection"""
         # tkinter.messagebox.showinfo("Proceed", f'{sel_item}')
         points = self._clst._get_np_points(
-            item=sel_item[0],
+            item=sel_item,
             silent=True)
         if points is None:
             tkinter.messagebox.showinfo(
@@ -367,12 +335,9 @@ class UserInterface():
             # clf() clears figure and subplots (axes)
             self.fig1.clf()
         self.fig1.add_subplot(111)
-        #print(f'self.fig1 {type(self.fig1)}')
-        self._intf_plot_points(sel_item[0], points)
-        self.current_display_item = sel_item
+        self._intf_plot_points(sel_item, points)
 
     def _intf_plot_points(self, item_name: str, points):
-        #print(f'TWO self.fig1 {type(self.fig1)}')
         self.fig1 = TPLT._get_fig_points(
             self.fig1,
             points, self._clst.bounds)
@@ -404,7 +369,7 @@ class UserInterface():
         print("*** tb_lineno:", exc_traceback.tb_lineno)
 
     def _quit_tkinter(self):
-        """exits Tkinter gui
+        """Exit Tkinter GUI
 
         ..to continue with code execution after mainloop()
 
@@ -415,10 +380,6 @@ class UserInterface():
         https://stackoverflow.com/questions/2307464/what-is-the-difference-between-root-destroy-and-root-quit
 
         """
-        # global app
-        # app.floater.destroy()
-        # tkinter.messagebox.showinfo("Closing App", "Closing App")
-        # plt.quit()
         self.abort = True
         self.app.update()
         self.app.destroy()
@@ -435,25 +396,16 @@ class UserInterface():
         Args:
             val: new cluster distance
         """
-        # tkinter.messagebox.showinfo("messagr", val)
-        # global canvas
-        # global tkScalebar
-        self._clst.cluster_distance = float(val)  # tkScalebar.get()
+        self._clst.cluster_distance = float(val)
 
     def _change_clusterer(self):
-        """Changes cluster distance based on user input
+        """Changes clusterer based on user selection
 
-        Args:
-            val: new cluster distance
+        Either TAGS, EMOJI or LOCATIONS
         """
-        # tkinter.messagebox.showinfo(
-        #   "messagr",
-        #   f'{self._clst_index.get()}')
-        # global canvas
-        # global tkScalebar
         self.current_display_item = None
         self._clst = self._clst_list[
-            self._clst_index.get()]  # tkScalebar.get()
+            self._clst_index.get()]
         self._populate_listbox()
         self._update_scalebar()
 
@@ -473,16 +425,15 @@ class UserInterface():
         w = evt.widget
         self.lastselection = w.index(tk.ACTIVE)
         sel_index = w.curselection()[0]
-        # value = w.get(index)
-        # tkinter.messagebox.showinfo("You selected ", value)
         if (self.gen_preview_map.get() == 1 and
                 len(w.curselection()) == 1):
-            # generate only preview map
+            # generate preview map
             # only if selection box is checked
             # and only if one item is checked
+            sel_item = self._clst.top_list[sel_index][0]
             self._intf_selection_preview(
-                self._clst.top_list[sel_index])
-            # plt.close('all')
+                sel_item)
+            self.current_display_item = sel_item
 
     def _cluster_current_display_item(self):
         """Cluster button: use selected or first in list"""
@@ -492,9 +443,10 @@ class UserInterface():
             self._cluster_preview(self.current_display_item)
         else:
             # use first in list
-            self._cluster_preview(self._clst.top_list[0])
+            self._cluster_preview(self._clst.top_list[0][0])
 
     def _scaletest_current_display_item(self):
+        """Compute clustering across different scales and output results to txt"""
         if self.create_min_spanning_tree is False:
             tkinter.messagebox.showinfo(
                 "Skip: ",
@@ -503,7 +455,7 @@ class UserInterface():
         if self.current_display_item:
             sel_item = self.current_display_item
         else:
-            sel_item = self._clst.top_list[0]
+            sel_item = self._clst.top_list[0][0]
         scalecalclist = []
         dmax = int(self._clst.cluster_distance*10)
         dmin = int(self._clst.cluster_distance/10)
@@ -587,11 +539,6 @@ class UserInterface():
                 f'Continue?', f'Continue?') is True:
             # the following code will remove
             # dict records and list entries from current clusterer
-            # but since both lists and dicts are mutable objects
-            # and further both dicts are referenced from outside clusterer
-            # this will modify the original list and dict
-            # all clusterer cleaned_post_dict and cleaned_post_list
-            # reference the same dict/list
             for post_guid in postguids_to_remove:
                 del(self._clst.cleaned_post_dict[post_guid])
             # To modify the list in-place, assign to its slice:

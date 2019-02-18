@@ -466,9 +466,9 @@ class PrepareData():
             # UserPhotoFirstThumb_dict[user_key] = photo[5]
 
     def _get_cleaned_location(self, first_post, locid_userid,
-                              post_latlng, user_key):
+                              post_latlng, user_key) -> CleanedPost:
         """Merge cleaned post from all posts of a certain user
-        at a specific location
+        at a specific location. This is producing the final CleanedPost.
 
         - some information is not needed, those post attributes
         are simply skipped (e.g. location name)

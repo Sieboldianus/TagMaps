@@ -39,6 +39,14 @@ sns.set_style('white')
 
 class ClusterGen():
     """Cluster methods for tags, emoji and post locations
+
+    Note: There are three different projections used here
+          1) Input: Original Data in Decimal Degrees (WGS1984)
+          2) Working: Radians data converted from Decimal Degrees with
+          np.radians(points) for use in HDBSCAN clustering
+          3) Output: Projected coordinates (auto-selected UTM Zone)
+          for calculating Alpha Shapes and writing results to
+          shapefile
     """
 
     def __init__(self, bounds: AnalysisBounds,
@@ -47,7 +55,6 @@ class ClusterGen():
                  top_list: List[Tuple[str, int]],
                  total_distinct_locations: int,
                  cluster_type: ClusterType = TAGS,
-                 # topitem: Tuple[str, int] = None,
                  local_saturation_check: bool = True):
         self.cls_type = cluster_type
         self.tmax = len(top_list)
@@ -70,7 +77,8 @@ class ClusterGen():
         self.clustered_items_dict = defaultdict(list)
         self.clustered_guids_all: List[str] = list()
         self.none_clustered_guids: List[str] = list()
-        # set initial analysis bounds
+        # get initial analysis bounds in Decimal Degrees
+        # for calculating output UTM Zone Projection
         self._update_bounds()
         self.bound_points_shapely = Utils._get_shapely_bounds(
             self.bounds)
@@ -344,9 +352,6 @@ class ClusterGen():
         # conversion to radians for HDBSCAN
         # (does not support decimal degrees)
         tag_radians_data = np.radians(points)  # pylint: disable=E1111
-        # for each tag in overallNumOfUsersPerTag_global.most_common(1000)
-        # (descending), calculate HDBSCAN Clusters
-        # min_cluster_size default - 5% optimum:
         if min_cluster_size is None:
             min_cluster_size = max(
                 2, int(((len(points))/100)*5))
@@ -355,10 +360,6 @@ class ClusterGen():
             gen_min_span_tree=min_span_tree,
             allow_single_cluster=allow_single_cluster,
             min_samples=1)
-        # clusterer = hdbscan.HDBSCAN(
-        #                   min_cluster_size=minClusterSize,
-        #                   gen_min_span_tree=True,
-        #                   min_samples=1)
         # clusterer = hdbscan.HDBSCAN(
         #                   min_cluster_size=10,
         #                   metric='haversine',
@@ -371,21 +372,16 @@ class ClusterGen():
         # to prevent GUI from freezing, see:
         # http://stupidpythonideas.blogspot.de/2013/10/why-your-gui-app-freezes.html
         # https://stackoverflow.com/questions/6893968/how-to-get-the-return-value-from-a-thread-in-python
-        # if preview_mode:
-        #    #on preview_mode command line operation,
-        #    #don't use multiprocessing
-        #    clusterer = fit_cluster(clusterer,tagRadiansData)
-        # else:
+
         with warnings.catch_warnings():
             # disable joblist multithread warning
+            # because there's only one thread
             warnings.simplefilter('ignore', UserWarning)
             async_result = pool.apply_async(
                 ClusterGen._fit_cluster, (self.clusterer, tag_radians_data))
             self.clusterer = async_result.get()
-            # clusterer.fit(tagRadiansData)
-            # updateNeeded = False
         if self.autoselect_clusters:
-            cluster_labels = self.clusterer.labels_  # auto selected clusters
+            cluster_labels = self.clusterer.labels_
         else:
             # min_cluster_size:
             # 0.000035 without haversine: 223 m (or 95 m for 0.000015)
@@ -398,21 +394,18 @@ class ClusterGen():
             return cluster_labels, None, None, None
         # verbose reporting if preview mode
         mask_noisy = (cluster_labels == -1)
-        # len(sel_labels)
         number_of_clusters = len(
             np.unique(cluster_labels[~mask_noisy]))  # nopep8 false positive? pylint: disable=E1130
         # palette = sns.color_palette("hls", )
-        # palette = sns.color_palette(None, len(sel_labels))
-        # #sns.color_palette("hls", ) #sns.color_palette(None, 100)
+        #           sns.color_palette(None, len(sel_labels))
+        #           sns.color_palette(None, 100)
         palette = sns.color_palette("husl", number_of_clusters+1)
-        # clusterer.labels_ (best selection) or sel_labels (cut distance)
         sel_colors = [palette[x] if x >= 0
                       else (0.5, 0.5, 0.5)
                       # for x in clusterer.labels_ ]
                       for x in cluster_labels]
-        # no need to return actual clusters if in manual mode
-        # self.mask_noisy, self.number_of_clusters and
-        # self.sel_colors will be used to gen preview map
+        # return additional information in preview mode
+        # for plotting
         return cluster_labels, sel_colors, mask_noisy, number_of_clusters
 
     def _cluster_item(self, item: str, preview_mode=None):
@@ -484,6 +477,7 @@ class ClusterGen():
             none_clustered_guids = list(np_selected_post_guids[clusters == -1])
             # Sort descending based on size of cluster
             # https://stackoverflow.com/questions/30346356/how-to-sort-list-of-lists-according-to-length-of-sublists
+            # this is need to later compute HImp Value (1 or 0)
             clustered_guids.sort(key=len, reverse=True)
         return clustered_guids, none_clustered_guids
 
