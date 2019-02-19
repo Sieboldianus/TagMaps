@@ -18,7 +18,7 @@ from .classes.interface import UserInterface
 from .classes.load_data import LoadData
 from .classes.prepare_data import PrepareData
 from .classes.shared_structure import (
-    EMOJI, LOCATIONS, TAGS, PostStructure, ClusterType, PreparedStats)
+    EMOJI, LOCATIONS, TAGS, TOPICS, PostStructure, ClusterType, PreparedStats)
 from .classes.utils import Utils
 
 
@@ -137,7 +137,7 @@ class TagMaps():
             output_folder=None, remove_long_tail=True,
             limit_bottom_user_count=5, topic_modeling=False,
             local_saturation_check=False, max_items=None,
-            logging_level=None):
+            logging_level=None, topic_cluster=None):
         """Init settings for Tag Maps Clustering"""
         self.write_cleaned_data = write_cleaned_data
         self.output_folder = output_folder
@@ -146,6 +146,8 @@ class TagMaps():
         self.topic_modeling = topic_modeling
         if max_items is None:
             max_items = 1000
+        if topic_cluster is None:
+            topic_cluster = False
         self.max_items = max_items
         self.local_saturation_check = local_saturation_check
         # initialize list of types to cluster
@@ -156,6 +158,8 @@ class TagMaps():
             self.cluster_types.append(EMOJI)
         if location_cluster:
             self.cluster_types.append(LOCATIONS)
+        if topic_cluster:
+            self.cluster_types.append(TOPICS)
         # create output dir if not exists
         Utils.init_output_dir(self.output_folder)
         # init logger (logging to console and file log.txt)

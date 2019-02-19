@@ -21,7 +21,7 @@ from shapely.ops import transform
 from functools import partial
 
 from tagmaps.classes.alpha_shapes import AlphaShapes
-from tagmaps.classes.shared_structure import (EMOJI, LOCATIONS, TAGS,
+from tagmaps.classes.shared_structure import (EMOJI, LOCATIONS, TAGS, TOPICS,
                                               AnalysisBounds, CleanedPost,
                                               ClusterType, PreparedStats)
 from tagmaps.classes.plotting import TPLT
@@ -113,8 +113,11 @@ class ClusterGen():
             top_list = cleaned_stats.top_emoji_list
         elif clusterer_type == LOCATIONS:
             top_list = cleaned_stats.top_locations_list
+        elif clusterer_type == TOPICS:
+            # TODO:
+            top_list = cleaned_stats.top_tags_list
         else:
-            raise ValueError("Cluster Type unknown.")
+            raise ValueError(f"Cluster Type unknown: {clusterer_type}")
 
         clusterer = cls(
             bounds=bounds,
@@ -175,20 +178,25 @@ class ClusterGen():
         """
         distinct_localloc_count = set()
         selected_postguids_list = list()
-        for cleaned_photo_location in self.cleaned_post_list:
+        for cleaned_post_location in self.cleaned_post_list:
             if self.cls_type == TAGS:
                 self._filter_tags(
-                    item, cleaned_photo_location,
+                    item, cleaned_post_location,
                     selected_postguids_list,
                     distinct_localloc_count)
             elif self.cls_type == EMOJI:
                 self._filter_emoji(
-                    item, cleaned_photo_location,
+                    item, cleaned_post_location,
                     selected_postguids_list,
                     distinct_localloc_count)
             elif self.cls_type == LOCATIONS:
                 self._filter_locations(
-                    item, cleaned_photo_location,
+                    item, cleaned_post_location,
+                    selected_postguids_list,
+                    distinct_localloc_count)
+            elif self.cls_type == TOPICS:
+                self._filter_topics(
+                    item, cleaned_post_location,
                     selected_postguids_list,
                     distinct_localloc_count)
             else:
@@ -207,6 +215,31 @@ class ClusterGen():
                 cleaned_photo_location.guid)
             distinct_localloc_count.add(
                 cleaned_photo_location.loc_id)
+
+    @staticmethod
+    def _filter_topics(
+            item: List[str],
+            cleaned_photo_location: CleanedPost,
+            selected_postguids_list: List[str],
+            distinct_localloc_count: Set[str]):
+        """Check topics against tags, body and emoji"""
+        if (ClusterGen._compare_anyinlist(
+            item, cleaned_photo_location.hashtags)
+            or ClusterGen._compare_anyinlist(
+                item, cleaned_photo_location.post_body)
+            or ClusterGen._compare_anyinlist(
+                item, cleaned_photo_location.emoji)):
+            selected_postguids_list.append(
+                cleaned_photo_location.guid)
+            distinct_localloc_count.add(
+                cleaned_photo_location.loc_id)
+
+    @staticmethod
+    def _compare_anyinlist(items, item_list):
+        """Check if any term of topic is in list"""
+        if any(x in items for x in item_list):
+            return True
+        return False
 
     @staticmethod
     def _filter_emoji(
@@ -242,12 +275,13 @@ class ClusterGen():
         query_result = self._select_postguids(item)
         selected_postguids_list = query_result[0]
         distinct_localloc_count = query_result[1]
-
         if silent:
             return selected_postguids_list
         # console reporting
         if self.cls_type == EMOJI:
             item_text = Utils._get_emojiname(item)
+        if self.cls_type == TOPICS:
+            item_text = '-'.join(item)
         else:
             item_text = item
         type_text = self.cls_type.rstrip('s')
@@ -290,7 +324,7 @@ class ClusterGen():
         """Gets numpy array of selected points with latlng containing _item
 
         Args:
-            item: tag, emoji, location
+            item: tag, emoji, location; or topic (list of terms)
             silent: if true, no console output (interface mode)
 
         Returns:
@@ -731,7 +765,7 @@ class ClusterGen():
         points = self._get_np_points(
             item=item,
             silent=True)
-        fig = TPLT._get_sel_preview(points, item, self.bounds)
+        fig = TPLT._get_sel_preview(points, item, self.bounds, self.cls_type)
         return fig
 
     def _get_cluster_preview(self, item):
@@ -747,9 +781,12 @@ class ClusterGen():
             item=item,
             preview_mode=True)
         fig = TPLT._get_cluster_preview(
-            points, sel_colors, item, self.bounds, mask_noisy,
-            self.cluster_distance, number_of_clusters,
-            self.autoselect_clusters)
+            points=points, sel_colors=sel_colors, item_text=item,
+            bounds=self.bounds, mask_noisy=mask_noisy,
+            cluster_distance=self.cluster_distance,
+            number_of_clusters=number_of_clusters,
+            auto_select_clusters=self.autoselect_clusters,
+            cls_type=self.cls_type)
         return fig
 
     def _get_clustershapes_preview(self, item):
@@ -771,7 +808,9 @@ class ClusterGen():
         # cluster_guids: those guids that are clustered
         cluster_guids, _ = self._get_cluster_guids(
             clusters, selected_post_guids)
-        shapes, _ = self._get_item_clustershapes(item, cluster_guids)
+        if self.cls_type == TOPICS:
+            first_item = item[0]
+        shapes, _ = self._get_item_clustershapes(first_item, cluster_guids)
         # proj shapes back to WGS1984 for plotting in matplotlib
         # simple list comprehension with projection:
         project = partial(
@@ -779,11 +818,13 @@ class ClusterGen():
             self.crs_proj,  # source coordinate system
             self.crs_wgs)  # destination coordinate system
         shapes_wgs = [transform(project, shape[0]) for shape in shapes]
-
         fig = TPLT._get_cluster_preview(
-            points, sel_colors, item, self.bounds, mask_noisy,
-            self.cluster_distance, number_of_clusters,
-            self.autoselect_clusters, shapes_wgs)
+            points=points, sel_colors=sel_colors, item_text=item,
+            bounds=self.bounds, mask_noisy=mask_noisy,
+            cluster_distance=self.cluster_distance,
+            number_of_clusters=number_of_clusters,
+            auto_select_clusters=self.autoselect_clusters,
+            shapes=shapes_wgs, cls_type=self.cls_type)
         return fig
 
     def get_singlelinkagetree_preview(self, item):

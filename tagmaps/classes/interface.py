@@ -22,7 +22,7 @@ from tagmaps.classes.plotting import TPLT
 from tagmaps.classes.utils import Utils
 from tagmaps.classes.shared_structure import (
     CleanedPost, AnalysisBounds,
-    ClusterType, TAGS, LOCATIONS, EMOJI)
+    ClusterType, TAGS, LOCATIONS, EMOJI, TOPICS)
 from tagmaps.classes.cluster import ClusterGen
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.figure import Figure

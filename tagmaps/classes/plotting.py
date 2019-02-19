@@ -10,7 +10,7 @@ from descartes import PolygonPatch
 from tagmaps.classes.shared_structure import CleanedPost, AnalysisBounds
 from tagmaps.classes.utils import Utils
 from tagmaps.classes.shared_structure import (
-    TAGS, LOCATIONS, EMOJI)
+    TAGS, LOCATIONS, EMOJI, TOPICS)
 
 
 class TPLT():
@@ -67,18 +67,18 @@ class TPLT():
         return fig
 
     @staticmethod
-    def _get_sel_preview(points, item, bounds):
+    def _get_sel_preview(points, item, bounds, cls_type):
         """Returns plt map for item selection preview"""
         # img_ratio = TPLT._get_img_ratio(bounds)
         fig = None
         fig = TPLT._get_fig_points(fig, points, bounds)
-        fig.suptitle(item, fontsize=18, fontweight='bold')
+        TPLT._set_plt_suptitle(fig, item, cls_type)
         return fig
 
     @staticmethod
     def _get_cluster_preview(points, sel_colors, item_text, bounds, mask_noisy,
                              cluster_distance, number_of_clusters, auto_select_clusters=None,
-                             shapes=None, fig=None):
+                             shapes=None, fig=None, cls_type=None):
         if auto_select_clusters is None:
             auto_select_clusters = False
         # img_ratio = TPLT._get_img_ratio(bounds)
@@ -90,7 +90,7 @@ class TPLT():
         ax.scatter(points.T[0], points.T[1],
                    c=sel_colors, **TPLT.PLOT_KWDS)
         fig.canvas.set_window_title('Cluster Preview')
-        TPLT._set_plt_suptitle_st(fig, item_text)
+        TPLT._set_plt_suptitle(fig, item_text, cls_type)
         dist_text = ''
         if shapes:
             for shape in shapes:
@@ -179,6 +179,8 @@ class TPLT():
         elif cls_type == EMOJI:
             emoji_name = Utils._get_emojiname(item)
             title = f'{item} ({emoji_name})'
+        elif cls_type == TOPICS:
+            title = '-'.join(item)
         else:
             title = item.upper()
         return title

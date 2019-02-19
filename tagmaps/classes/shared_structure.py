@@ -12,10 +12,12 @@ import attr
 LOCATIONS: str = 'Locations'
 TAGS: str = 'Tags'
 EMOJI: str = 'Emoji'
+TOPICS: List[str] = 'Topics'
 ClusterType: Tuple[Tuple[str, int]] = (
     (LOCATIONS, 1),
     (TAGS, 2),
     (EMOJI, 3),
+    (TOPICS, 4),
 )
 
 CleanedPost_ = namedtuple(
