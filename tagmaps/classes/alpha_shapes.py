@@ -87,8 +87,8 @@ class AlphaShapes():
                 2, post_count, unique_user_count)
             weightsv3 = Utils._get_weight(
                 3, post_count, unique_user_count)
-            distinct_locations = set([post.loc_id
-                                      for post in posts])
+            distinct_locations = {post.loc_id
+                                  for post in posts}
             # simple list comprehension with projection:
             points = [geometry.Point(
                       pyproj.transform(

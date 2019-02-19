@@ -57,12 +57,17 @@ def main():
         cfg, user_variety_input=True, console_reporting=True)
     # initialize tag maps
     tagmaps = TagMaps(
-        cfg.cluster_tags, cfg.cluster_emoji,
-        cfg.cluster_locations, cfg.write_cleaned_data,
-        cfg.output_folder, cfg.remove_long_tail,
-        cfg.limit_bottom_user_count,
-        cfg.topic_modeling, cfg.local_saturation_check,
-        cfg.max_items, cfg.logging_level)
+        tag_cluster=cfg.cluster_tags,
+        emoji_cluster=cfg.cluster_emoji,
+        location_cluster=cfg.cluster_locations,
+        write_cleaned_data=cfg.write_cleaned_data,
+        output_folder=cfg.output_folder,
+        remove_long_tail=cfg.remove_long_tail,
+        limit_bottom_user_count=cfg.limit_bottom_user_count,
+        topic_modeling=cfg.topic_modeling,
+        local_saturation_check=cfg.local_saturation_check,
+        max_items=cfg.max_items,
+        logging_level=cfg.logging_level)
     # read input records from csv
     with input_data as records:
         for record in records:

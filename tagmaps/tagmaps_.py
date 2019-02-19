@@ -117,7 +117,7 @@ class TagMaps():
                 # check if data has been added
                 if not self.lbsn_data or self.lbsn_data.count_glob == 0:
                     raise ValueError(
-                        "No data records available."
+                        "No data records available. "
                         "Add records with tagmaps.add_record() first.")
                 return func(self)
             return _wrapper
