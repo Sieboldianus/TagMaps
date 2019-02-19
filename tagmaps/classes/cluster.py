@@ -280,7 +280,7 @@ class ClusterGen():
         # console reporting
         if self.cls_type == EMOJI:
             item_text = Utils._get_emojiname(item)
-        if self.cls_type == TOPICS:
+        elif self.cls_type == TOPICS:
             item_text = '-'.join(item)
         else:
             item_text = item
@@ -294,10 +294,10 @@ class ClusterGen():
             perc_text = (f'(found in {perc_oftotal_locations:.0f}% '
                          f'of DLC in area)')
         item_index_pos = self._get_toplist_index(item) + 1
-        print(f'({item_index_pos} of {self.tmax}) '
-              f'Found {len(selected_postguids_list)} posts (UPL) '
-              f'for {type_text} \'{item_text}\' '
-              f'{perc_text}', end=" ")
+        print(f"({item_index_pos} of {self.tmax}) "
+              f"Found {len(selected_postguids_list)} posts (UPL) "
+              f"for {type_text} '{item_text}' "
+              f"{perc_text}", end=" ")
         return selected_postguids_list
 
     def _get_toplist_index(self, item_text: str) -> int:
