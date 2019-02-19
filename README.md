@@ -84,10 +84,12 @@ GNU GPLv3
 
 ## Changelog & Download
 
-2019-02-06: [**TagMaps v0.13.0**](https://cloudstore.zih.tu-dresden.de/index.php/s/IrV632Xc59ozqmG/download)
+2019-02-19: [**TagMaps v0.15.0**](https://cloudstore.zih.tu-dresden.de/index.php/s/5Mo7HAb0decOubz/download)
 
 * First version of public API, e.g. load tagmaps to other packages with `import tagmaps` or `from tagmaps import TagMaps`
 * Refactor of LoadData and PrepareData in separate classes, use of contextmanager/ pipeline generator
+* Improved generation of Alpha Shapes 
+* Basic system integration test pipeline
 
 2019-01-23: [**TagMaps v0.11.1**](https://cloudstore.zih.tu-dresden.de/index.php/s/QhKT3Pj9fk4H9ns/download)
 
