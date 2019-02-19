@@ -178,7 +178,7 @@ class AlphaShapes():
         poly_shape = AlphaShapes.alpha_shape(
             points, alpha=cluster_distance/startalpha)
         shapetype = "Initial Alpha Shape + Buffer"
-        if poly_shape.is_empty:
+        if not isinstance(poly_shape, bool) and poly_shape.is_empty:
             # try again with centered axis reduced alpha
             poly_shape = AlphaShapes.alpha_shape(
                 points, alpha=(cluster_distance/startalpha), centeraxis=True)
