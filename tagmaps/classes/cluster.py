@@ -604,8 +604,6 @@ class ClusterGen():
 
     def get_item_cluster_centroids(self, item):
         """Get centroids for item clustered data"""
-        if self.cls_type == TOPICS:
-            item = ClusterGen._concat_topic(item)
         self._get_update_clusters(
             item=item)
         cluster_guids = self.clustered_items_dict[item]
@@ -793,6 +791,44 @@ class ClusterGen():
         fig = TPLT._get_sel_preview(points, item, self.bounds, self.cls_type)
         return fig
 
+    def _get_cluster_centroid_data(self, item, zipped=None):
+        if self.cls_type == TOPICS and isinstance(item, list):
+            item = ClusterGen._concat_topic(item)
+        if zipped is None:
+            zipped = False
+        shapes = self.get_item_cluster_centroids(
+            item=item)
+        user_count = [meta[1] for meta in shapes]
+        shapes_wgs = self._project_geom_back(shapes)
+        latlng_list = []
+        for shape in shapes_wgs:
+            lng = shape.x
+            lat = shape.y
+            latlng_list.append((lng, lat))
+        points = np.array(latlng_list)
+        if zipped:
+            zip_list = list()
+            x = 0
+            # zip_list.append(("latitude", "longitude","usercount"))
+            for point in points:
+                zip_list.append((point[0], point[1], user_count[x]))
+                x += 1
+            result = np.asarray(zip_list)
+            # result = np.c_[points, np.asarray([user_count]).T]
+            #result = np.column_stack((points, np.asarray([user_count])))
+        else:
+            result = (points, user_count)
+        return result
+
+    def get_cluster_centroid_preview(self, item):
+        """Returns plt map for item selection cluster centroids"""
+        if self.cls_type == TOPICS:
+            item = ClusterGen._concat_topic(item)
+        points, user_count = self._get_cluster_centroid_data(item)
+        fig = TPLT._get_centroid_preview(
+            points, item, self.bounds, self.cls_type, user_count)
+        return fig
+
     def _get_cluster_preview(self, item):
         """Returns plt map for item cluster preview"""
         if self.cls_type == TOPICS:
@@ -848,13 +884,7 @@ class ClusterGen():
         cluster_guids, _ = self._get_cluster_guids(
             clusters, selected_post_guids)
         shapes, _ = self._get_item_clustershapes(item, cluster_guids)
-        # proj shapes back to WGS1984 for plotting in matplotlib
-        # simple list comprehension with projection:
-        project = partial(
-            pyproj.transform,
-            self.crs_proj,  # source coordinate system
-            self.crs_wgs)  # destination coordinate system
-        shapes_wgs = [transform(project, shape[0]) for shape in shapes]
+        shapes_wgs = self._project_geom_back(shapes)
         fig = TPLT._get_cluster_preview(
             points=points, sel_colors=sel_colors, item_text=item,
             bounds=self.bounds, mask_noisy=mask_noisy,
@@ -863,6 +893,18 @@ class ClusterGen():
             auto_select_clusters=self.autoselect_clusters,
             shapes=shapes_wgs, cls_type=self.cls_type)
         return fig
+
+    def _project_geom_back(self, shapes):
+        """Proj shapes back to WGS1984 for plotting in matplotlib
+
+        simple list comprehension with projection:
+        """
+        project = partial(
+            pyproj.transform,
+            self.crs_proj,  # source coordinate system
+            self.crs_wgs)  # destination coordinate system
+        shapes_wgs = [transform(project, shape[0]) for shape in shapes]
+        return shapes_wgs
 
     def get_singlelinkagetree_preview(self, item):
         if self.cls_type == TOPICS:

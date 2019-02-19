@@ -52,15 +52,19 @@ class TPLT():
             [bounds.lim_lat_min, bounds.lim_lat_max])
 
     @staticmethod
-    def _get_fig_points(fig, points, bounds):
+    def _get_fig_points(fig, points, bounds, point_size=None):
         # a new figure window
         if not fig:
             fig = plt.figure(1)
             fig.add_subplot(111)
         ax = fig.get_axes()[0]
         # only one subplot (nrows, ncols, axnum)
-        ax.scatter(points.T[0], points.T[1],
-                   color='red', **TPLT.PLOT_KWDS)
+        if point_size:
+            ax.scatter(points.T[0], points.T[1],
+                       color='red', alpha=0.5, s=point_size, linewidths=0)
+        else:
+            ax.scatter(points.T[0], points.T[1],
+                       color='red', **TPLT.PLOT_KWDS)
         fig.canvas.set_window_title('Preview Map')
         TPLT.plt_setxy_lim(ax, bounds)
         ax.tick_params(labelsize=10)
@@ -72,6 +76,15 @@ class TPLT():
         # img_ratio = TPLT._get_img_ratio(bounds)
         fig = None
         fig = TPLT._get_fig_points(fig, points, bounds)
+        TPLT._set_plt_suptitle(fig, item, cls_type)
+        return fig
+
+    @staticmethod
+    def _get_centroid_preview(points, item, bounds, cls_type, point_size):
+        """Returns plt map for item selection preview"""
+        # img_ratio = TPLT._get_img_ratio(bounds)
+        fig = None
+        fig = TPLT._get_fig_points(fig, points, bounds, point_size)
         TPLT._set_plt_suptitle(fig, item, cls_type)
         return fig
 
