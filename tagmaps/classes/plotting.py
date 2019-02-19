@@ -179,8 +179,6 @@ class TPLT():
         elif cls_type == EMOJI:
             emoji_name = Utils._get_emojiname(item)
             title = f'{item} ({emoji_name})'
-        elif cls_type == TOPICS:
-            title = '-'.join(item)
         else:
             title = item.upper()
         return title

@@ -218,17 +218,18 @@ class ClusterGen():
 
     @staticmethod
     def _filter_topics(
-            item: List[str],
+            item: str,
             cleaned_photo_location: CleanedPost,
             selected_postguids_list: List[str],
             distinct_localloc_count: Set[str]):
         """Check topics against tags, body and emoji"""
+        item_list = ClusterGen._split_topic(item)
         if (ClusterGen._compare_anyinlist(
-            item, cleaned_photo_location.hashtags)
+            item_list, cleaned_photo_location.hashtags)
             or ClusterGen._compare_anyinlist(
-                item, cleaned_photo_location.post_body)
+                item_list, cleaned_photo_location.post_body)
             or ClusterGen._compare_anyinlist(
-                item, cleaned_photo_location.emoji)):
+                item_list, cleaned_photo_location.emoji)):
             selected_postguids_list.append(
                 cleaned_photo_location.guid)
             distinct_localloc_count.add(
@@ -280,8 +281,6 @@ class ClusterGen():
         # console reporting
         if self.cls_type == EMOJI:
             item_text = Utils._get_emojiname(item)
-        elif self.cls_type == TOPICS:
-            item_text = '-'.join(item)
         else:
             item_text = item
         type_text = self.cls_type.rstrip('s')
@@ -515,16 +514,20 @@ class ClusterGen():
             clustered_guids.sort(key=len, reverse=True)
         return clustered_guids, none_clustered_guids
 
-    def _get_update_clusters(self, item: Tuple[str, int] = None,
+    def _get_update_clusters(self, item: str = None,
                              single_items_dict=None,
                              cluster_items_dict=None,
                              itemized: bool = None):
         """Get clusters for items and write results to dicts"""
+        if not single_items_dict:
+            single_items_dict = self.single_items_dict
+        if not cluster_items_dict:
+            cluster_items_dict = self.clustered_items_dict
         if itemized is None:
             # default
             itemized = True
         if itemized:
-            cluster_results = self._cluster_item(item[0])
+            cluster_results = self._cluster_item(item)
         else:
             cluster_results = self._cluster_all_items()
         if not cluster_results:
@@ -537,9 +540,9 @@ class ClusterGen():
         clustered_guids = result[0]
         none_clustered_guids = result[1]
         if itemized:
-            self.single_items_dict[item[0]] = none_clustered_guids
+            single_items_dict[item] = none_clustered_guids
             if not len(clustered_guids) == 0:
-                self.clustered_items_dict[item[0]] = clustered_guids
+                cluster_items_dict[item] = clustered_guids
             # dicts modified in place, no need to return
             return
         else:
@@ -590,11 +593,31 @@ class ClusterGen():
         # flush console output once
         sys.stdout.flush()
 
-    def get_cluster_centroids(self):
-        """Get centroids for clustered data"""
+    def get_all_cluster_centroids(self):
+        """Get all centroids for clustered data"""
         itemized = False
+        cluster_guids = self.clustered_guids_all
+        none_clustered_guids = self.none_clustered_guids
+        resultshapes_and_meta = self.get_cluster_centroids(
+            cluster_guids, none_clustered_guids)
+        return resultshapes_and_meta, self.cls_type, itemized
+
+    def get_item_cluster_centroids(self, item):
+        """Get centroids for item clustered data"""
+        if self.cls_type == TOPICS:
+            item = ClusterGen._concat_topic(item)
+        self._get_update_clusters(
+            item=item)
+        cluster_guids = self.clustered_items_dict[item]
+        none_clustered_guids = self.single_items_dict[item]
+        resultshapes_and_meta = self.get_cluster_centroids(
+            cluster_guids, none_clustered_guids)
+        return resultshapes_and_meta
+
+    def get_cluster_centroids(self, clustered_guids, none_clustered_guids):
+        """Get centroids for clustered data"""
         resultshapes_and_meta = list()
-        for post_cluster in self.clustered_guids_all:
+        for post_cluster in clustered_guids:
             posts = [self.cleaned_post_dict[x] for x in post_cluster]
             unique_user_count = len(set([post.user_guid for post in posts]))
             # get points and project coordinates to suitable UTM
@@ -611,7 +634,7 @@ class ClusterGen():
                     (result_centroid, unique_user_count)
                 )
         # noclusterphotos = [cleanedPhotoDict[x] for x in singlePhotoGuidList]
-        for no_cluster_post in self.none_clustered_guids:
+        for no_cluster_post in none_clustered_guids:
             post = self.cleaned_post_dict[no_cluster_post]
             x, y = pyproj.transform(self.crs_wgs, self.crs_proj,
                                     post.lng, post.lat)
@@ -620,7 +643,7 @@ class ClusterGen():
                 resultshapes_and_meta.append((p_center, 1))
         sys.stdout.flush()
         # log.debug(f'{resultshapes_and_meta[:10]}')
-        return resultshapes_and_meta, self.cls_type, itemized
+        return resultshapes_and_meta
 
     def _get_item_clustershapes(
             self,
@@ -762,6 +785,8 @@ class ClusterGen():
 
     def _get_sel_preview(self, item):
         """Returns plt map for item selection preview"""
+        if self.cls_type == TOPICS:
+            item = ClusterGen._concat_topic(item)
         points = self._get_np_points(
             item=item,
             silent=True)
@@ -770,6 +795,8 @@ class ClusterGen():
 
     def _get_cluster_preview(self, item):
         """Returns plt map for item cluster preview"""
+        if self.cls_type == TOPICS:
+            item = ClusterGen._concat_topic(item)
         points = self._get_np_points(
             item=item,
             silent=True)
@@ -789,11 +816,23 @@ class ClusterGen():
             cls_type=self.cls_type)
         return fig
 
+    @staticmethod
+    def _concat_topic(term_list):
+        topic_name = '-'.join(term_list)
+        return topic_name
+
+    @staticmethod
+    def _split_topic(term_concat):
+        topic_terms = term_concat.split('-')
+        return topic_terms
+
     def _get_clustershapes_preview(self, item):
         """Returns plt map for item cluster preview"""
         # selected post guids: all posts for item
         # points: numpy-points for plotting
         # clusters: hdbscan labels for clustered items
+        if self.cls_type == TOPICS:
+            item = ClusterGen._concat_topic(item)
         result = self._cluster_item(
             item=item,
             preview_mode=True)
@@ -808,9 +847,7 @@ class ClusterGen():
         # cluster_guids: those guids that are clustered
         cluster_guids, _ = self._get_cluster_guids(
             clusters, selected_post_guids)
-        if self.cls_type == TOPICS:
-            first_item = item[0]
-        shapes, _ = self._get_item_clustershapes(first_item, cluster_guids)
+        shapes, _ = self._get_item_clustershapes(item, cluster_guids)
         # proj shapes back to WGS1984 for plotting in matplotlib
         # simple list comprehension with projection:
         project = partial(
@@ -828,6 +865,8 @@ class ClusterGen():
         return fig
 
     def get_singlelinkagetree_preview(self, item):
+        if self.cls_type == TOPICS:
+            item = ClusterGen._concat_topic(item)
         (_, _, _, _, _, number_of_clusters) = self._cluster_item(
             item=item,
             preview_mode=True)
