@@ -48,6 +48,22 @@ class ClusterGen():
           for calculating Alpha Shapes and writing results to
           shapefile
     """
+    class CGDec():
+        """Decorators for class CG methods"""
+        @staticmethod
+        def input_topic_format(func):
+            def _wrapper(self, item):
+                """Check if cluster type is topic and if,
+                concat item list to string."""
+                if self.cls_type == TOPICS:
+                    if isinstance(item, list):
+                        item = ClusterGen._concat_topic(item)
+                    elif not '-' in item:
+                        raise ValueError(
+                            "Please supply either list of terms, or"
+                            "concatenate terms with '-' character.")
+                return func(self, item)
+            return _wrapper
 
     def __init__(self, bounds: AnalysisBounds,
                  cleaned_post_dict: Dict[str, CleanedPost],
@@ -781,19 +797,17 @@ class ClusterGen():
         clusterer.fit(data)
         return clusterer
 
+    @CGDec.input_topic_format
     def _get_sel_preview(self, item):
         """Returns plt map for item selection preview"""
-        if self.cls_type == TOPICS:
-            item = ClusterGen._concat_topic(item)
         points = self._get_np_points(
             item=item,
             silent=True)
         fig = TPLT._get_sel_preview(points, item, self.bounds, self.cls_type)
         return fig
 
+    @CGDec.input_topic_format
     def _get_cluster_centroid_data(self, item, zipped=None):
-        if self.cls_type == TOPICS and isinstance(item, list):
-            item = ClusterGen._concat_topic(item)
         if zipped is None:
             zipped = False
         shapes = self.get_item_cluster_centroids(
@@ -820,19 +834,17 @@ class ClusterGen():
             result = (points, user_count)
         return result
 
+    @CGDec.input_topic_format
     def get_cluster_centroid_preview(self, item):
         """Returns plt map for item selection cluster centroids"""
-        if self.cls_type == TOPICS:
-            item = ClusterGen._concat_topic(item)
         points, user_count = self._get_cluster_centroid_data(item)
         fig = TPLT._get_centroid_preview(
             points, item, self.bounds, self.cls_type, user_count)
         return fig
 
+    @CGDec.input_topic_format
     def _get_cluster_preview(self, item):
         """Returns plt map for item cluster preview"""
-        if self.cls_type == TOPICS:
-            item = ClusterGen._concat_topic(item)
         points = self._get_np_points(
             item=item,
             silent=True)
@@ -854,6 +866,9 @@ class ClusterGen():
 
     @staticmethod
     def _concat_topic(term_list):
+        if any('-' in s for s in term_list):
+            raise ValueError(
+                "No '-' characters supported in topic list terms")
         topic_name = '-'.join(term_list)
         return topic_name
 
@@ -862,13 +877,12 @@ class ClusterGen():
         topic_terms = term_concat.split('-')
         return topic_terms
 
+    @CGDec.input_topic_format
     def _get_clustershapes_preview(self, item):
         """Returns plt map for item cluster preview"""
         # selected post guids: all posts for item
         # points: numpy-points for plotting
         # clusters: hdbscan labels for clustered items
-        if self.cls_type == TOPICS:
-            item = ClusterGen._concat_topic(item)
         result = self._cluster_item(
             item=item,
             preview_mode=True)
