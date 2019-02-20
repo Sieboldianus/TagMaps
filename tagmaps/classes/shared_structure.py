@@ -25,7 +25,8 @@ CleanedPost_ = namedtuple(
     'origin_id lat lng guid user_guid '
     'post_create_date post_publish_date '
     'post_body hashtags emoji '
-    'post_views_count post_like_count loc_id')
+    'post_views_count post_like_count loc_id '
+    'loc_name')
 
 
 class CleanedPost(CleanedPost_):

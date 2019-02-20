@@ -21,7 +21,7 @@ from decimal import Decimal
 import json
 import math
 import collections
-from typing import List, Set, Dict, Tuple, Optional, TextIO
+from typing import List, Set, Dict, Tuple, Optional, TextIO, Union
 from collections import Counter
 from collections import defaultdict
 from collections import namedtuple
@@ -85,7 +85,8 @@ class PrepareData():
         self.distinct_locations_set = set()
         self.distinct_userlocations_set = set()
 
-    def add_record(self, lbsn_post: PostStructure):
+    def add_record(
+            self, lbsn_post: Union[PostStructure, CleanedPost]):
         """Method will merge all tags/emoji/terms
         of a single user for each location (Metric 'UPL') to
         produce a cleaned version of input data
@@ -98,6 +99,7 @@ class PrepareData():
         - get cleaned output with get_prepared_data()
         """
         self.count_glob += 1
+        self._update_toplists(lbsn_post)
         # create userid_loc_id, this is used as the base
         # for clustering data (metric UPL)
         post_locid_userid = f'{lbsn_post.loc_id}::{lbsn_post.user_guid}'
@@ -107,6 +109,9 @@ class PrepareData():
         self.distinct_userlocations_set.add(post_locid_userid)
         # print(f'Added: {post_locid_userid} to distinct_userlocations_set '
         #       f'(len: {len(distinct_userlocations_set)})')
+        if isinstance(lbsn_post, CleanedPost):
+            # no need to merge terms and other parameter
+            return
         if (lbsn_post.loc_name and
                 lbsn_post.loc_id not in self.locid_locname_dict):
             # add locname to dict
@@ -140,15 +145,33 @@ class PrepareData():
         self.userlocation_wordlist_dict[
             post_locid_userid] |= set(
             cleaned_wordlist)
-        self._update_toplists(lbsn_post)
 
     def get_cleaned_post_dict(
-            self) -> Dict[str, CleanedPost]:
+            self, input_path=None) -> Dict[str, CleanedPost]:
         """Output wrapper
 
         - calls loop user locations method
         - optionally initializes output to file
         """
+        if input_path is None:
+            # load from ingested data
+            cleaned_post_dict = self.process_cleaned_data()
+        else:
+            # load from file store
+            cleaned_post_dict = self.load_cleaned_data(input_path)
+        return cleaned_post_dict
+
+    def load_cleaned_data(self, input_path):
+        """Get cleaned Post Dict from intermediate
+        data stored in file"""
+        input_file = Path.cwd() / input_path
+        if not input_file.exists():
+            raise ValueError(f"File does not exist: {input_file}")
+        cleaned_post_dict = self._loop_cleaned_data(input_file)
+        return cleaned_post_dict
+
+    def process_cleaned_data(self):
+        """Get cleaned Post Dict from ingested data"""
         if self.write_cleaned_data:
             with open(self.output_folder / 'Output_cleaned.csv', 'w',
                       encoding='utf8') as csvfile:
@@ -159,7 +182,8 @@ class PrepareData():
                 datawriter = csv.writer(
                     csvfile, delimiter=',', lineterminator='\n',
                     quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
-                cleaned_post_dict = self._loop_loc_per_userid(datawriter)
+                cleaned_post_dict = self._loop_loc_per_userid(
+                    datawriter)
         else:
             cleaned_post_dict = self._loop_loc_per_userid(None)
         if self.topic_modeling:
@@ -387,19 +411,41 @@ class PrepareData():
                 if first_post is None:
                     return
                 # create tuple with cleaned photo data
-                cleaned_post_location = self._get_cleaned_location(
+                cleaned_post = self._compile_cleaned_post(
                     first_post, locid_userid, post_latlng, user_key)
                 if datawriter is not None:
                     PrepareData._write_location_tocsv(
-                        datawriter, cleaned_post_location)
+                        datawriter, cleaned_post)
                 if self.topic_modeling:
                     self._update_topic_models(
-                        cleaned_post_location, user_key)
-                cleaned_post_dict[cleaned_post_location.guid] = \
-                    cleaned_post_location
+                        cleaned_post, user_key)
+                cleaned_post_dict[cleaned_post.guid] = \
+                    cleaned_post
                 # update boundary
                 self.bounds._upd_latlng_bounds(
-                    cleaned_post_location.lat, cleaned_post_location.lng)
+                    cleaned_post.lat, cleaned_post.lng)
+        return cleaned_post_dict
+
+    def _loop_cleaned_data(self, cdata: Path):
+        """Create cleaned post dict from intermediate data file store"""
+        cleaned_post_dict = defaultdict(CleanedPost)
+        with open(cdata, 'r', newline='', encoding='utf8') as f:
+            cpost_reader = csv.DictReader(
+                f,
+                delimiter=',',
+                quotechar='"',
+                quoting=QUOTE_MINIMAL)
+            for cpost in cpost_reader:
+                # row_num += 1
+                self.count_glob += 1
+                cleaned_post = PrepareData._parse_cleaned_post(cpost)
+                cleaned_post_dict[cleaned_post.guid] = \
+                    cleaned_post
+                # update statistics from cleaned post
+                self.add_record(cleaned_post)
+                # update boundary
+                self.bounds._upd_latlng_bounds(
+                    cleaned_post.lat, cleaned_post.lng)
         return cleaned_post_dict
 
     def _write_topic_models(self):
@@ -465,7 +511,28 @@ class PrepareData():
                 cleaned_post_location.guid}
             # UserPhotoFirstThumb_dict[user_key] = photo[5]
 
-    def _get_cleaned_location(self, first_post, locid_userid,
+    @staticmethod
+    def _parse_cleaned_post(cpost: Dict[str, str]) -> CleanedPost:
+        """Process single cleaned post from (file) dict stream"""
+        cleaned_post = CleanedPost(
+            origin_id=cpost.get("origin_id"),
+            lat=float(cpost.get("lat")),
+            lng=float(cpost.get("lng")),
+            guid=cpost.get("post_guid"),
+            user_guid=cpost.get("user_id"),
+            post_body=set(cpost.get("post_body")),
+            post_create_date=cpost.get("post_create_date"),
+            post_publish_date=cpost.get("post_publish_date"),
+            post_views_count=int(cpost.get("post_views_count")),
+            post_like_count=int(cpost.get("post_like_count")),
+            emoji=set(cpost.get("post_publish_date").split(';')),
+            hashtags=set(cpost.get("post_publish_date").split(';')),
+            loc_id=cpost.get("loc_id"),
+            loc_name=cpost.get("loc_name")
+        )
+        return cleaned_post
+
+    def _compile_cleaned_post(self, first_post, locid_userid,
                               post_latlng, user_key) -> CleanedPost:
         """Merge cleaned post from all posts of a certain user
         at a specific location. This is producing the final CleanedPost.
@@ -509,7 +576,8 @@ class PrepareData():
             post_like_count=first_post.post_like_count,
             emoji=merged_emojilist,
             hashtags=merged_taglist,
-            loc_id=first_post.loc_id
+            loc_id=first_post.loc_id,
+            loc_name=first_post.loc_name
         )
         return cleaned_post
 

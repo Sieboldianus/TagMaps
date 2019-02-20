@@ -207,12 +207,24 @@ class TagMaps():
             f'Total user post locations (UPL): '
             f'{len(self.lbsn_data.distinct_userlocations_set)}')
 
+    @TMDec.init_data_check
+    def load_cleaned_data(self, input_path):
+        """Load cleaned data from file (intermediate output)
+
+        Args:
+            input_path (str): Relative path from current directory, e.g.
+                              "01_Input/Output_cleaned.csv".
+        """
+        self.cleaned_post_dict = self.lbsn_data.get_cleaned_post_dict(
+            input_path)
+
     @TMDec.data_added_check
     def prepare_stats(self):
         """Prepare data and metrics for use in clustering
         """
         # get cleaned data for use in clustering
-        self.cleaned_post_dict = self.lbsn_data.get_cleaned_post_dict()
+        if not self.cleaned_post_dict:
+            self.cleaned_post_dict = self.lbsn_data.get_cleaned_post_dict()
         # a list is faster for looping through,
         # a dict is faster for key lookup,
         # get both here

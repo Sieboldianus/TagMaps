@@ -803,17 +803,22 @@ class ClusterGen():
         points = self._get_np_points(
             item=item,
             silent=True)
-        fig = TPLT._get_sel_preview(points, item, self.bounds, self.cls_type)
+        fig = TPLT._get_sel_preview(
+            points, item, self.bounds, self.cls_type)
         return fig
 
     @CGDec.input_topic_format
-    def _get_cluster_centroid_data(self, item, zipped=None):
+    def _get_cluster_centroid_data(
+        self, item, zipped=None, projected=None):
         if zipped is None:
             zipped = False
+        if projected is None:
+            projected = False
         shapes = self.get_item_cluster_centroids(
             item=item)
         user_count = [meta[1] for meta in shapes]
-        shapes_wgs = self._project_geom_back(shapes)
+        if not projected:
+            shapes_wgs = self._project_geom_back(shapes)
         latlng_list = []
         for shape in shapes_wgs:
             lng = shape.x
