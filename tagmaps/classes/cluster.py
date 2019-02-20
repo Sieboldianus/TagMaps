@@ -44,7 +44,7 @@ class ClusterGen():
           1) Input: Original Data in Decimal Degrees (WGS1984)
           2) Working: Radians data converted from Decimal Degrees with
           np.radians(points) for use in HDBSCAN clustering
-          3) Output: Projected coordinates (auto-selected UTM Zone)
+          3) Output: Projected coordinates based on auto-selected UTM Zone,
           for calculating Alpha Shapes and writing results to
           shapefile
     """
@@ -52,7 +52,7 @@ class ClusterGen():
         """Decorators for class CG methods"""
         @staticmethod
         def input_topic_format(func):
-            def _wrapper(self, item):
+            def _wrapper(self, item, **kwargs):
                 """Check if cluster type is topic and if,
                 concat item list to string."""
                 if self.cls_type == TOPICS:
@@ -62,7 +62,7 @@ class ClusterGen():
                         raise ValueError(
                             "Please supply either list of terms, or"
                             "concatenate terms with '-' character.")
-                return func(self, item)
+                return func(self, item, **kwargs)
             return _wrapper
 
     def __init__(self, bounds: AnalysisBounds,
@@ -71,7 +71,7 @@ class ClusterGen():
                  top_list: List[Tuple[str, int]],
                  total_distinct_locations: int,
                  cluster_type: ClusterType = TAGS,
-                 local_saturation_check: bool = True):
+                 local_saturation_check: bool = False):
         self.cls_type = cluster_type
         self.tmax = len(top_list)
         self.bounds = bounds
