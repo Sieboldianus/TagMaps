@@ -136,6 +136,8 @@ class LoadData():
         if msg and self.console_reporting:
             print(" " * len(msg), end='\r')
         sys.stdout.flush()
+        if self.stats.count_glob == 0:
+            raise ValueError("No posts found in input data.")
         self.log.info(msg)
 
     def _report_progress(self):

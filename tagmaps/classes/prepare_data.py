@@ -64,7 +64,7 @@ class PrepareData():
         self.total_tag_counter = collections.Counter()
         self.total_emoji_counter = collections.Counter()
         self.total_location_counter = collections.Counter()
-        self.cleaned_stats = PreparedStats()
+        self.cleaned_stats = None
         # Hashsets:
         self.locations_per_userid_dict = defaultdict(set)
         self.userlocation_taglist_dict = defaultdict(set)
@@ -110,9 +110,7 @@ class PrepareData():
         # print(f'Added: {post_locid_userid} to distinct_userlocations_set '
         #       f'(len: {len(distinct_userlocations_set)})')
         # todo:
-        if isinstance(lbsn_post, CleanedPost):
-            # no need to merge terms and other parameter
-            return
+
         if (lbsn_post.loc_name and
                 lbsn_post.loc_id not in self.locid_locname_dict):
             # add locname to dict
@@ -132,6 +130,7 @@ class PrepareData():
             # self.stats.count_loc += 1
             self.userlocations_firstpost_dict[
                 post_locid_userid] = lbsn_post
+
         # union tags/emoji per userid/unique location
         if TAGS in self.cluster_types:
             self.userlocation_taglist_dict[
@@ -139,13 +138,16 @@ class PrepareData():
         if EMOJI in self.cluster_types:
             self.userlocation_emojilist_dict[
                 post_locid_userid] |= lbsn_post.emoji
-        # get cleaned wordlist for topic modeling
-        cleaned_wordlist = self._get_cleaned_wordlist(
-            lbsn_post.post_body)
+        if isinstance(lbsn_post, PostStructure):
+            # get cleaned wordlist
+            cleaned_wordlist = set(self._get_cleaned_wordlist(
+                lbsn_post.post_body))
+        else:
+            # words already cleaned
+            cleaned_wordlist = lbsn_post.post_body
         # union words per userid/unique location
         self.userlocation_wordlist_dict[
-            post_locid_userid] |= set(
-            cleaned_wordlist)
+            post_locid_userid] |= cleaned_wordlist
 
     def get_cleaned_post_dict(
             self, input_path=None) -> Dict[str, CleanedPost]:

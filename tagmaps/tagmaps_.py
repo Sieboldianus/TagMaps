@@ -201,7 +201,7 @@ class TagMaps():
     def global_stats_report(self, cleaned=None):
         """Report global stats after data has been read"""
         if cleaned is None:
-            cleaned = True
+            cleaned = False
         self.lbsn_data.global_stats_report(cleaned=cleaned)
 
     @TMDec.init_data_check
