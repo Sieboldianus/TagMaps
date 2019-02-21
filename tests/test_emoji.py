@@ -88,3 +88,5 @@ def test_capital_case():
 # alternative Shapefile module pure Python
 # https://github.com/GeospatialPython/pyshp#writing-shapefiles
 # import shapefile
+# to test:
+# bba9f14180134069a9da5b3eb3539130822f917a55fc42d4adcc816018f79d9e "bei;bilzbad;flamingos;radebeul;@mcfitti;👯🎉😋;30grad;und","radebeul;bilzbad;flamingos","🐬;🌊;😋;🎉;👯"

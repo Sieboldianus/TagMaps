@@ -109,6 +109,7 @@ class PrepareData():
         self.distinct_userlocations_set.add(post_locid_userid)
         # print(f'Added: {post_locid_userid} to distinct_userlocations_set '
         #       f'(len: {len(distinct_userlocations_set)})')
+        # todo:
         if isinstance(lbsn_post, CleanedPost):
             # no need to merge terms and other parameter
             return
@@ -197,7 +198,9 @@ class PrepareData():
         - prepare data for tag maps clustering
         - store to self.data_prepared
         """
-        self._prepare_item_stats()
+        if self.cleaned_stats is None:
+            self.cleaned_stats = PreparedStats()
+            self._prepare_item_stats()
         return self.cleaned_stats
 
     def _prepare_item_stats(self):
@@ -525,8 +528,8 @@ class PrepareData():
             post_publish_date=cpost.get("post_publish_date"),
             post_views_count=int(cpost.get("post_views_count")),
             post_like_count=int(cpost.get("post_like_count")),
-            emoji=set(cpost.get("post_publish_date").split(';')),
-            hashtags=set(cpost.get("post_publish_date").split(';')),
+            emoji=set(cpost.get("emoji").split(';')),
+            hashtags=set(cpost.get("hashtags").split(';')),
             loc_id=cpost.get("loc_id"),
             loc_name=cpost.get("loc_name")
         )
@@ -630,3 +633,28 @@ class PrepareData():
         wordlist = [word for word in cleaned_post_body.lower().split(
             ' ') if len(word) > 2]
         return wordlist
+
+    def global_stats_report(self, cleaned=None):
+        """Report global stats after data has been read"""
+        if cleaned is None:
+            cleaned = True
+        self.log.info(
+            f'Total user count (UC): '
+            f'{len(self.locations_per_userid_dict)}')
+        self.log.info(
+            f'Total user post locations (UPL): '
+            f'{len(self.distinct_userlocations_set)}')
+        if not cleaned:
+            return
+        if self.cleaned_stats is None:
+            self.cleaned_stats = PreparedStats()
+            self._prepare_item_stats()
+        self.log.info(
+            f'Total (cleaned) post count (PC): '
+            f'{self.count_glob:02d}')
+        self.log.info(
+            f'Total (cleaned) tag count (PTC): '
+            f'{self.cleaned_stats.total_tag_count}')
+        self.log.info(
+            f'Total (cleaned) emoji count (PEC): '
+            f'{self.cleaned_stats.total_emoji_count}')

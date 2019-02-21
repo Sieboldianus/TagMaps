@@ -75,7 +75,7 @@ def main():
     # get statistics for input data
     # and indested data
     input_data.input_stats_report()
-    tagmaps.global_stats_report()
+    tagmaps.global_stats_report(cleaned=True)
     # get current time for monitoring
     now = time.time()
 

@@ -198,14 +198,11 @@ class TagMaps():
             self.limit_bottom_user_count, self.topic_modeling)
 
     @TMDec.data_added_check
-    def global_stats_report(self):
+    def global_stats_report(self, cleaned=None):
         """Report global stats after data has been read"""
-        self.log.info(
-            f'Total user count (UC): '
-            f'{len(self.lbsn_data.locations_per_userid_dict)}')
-        self.log.info(
-            f'Total user post locations (UPL): '
-            f'{len(self.lbsn_data.distinct_userlocations_set)}')
+        if cleaned is None:
+            cleaned = True
+        self.lbsn_data.global_stats_report(cleaned=cleaned)
 
     @TMDec.init_data_check
     def load_cleaned_data(self, input_path):
