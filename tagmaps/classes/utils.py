@@ -372,7 +372,7 @@ class Utils():
         return flags
 
     @staticmethod
-    def _extract_emoji(string_with_emoji):
+    def _extract_emoji(string_with_emoji: str) -> Set[str]:
         """Extract emoji and flags using regex package
 
         This is a new version to extract emoji (see old method:
@@ -396,7 +396,8 @@ class Utils():
         emoji_split = Utils.split_count(string_with_emoji)
         emoji_list = [emoji for emoji in emoji_split]
         flags_list = Utils.extract_flags(string_with_emoji)
-        return emoji_list + flags_list
+        emoji_list.extend(flags_list)
+        return set(emoji_list)
 
     @staticmethod
     def _extract_emoji_old(string_with_emoji):
