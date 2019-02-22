@@ -21,7 +21,7 @@ from decimal import Decimal
 import json
 import math
 import collections
-from typing import List, Set, Dict, Tuple, Optional, TextIO, Union
+from typing import List, Set, Dict, Tuple, Optional, TextIO, Union, DefaultDict, NamedTuple, Counter as CDict
 from collections import Counter
 from collections import defaultdict
 from collections import namedtuple
@@ -31,7 +31,7 @@ from shapely.geometry import shape
 from shapely.geometry import Point
 from tagmaps.classes.utils import Utils
 from tagmaps.classes.shared_structure import (
-    EMOJI, LOCATIONS, TAGS, ClusterType)
+    EMOJI, LOCATIONS, TAGS, TOPICS, ClusterType)
 from tagmaps.classes.shared_structure import (
     PostStructure, CleanedPost, AnalysisBounds, PreparedStats)
 
@@ -61,10 +61,16 @@ class PrepareData():
         self.count_glob = 0
         self.bounds = AnalysisBounds()
         self.log = logging.getLogger("tagmaps")
-        self.total_tag_counter = collections.Counter()
-        self.total_emoji_counter = collections.Counter()
-        self.total_location_counter = collections.Counter()
-        self.cleaned_stats = None
+        # The following dict stores, per cls_type,
+        # the total number of times items appeared
+        # these are used to measure total counts
+        self.total_item_counter: Dict[ClusterType, CDict] = dict()
+        for cls_type in self.cluster_types:
+            self.total_item_counter[cls_type] = collections.Counter()
+        #self.total_tag_counter = collections.Counter()
+        #self.total_emoji_counter = collections.Counter()
+        #self.total_location_counter = collections.Counter()
+        self.cleaned_stats: Dict[ClusterType, NamedTuple] = dict()
         # Hashsets:
         self.locations_per_userid_dict = defaultdict(set)
         self.userlocation_taglist_dict = defaultdict(set)
@@ -77,9 +83,17 @@ class PrepareData():
         self.userlocation_wordlist_dict = defaultdict(set)
         self.userlocations_firstpost_dict = defaultdict(set)
         # UserDict_TagCounters = defaultdict(set)
-        self.userdict_tagcounters_global = defaultdict(set)
-        self.userdict_emojicounters_global = defaultdict(set)
-        self.userdict_locationcounters_global = defaultdict(set)
+        # The following dict stores, per cls_type, the distinct items
+        # on a per user basis, e.g.
+        # self.useritem_counts_global[TAGS][USERGUID] = {term1, term2, term3}
+        self.useritem_counts_global:  Dict[
+            ClusterType, DefaultDict[str, Set[str]]] = dict()
+        for cls_type in self.cluster_types:
+            self.useritem_counts_global[cls_type] = defaultdict(set)
+
+        #self.userdict_tagcounters_global = defaultdict(set)
+        #self.userdict_emojicounters_global = defaultdict(set)
+        #self.userdict_locationcounters_global = defaultdict(set)
         # UserIDsPerLocation_dict = defaultdict(set)
         # PhotoLocDict = defaultdict(set)
         self.distinct_locations_set = set()
@@ -200,96 +214,81 @@ class PrepareData():
         - prepare data for tag maps clustering
         - store to self.data_prepared
         """
-        if self.cleaned_stats is None:
-            self.cleaned_stats = PreparedStats()
-            self._prepare_item_stats()
+        if not self.cleaned_stats:
+            self._init_item_stats()
+        # TODO:
+        ## self.cleaned_stats.locid_locname_dict = self.locid_locname_dict
         return self.cleaned_stats
 
-    def _prepare_item_stats(self):
+    def _init_item_stats(self):
+        """Init stats for selected cls_types"""
+        for cls_type in self.cluster_types:
+            self.cleaned_stats[cls_type] = self._prepare_item_stats(
+                cls_type)
+
+    def _prepare_item_stats(self, cls_type):
         """Calculate overall tag and emoji statistics
 
         - write results (optionally) to file
         """
+        # init named tuple
+        PreparedStats = namedtuple(
+            'PreparedStats',
+            'top_items_list total_unique_items total_item_count '
+            'max_items')
         # top lists and unique
-        tag_stats = self._get_top_list(
-            self.userdict_tagcounters_global, TAGS)
-        top_tags_list = tag_stats[0]
-        total_unique_tags = tag_stats[1]
-        tagscount_without_longtail = tag_stats[2]
-
-        emoji_stats = self._get_top_list(
-            self.userdict_emojicounters_global, EMOJI)
-        top_emoji_list = emoji_stats[0]
-        total_unique_emoji = emoji_stats[1]
-        emojicount_without_longtail = emoji_stats[2]
-
-        location_stats = self._get_top_list(
-            self.userdict_locationcounters_global, LOCATIONS)
-        top_location_list = location_stats[0]
-        total_unique_locations = location_stats[1]
-
-        # update tmax and emax from optionally long tail removal
-        if tagscount_without_longtail:
-            self.cleaned_stats.tmax = tagscount_without_longtail
+        item_stats = self._get_top_list(cls_type)
+        top_items_list = item_stats.top_items
+        total_unique_items = item_stats.total_unique
+        itemcount_without_longtail = item_stats.total_without_longtail
+        # top counts
+        total_item_count = PrepareData._get_total_count(
+            top_items_list, self.total_item_counter[cls_type])
+        # assign stats to structure
+        # update max_item from optionally long tail removal
+        if itemcount_without_longtail and cls_type in [EMOJI, TAGS]:
+            max_items = itemcount_without_longtail
         else:
-            self.cleaned_stats.tmax = self.max_items
-        if emojicount_without_longtail:
-            self.cleaned_stats.emax = emojicount_without_longtail
-        else:
-            self.cleaned_stats.emax = self.max_items
-
-        # collect stats in prepared_data
-        # if self.cfg.cluster_locations:
-        total_location_count = PrepareData._get_total_count(
-            top_location_list, self.total_location_counter)
-        self.cleaned_stats.top_locations_list = top_location_list
-        self.cleaned_stats.total_unique_locations = total_unique_locations
-        self.cleaned_stats.total_location_count = total_location_count
-        self.cleaned_stats.locid_locname_dict = self.locid_locname_dict
-
-        if TAGS in self.cluster_types:
-            # top counts
-            total_tag_count = PrepareData._get_total_count(
-                top_tags_list, self.total_tag_counter)
-            self.cleaned_stats.top_tags_list = top_tags_list
-            self.cleaned_stats.total_unique_tags = total_unique_tags
-            self.cleaned_stats.total_tag_count = total_tag_count
-
-        if EMOJI in self.cluster_types:
-            total_emoji_count = PrepareData._get_total_count(
-                top_emoji_list, self.total_emoji_counter)
-            self.cleaned_stats.top_emoji_list = top_emoji_list
-            self.cleaned_stats.total_unique_emoji = total_unique_emoji
-            self.cleaned_stats.total_emoji_count = total_emoji_count
+            max_items = self.max_items
+        item_stats = PreparedStats(
+            top_items_list, total_unique_items, total_item_count,
+            max_items)
+        return item_stats
 
     def _update_toplists(self, lbsn_post):
-        """Calculate toplists for emoji and tags
+        """Calculate toplists for emoji, tags and locations
 
-        - adds tag/emojicount of this media to overall
+        - adds tag/emojicount of this post to overall
           tag/emojicount for this user,
         - initialize counter for user if not already done
         """
-        if TAGS in self.cluster_types and lbsn_post.hashtags:
-            self.userdict_tagcounters_global[
+        for cls_type in [EMOJI, TAGS, TOPICS]:
+            if cls_type not in self.cluster_types:
+                continue
+            if cls_type in [TAGS, TOPICS]:
+                # todo: TOPIC implementation
+                item_list = lbsn_post.hashtags
+            else:
+                item_list = lbsn_post.emoji
+            if not item_list:
+                continue
+            self.useritem_counts_global[cls_type][
                 lbsn_post.user_guid].update(
-                lbsn_post.hashtags)
-            self.total_tag_counter.update(lbsn_post.hashtags)
-        if EMOJI in self.cluster_types and lbsn_post.emoji:
-            self.userdict_emojicounters_global[
-                lbsn_post.user_guid].update(
-                lbsn_post.emoji)
-            self.total_emoji_counter.update(
-                lbsn_post.emoji)
+                item_list)
+            self.total_item_counter[cls_type].update(item_list)
+        # locations
         if lbsn_post.loc_id:
             # update single item hack
             # there're more elegant ways to do this
-            self.userdict_locationcounters_global[
+            self.useritem_counts_global[LOCATIONS][
                 lbsn_post.user_guid].update(
                 (lbsn_post.loc_id,))
-            self.total_location_counter.update(
-                (lbsn_post.loc_id,))
+            self.total_item_counter[LOCATIONS].update((lbsn_post.loc_id,))
 
-    def _write_toplist(self, top_list, list_name):
+    @staticmethod
+    def _write_toplist(self, top_list,
+                       list_type, max_items, output_folder,
+                       locid_name_dict=None):
         """Write toplists to file
 
         e.g.:
@@ -300,17 +299,33 @@ class PrepareData():
         """
         if len(top_list) == 0:
             return
+
+        # only ever write top 1000 to file
+        max_to_write = min(1000, max_items)
+        top_list = top_list[:max_to_write]
+        if list_type == LOCATIONS and locid_name_dict:
+            # get name for locid, if possible
+            top_list = [(Utils._get_locname(
+                item.name, locid_name_dict), item.ucount) for item in top_list]
+        # construct string
         top_list_store = ''.join(
             "%s,%i" % v + '\n' for v in top_list)
         # overwrite, if exists:
-        with open(
-                self.output_folder / f'Output_top{list_name}.txt',
-                'w', encoding='utf8') as out_file:
-            out_file.write(f'{list_name}, usercount\n')
+        with open(output_folder / f'Output_top{list_type}.txt',
+                  'w', encoding='utf8') as out_file:
+            out_file.write(f'{list_type}, usercount\n')
             out_file.write(top_list_store)
 
-    def _get_top_list(self, userdict_tagemoji_counters,
-                      listtype: ClusterType = TAGS):
+    def write_toplists(self):
+        """Writes toplists (tags, emoji, locations) to file"""
+        for cls_type in self.cluster_types:
+            top_list = self.cleaned_stats[cls_type].top_items_list
+            max_items = self.cleaned_stats[cls_type].max_items
+        PrepareData._write_toplist(
+            top_list, cls_type, max_items,
+            self.output_folder, self.locid_locname_dict)
+
+    def _get_top_list(self, cls_type: ClusterType = TAGS) -> NamedTuple:
         """Get Top Tags on a per user basis, i.e.
 
         - the global number of distinct users who used each distinct tag
@@ -321,27 +336,34 @@ class PrepareData():
             - list of top tags up to tmax [1000]
             - count of total unique tags
         """
-        overall_usercount_perte = collections.Counter()
-        for tagemoji_hash in userdict_tagemoji_counters.values():
+        # create named tuple for result for easier referencing
+        item_stats = namedtuple(
+            'item_stats',
+            'top_items total_unique total_without_longtail')
+        # also create a named tuple for item counter object
+        item_counter = collections.namedtuple(
+            'item_counter', 'name ucount')
+        overall_usercount_per_item = collections.Counter()
+        for item_hash in self.useritem_counts_global[cls_type].values():
             # taghash contains unique values (= strings) for each user,
             # thus summing up these taghashes counts each user
             # only once per tag (or emoji)
-            overall_usercount_perte.update(tagemoji_hash)
-        total_unique = len(overall_usercount_perte)
+            overall_usercount_per_item.update(item_hash)
+        total_unique = len(overall_usercount_per_item)
         # get all items for "locations"
         # but clip list for tags and emoji
-        if listtype in (TAGS, EMOJI):
+        if cls_type in (TAGS, EMOJI):
             max_items = self.max_items
         else:
             max_items = None
-        top_list = overall_usercount_perte.most_common(max_items)
+        top_items_list = overall_usercount_per_item.most_common(max_items)
+        # convert list of item counts into list of namedtuple
+        top_items_list = [
+            item_counter(*ic_tuple) for ic_tuple in top_items_list]
         if self.remove_long_tail is True:
-            total_without_longtail = self._remove_long_tail(top_list, listtype)
-        # only ever write top 1000 to file
-        max_to_write = min(1000, self.max_items)
-        if self.write_cleaned_data:
-            self._write_toplist(top_list[:max_to_write], listtype)
-        return top_list, total_unique, total_without_longtail
+            total_without_longtail = self._remove_long_tail(
+                top_items_list, cls_type)
+        return item_stats(top_items_list, total_unique, total_without_longtail)
 
     @staticmethod
     def _get_total_count(top_list, top_counter):
@@ -352,8 +374,8 @@ class PrepareData():
         top_counter (Reference to counter object)
         """
         total_count = 0
-        for tagemoji in top_list:
-            count = top_counter.get(tagemoji[0])
+        for item in top_list:
+            count = top_counter.get(item[0])
             if count:
                 total_count += count
         return total_count
@@ -648,15 +670,14 @@ class PrepareData():
             f'{len(self.distinct_userlocations_set)}')
         if not cleaned:
             return
-        if self.cleaned_stats is None:
-            self.cleaned_stats = PreparedStats()
-            self._prepare_item_stats()
+        if not self.cleaned_stats:
+            self._init_item_stats()
         self.log.info(
             f'Total (cleaned) post count (PC): '
             f'{self.count_glob:02d}')
         self.log.info(
             f'Total (cleaned) tag count (PTC): '
-            f'{self.cleaned_stats.total_tag_count}')
+            f'{self.cleaned_stats[TAGS].total_item_count}')
         self.log.info(
             f'Total (cleaned) emoji count (PEC): '
-            f'{self.cleaned_stats.total_emoji_count}')
+            f'{self.cleaned_stats[EMOJI].total_item_count}')

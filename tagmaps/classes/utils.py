@@ -569,3 +569,13 @@ class Utils():
                 return pos
         # Matches behavior of list.index
         raise ValueError("list.index(x): x not in list")
+
+    @staticmethod
+    def _get_locname(item: str, loc_name_dict: Dict[str, str]):
+        """Gets location name from ID, if available"""
+        if loc_name_dict:
+            item_name = loc_name_dict.get(item, item)
+        else:
+            # default to item if dict key not found
+            item_name = item
+        return item_name

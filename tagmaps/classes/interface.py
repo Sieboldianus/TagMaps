@@ -199,7 +199,7 @@ class UserInterface():
         # maximum of 1000 entries shown
         for item in top_list[:1000]:
             if self._clst.cls_type == LOCATIONS:
-                item_name = UserInterface._get_locname(item[0], loc_name_dict)
+                item_name = Utils._get_locname(item[0], loc_name_dict)
             else:
                 item_name = item[0]
             try:
@@ -211,15 +211,7 @@ class UserInterface():
                 emoji = Utils._get_emojiname(item_name)
                 listbox.insert(tk.END, f'{emoji} ({item[1]} user)')
 
-    @staticmethod
-    def _get_locname(item: str, loc_name_dict: Dict[str, str]):
-        """Gets location name from ID, if available"""
-        if loc_name_dict:
-            # default to item[0] if dict key not found
-            item_name = loc_name_dict.get(item, item)
-        else:
-            item_name = item
-        return item_name
+
 
     def start(self):
         """Start up user interface after initialization

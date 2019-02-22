@@ -8,8 +8,9 @@ import logging
 import sys
 import warnings
 from collections import defaultdict
+from collections import namedtuple
 from multiprocessing.pool import ThreadPool
-from typing import Any, Dict, List, Optional, Set, TextIO, Tuple
+from typing import Any, Dict, List, Optional, Set, TextIO, Tuple, NamedTuple
 
 import fiona
 import numpy as np
@@ -73,7 +74,6 @@ class ClusterGen():
                  cluster_type: ClusterType = TAGS,
                  local_saturation_check: bool = False):
         self.cls_type = cluster_type
-        self.tmax = len(top_list)
         self.bounds = bounds
         self.cluster_distance = ClusterGen._init_cluster_dist(
             self.bounds, self.cls_type)
@@ -105,17 +105,17 @@ class ClusterGen():
 
     @classmethod
     def new_clusterer(cls,
-                      clusterer_type: ClusterType,
+                      cls_type: ClusterType,
                       bounds: AnalysisBounds,
                       cleaned_post_dict: Dict[str, CleanedPost],
                       cleaned_post_list: List[CleanedPost],
-                      cleaned_stats: PreparedStats,
+                      cleaned_stats: NamedTuple,
                       local_saturation_check: bool):
         """Create new clusterer from type and input data
 
         Args:
-            clusterer_type (ClusterType): Either Tags,
-                Locations or Emoji
+            cls_type (ClusterType): Either TAGS,
+                LOCATIONS, TOPICS or EMOJI
             bounds (LoadData.AnalysisBounds): Analaysis spatial boundary
             cleaned_post_dict (Dict[str, CleanedPost]): Dict of cleaned posts
             prepared_data (LoadData.PreparedData): Statistics data
@@ -123,25 +123,14 @@ class ClusterGen():
         Returns:
             clusterer (ClusterGen): A new clusterer of ClusterType
         """
-        if clusterer_type == TAGS:
-            top_list = cleaned_stats.top_tags_list
-        elif clusterer_type == EMOJI:
-            top_list = cleaned_stats.top_emoji_list
-        elif clusterer_type == LOCATIONS:
-            top_list = cleaned_stats.top_locations_list
-        elif clusterer_type == TOPICS:
-            # TODO:
-            top_list = cleaned_stats.top_tags_list
-        else:
-            raise ValueError(f"Cluster Type unknown: {clusterer_type}")
-
         clusterer = cls(
             bounds=bounds,
             cleaned_post_dict=cleaned_post_dict,
             cleaned_post_list=cleaned_post_list,
-            top_list=top_list,
-            total_distinct_locations=cleaned_stats.total_unique_locations,
-            cluster_type=clusterer_type,
+            top_list=cleaned_stats[cls_type].top_items_list,
+            total_distinct_locations=cleaned_stats[
+                LOCATIONS].total_unique_items,
+            cluster_type=cls_type,
             local_saturation_check=local_saturation_check)
         return clusterer
 
@@ -309,7 +298,7 @@ class ClusterGen():
             perc_text = (f'(found in {perc_oftotal_locations:.0f}% '
                          f'of DLC in area)')
         item_index_pos = self._get_toplist_index(item) + 1
-        print(f"({item_index_pos} of {self.tmax}) "
+        print(f"({item_index_pos} of {len(self.top_list)}) "
               f"Found {len(selected_postguids_list)} posts (UPL) "
               f"for {type_text} '{item_text}' "
               f"{perc_text}", end=" ")
@@ -584,9 +573,6 @@ class ClusterGen():
             self.single_items_dict
             self.clustered_items_dict
         """
-        # update in case of items
-        # have been removed from top_list
-        self.tmax = len(self.top_list)
         # get clusters for top item
         if self.local_saturation_check:
             self._get_update_clusters(
@@ -601,7 +587,7 @@ class ClusterGen():
                 continue
             tnum += 1
             self._get_update_clusters(
-                item=item)
+                item=item.name)
         # logging.getLogger("tagmaps").info(
         #    f'{len(self.clustered_items)} '
         #    f'{self.cls_type.rstrip("s")} clusters.\n'
@@ -609,14 +595,25 @@ class ClusterGen():
         # flush console output once
         sys.stdout.flush()
 
-    def get_all_cluster_centroids(self):
-        """Get all centroids for clustered data"""
+    def get_all_cluster_centroids(self) -> NamedTuple:
+        """Get all centroids for clustered data
+
+        Returns:
+            NamedTuple: Results as named tuple
+                        data: shapes and meta information
+                        cls_type: ClusterGen [EMOJI, TAGS etc.)
+                        itemized: bool
+        """
+
         itemized = False
+        ClusterResults = namedtuple(
+            'ClusterResults',
+            'data cls_type itemized')
         cluster_guids = self.clustered_guids_all
         none_clustered_guids = self.none_clustered_guids
         resultshapes_and_meta = self.get_cluster_centroids(
             cluster_guids, none_clustered_guids)
-        return resultshapes_and_meta, self.cls_type, itemized
+        return ClusterResults(resultshapes_and_meta, self.cls_type, itemized)
 
     def get_item_cluster_centroids(self, item):
         """Get centroids for item clustered data"""
@@ -809,7 +806,7 @@ class ClusterGen():
 
     @CGDec.input_topic_format
     def _get_cluster_centroid_data(
-        self, item, zipped=None, projected=None):
+            self, item, zipped=None, projected=None):
         if zipped is None:
             zipped = False
         if projected is None:

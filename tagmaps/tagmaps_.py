@@ -113,13 +113,13 @@ class TagMaps():
 
         @staticmethod
         def data_added_check(func):
-            def _wrapper(self):
+            def _wrapper(self, *args, **kwargs):
                 # check if data has been added
                 if not self.lbsn_data or self.lbsn_data.count_glob == 0:
                     raise ValueError(
                         "No data records available. "
                         "Add records with tagmaps.add_record() first.")
-                return func(self)
+                return func(self, *args, **kwargs)
             return _wrapper
 
         @staticmethod
@@ -241,23 +241,23 @@ class TagMaps():
                 f"{location_name_count}")
         self.log.info(
             f'Total distinct tags (DTC): '
-            f'{self.cleaned_stats.total_unique_tags}')
+            f'{self.cleaned_stats[TAGS].total_unique_items}')
         self.log.info(
             f'Total distinct emoji (DEC): '
-            f'{self.cleaned_stats.total_unique_emoji}')
+            f'{self.cleaned_stats[EMOJI].total_unique_items}')
         self.log.info(
             f'Total distinct locations (DLC): '
-            f'{self.cleaned_stats.total_unique_locations}')
+            f'{self.cleaned_stats[LOCATIONS].total_unique_items}')
         self.log.info(
             f'Total tag count for the '
-            f'{self.cleaned_stats.tmax} '
+            f'{self.cleaned_stats[TAGS].max_items} '
             f'most used tags in selected area: '
-            f'{self.cleaned_stats.total_tag_count}.')
+            f'{self.cleaned_stats[TAGS].total_item_count}.')
         self.log.info(
             f'Total emoji count for the '
-            f'{self.cleaned_stats.emax} '
+            f'{self.cleaned_stats[EMOJI].max_items} '
             f'most used emoji in selected area: '
-            f'{self.cleaned_stats.total_emoji_count}.')
+            f'{self.cleaned_stats[EMOJI].total_item_count}.')
         self.log.info(
             self.lbsn_data.bounds.get_bound_report())
 
@@ -268,7 +268,7 @@ class TagMaps():
         has been loaded"""
         for cls_type in self.cluster_types:
             clusterer = ClusterGen.new_clusterer(
-                clusterer_type=cls_type,
+                cls_type=cls_type,
                 bounds=self.lbsn_data.bounds,
                 cleaned_post_dict=self.cleaned_post_dict,
                 cleaned_post_list=self.cleaned_post_list,
@@ -348,8 +348,8 @@ class TagMaps():
     def _cluster_centroids(self, cluster_type):
         """Calculates cluster centroids"""
         clusterer = self.clusterer.get(cluster_type)
-        cluster_shapes = clusterer.get_cluster_centroids()
-        self.global_cluster_centroids.append(cluster_shapes)
+        cluster_results = clusterer.get_all_cluster_centroids()
+        self.global_cluster_centroids.append(cluster_results)
 
     def write_tagemoji_shapes(self):
         """Write tag and emoji cluster shapes to shapefile"""
