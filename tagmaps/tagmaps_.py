@@ -50,12 +50,6 @@ class TagMaps():
         all locations in provided records, regardless of tags attached.
         Usefull for visualizing overall frequentation patterns.
 
-    write_cleaned_data : bool, optional (default=False)
-        If true, write out a file limited to the cleaned data
-        that is finally used for tag clustering
-        (filtered records based on stoplists, clipped boundary,
-        minimum user threshold etc.)
-
     output_folder : Path, optional (default=None)
         optionally provide a path (Pathlib Path object) for storing
         output files, e.g. Path.cwd() / "02_Output"/.
@@ -123,23 +117,22 @@ class TagMaps():
             return _wrapper
 
         @staticmethod
-        def init_stats_check(func):
+        def prepare_data_check(func):
             def _wrapper(self):
                 # prepare stats
                 if self.cleaned_stats is None:
-                    self.prepare_stats()
+                    self.prepare_data()
                 func(self)
             return _wrapper
 
     def __init__(
             self, tag_cluster=True, emoji_cluster=True,
-            location_cluster=True, write_cleaned_data=False,
+            location_cluster=True,
             output_folder=None, remove_long_tail=True,
             limit_bottom_user_count=5, topic_modeling=False,
             local_saturation_check=False, max_items=None,
             logging_level=None, topic_cluster=None):
         """Init settings for Tag Maps Clustering"""
-        self.write_cleaned_data = write_cleaned_data
         self.output_folder = output_folder
         self.remove_long_tail = remove_long_tail
         self.limit_bottom_user_count = limit_bottom_user_count
@@ -193,9 +186,12 @@ class TagMaps():
     def init_lbsn_data(self):
         """init PrepareData structure"""
         self.lbsn_data = PrepareData(
-            self.cluster_types, self.write_cleaned_data,
-            self.max_items, self.output_folder, self.remove_long_tail,
-            self.limit_bottom_user_count, self.topic_modeling)
+            cluster_types=self.cluster_types,
+            max_items=self.max_items,
+            output_folder=self.output_folder,
+            remove_long_tail=self.remove_long_tail,
+            limit_bottom_user_count=self.limit_bottom_user_count,
+            topic_modeling=self.topic_modeling)
 
     @TMDec.data_added_check
     def global_stats_report(self, cleaned=None):
@@ -216,7 +212,7 @@ class TagMaps():
             input_path)
 
     @TMDec.data_added_check
-    def prepare_stats(self):
+    def prepare_data(self):
         """Prepare data and metrics for use in clustering
         """
         # get cleaned data for use in clustering
@@ -229,8 +225,8 @@ class TagMaps():
         # get prepared data for statistics and clustering
         self.cleaned_stats = self.lbsn_data._get_item_stats()
 
+    @TMDec.prepare_data_check
     @TMDec.data_added_check
-    @TMDec.init_stats_check
     def item_stats_report(self):
         """Stats reporting for tags, emoji (and locations)"""
         location_name_count = len(
@@ -261,8 +257,8 @@ class TagMaps():
         self.log.info(
             self.lbsn_data.bounds.get_bound_report())
 
+    @TMDec.prepare_data_check
     @TMDec.data_added_check
-    @TMDec.init_stats_check
     def init_cluster(self):
         """Initialize clusterers after base data
         has been loaded"""
@@ -399,3 +395,12 @@ class TagMaps():
         """Return plt.figure for item cluster shapes."""
         fig = self.clusterer[cls_type].get_singlelinkagetree_preview(item)
         return fig
+
+    @TMDec.init_data_check
+    def write_toplists(self):
+        """Write toplists for items to output"""
+        self.lbsn_data.write_toplists()
+
+    def write_cleaned_data(self):
+        """Write cleaned data to file for intermediate results store"""
+        self.lbsn_data.write_cleaned_data(self.cleaned_post_dict)

@@ -60,7 +60,6 @@ def main():
         tag_cluster=cfg.cluster_tags,
         emoji_cluster=cfg.cluster_emoji,
         location_cluster=cfg.cluster_locations,
-        write_cleaned_data=cfg.write_cleaned_data,
         output_folder=cfg.output_folder,
         remove_long_tail=cfg.remove_long_tail,
         limit_bottom_user_count=cfg.limit_bottom_user_count,
@@ -75,7 +74,8 @@ def main():
     # get statistics for input data
     # and indested data
     input_data.input_stats_report()
-    tagmaps.global_stats_report(cleaned=True)
+    tagmaps.global_stats_report()
+
     # get current time for monitoring
     now = time.time()
 
@@ -86,6 +86,11 @@ def main():
             "##########")
     # calculate and report item stats
     tagmaps.item_stats_report()
+
+    if cfg.write_cleaned_data:
+        # write intermediate results
+        tagmaps.write_cleaned_data()
+        tagmaps.write_toplists()
 
     if cfg.statistics_only is False:
         # restart time monitoring for

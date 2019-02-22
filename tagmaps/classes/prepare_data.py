@@ -47,13 +47,12 @@ class PrepareData():
     """
 
     def __init__(
-            self, cluster_types, write_cleaned_data, max_items,
+            self, cluster_types, max_items,
             output_folder, remove_long_tail, limit_bottom_user_count,
             topic_modeling):
         """Initializes Prepare Data structure"""
         # global settings
         self.cluster_types = cluster_types
-        self.write_cleaned_data = write_cleaned_data
         self.max_items = max_items
         self.output_folder = output_folder
         self.remove_long_tail = remove_long_tail
@@ -69,37 +68,34 @@ class PrepareData():
         self.total_item_counter: Dict[ClusterType, CDict] = dict()
         for cls_type in self.cluster_types:
             self.total_item_counter[cls_type] = collections.Counter()
-        #self.total_tag_counter = collections.Counter()
-        #self.total_emoji_counter = collections.Counter()
-        #self.total_location_counter = collections.Counter()
+
         self.cleaned_stats: Dict[ClusterType, NamedTuple] = dict()
         # Hashsets:
-        self.locations_per_userid_dict = defaultdict(set)
-        self.userlocation_taglist_dict = defaultdict(set)
-        self.userlocation_emojilist_dict = defaultdict(set)
+        self.items_per_userloc: Dict[
+            ClusterType, DefaultDict[str, Set[str]]] = dict()
+        for cls_type in [EMOJI, TAGS]:
+            # items per user_location [EMOJI, TAGS, TOPICS]
+            self.items_per_userloc[cls_type] = defaultdict(set)
+        # and LOCATIONS per user
+        self.locations_per_user = defaultdict(set)
+        # dict to store names for loc ids
         self.locid_locname_dict: Dict[str, str] = dict()  # nopep8
         if self.topic_modeling:
             self.user_topiclist_dict = defaultdict(set)
             self.user_post_ids_dict = defaultdict(set)
             self.userpost_first_thumb_dict = defaultdict(str)
-        self.userlocation_wordlist_dict = defaultdict(set)
+        # list of distinct terms per user-location
+        self.userlocation_terms_dict = defaultdict(set)
+        # first item for each UPL, required
+        # for some attributes to generate CleanedPost
         self.userlocations_firstpost_dict = defaultdict(set)
-        # UserDict_TagCounters = defaultdict(set)
-        # The following dict stores, per cls_type, the distinct items
-        # on a per user basis, e.g.
-        # self.useritem_counts_global[TAGS][USERGUID] = {term1, term2, term3}
+        # The following dicts store, per cls_type,
+        # distinct items on a per user basis, e.g.
+        # self.useritem_counts_global[TAGS][USER] = {term1, term2, term3}
         self.useritem_counts_global:  Dict[
             ClusterType, DefaultDict[str, Set[str]]] = dict()
         for cls_type in self.cluster_types:
             self.useritem_counts_global[cls_type] = defaultdict(set)
-
-        #self.userdict_tagcounters_global = defaultdict(set)
-        #self.userdict_emojicounters_global = defaultdict(set)
-        #self.userdict_locationcounters_global = defaultdict(set)
-        # UserIDsPerLocation_dict = defaultdict(set)
-        # PhotoLocDict = defaultdict(set)
-        self.distinct_locations_set = set()
-        self.distinct_userlocations_set = set()
 
     def add_record(
             self, lbsn_post: Union[PostStructure, CleanedPost]):
@@ -119,51 +115,42 @@ class PrepareData():
         # create userid_loc_id, this is used as the base
         # for clustering data (metric UPL)
         post_locid_userid = f'{lbsn_post.loc_id}::{lbsn_post.user_guid}'
-        self.distinct_locations_set.add(lbsn_post.loc_id)
-        # print(f'Added: {photo_locID} to distinct_locations_set '
-        #       f'(len: {len(self.distinct_locations_set)})')
-        self.distinct_userlocations_set.add(post_locid_userid)
-        # print(f'Added: {post_locid_userid} to distinct_userlocations_set '
-        #       f'(len: {len(distinct_userlocations_set)})')
-        # todo:
 
         if (lbsn_post.loc_name and
                 lbsn_post.loc_id not in self.locid_locname_dict):
             # add locname to dict
             self.locid_locname_dict[
                 lbsn_post.loc_id] = lbsn_post.loc_name
-        if lbsn_post.user_guid not in \
-                self.locations_per_userid_dict or \
-                lbsn_post.loc_id not in \
-                self.locations_per_userid_dict[
-                    lbsn_post.user_guid]:
+        if (lbsn_post.user_guid not in
+                self.locations_per_user or
+                lbsn_post.loc_id not in
+                self.locations_per_user[lbsn_post.user_guid]):
             # Bit wise or and assignment in one step.
             # -> assign locID to UserDict list
             # if not already contained
-            self.locations_per_userid_dict[
-                lbsn_post.user_guid] |= {
-                lbsn_post.loc_id}
+            self.locations_per_user[lbsn_post.user_guid] |= \
+                {lbsn_post.loc_id}
             # self.stats.count_loc += 1
             self.userlocations_firstpost_dict[
                 post_locid_userid] = lbsn_post
 
         # union tags/emoji per userid/unique location
         if TAGS in self.cluster_types:
-            self.userlocation_taglist_dict[
-                post_locid_userid] |= lbsn_post.hashtags
+            self.items_per_userloc[TAGS][post_locid_userid] \
+                |= lbsn_post.hashtags
         if EMOJI in self.cluster_types:
-            self.userlocation_emojilist_dict[
-                post_locid_userid] |= lbsn_post.emoji
+            self.items_per_userloc[EMOJI][post_locid_userid] \
+                |= lbsn_post.emoji
         if isinstance(lbsn_post, PostStructure):
             # get cleaned wordlist
-            cleaned_wordlist = set(self._get_cleaned_wordlist(
+            cleaned_terms = set(self._get_cleaned_wordlist(
                 lbsn_post.post_body))
         else:
             # words already cleaned
-            cleaned_wordlist = lbsn_post.post_body
+            cleaned_terms = lbsn_post.post_body
         # union words per userid/unique location
-        self.userlocation_wordlist_dict[
-            post_locid_userid] |= cleaned_wordlist
+        self.userlocation_terms_dict[
+            post_locid_userid] |= cleaned_terms
 
     def get_cleaned_post_dict(
             self, input_path=None) -> Dict[str, CleanedPost]:
@@ -174,7 +161,7 @@ class PrepareData():
         """
         if input_path is None:
             # load from ingested data
-            cleaned_post_dict = self.process_cleaned_data()
+            cleaned_post_dict = self._compile_cleaned_data()
         else:
             # load from file store
             cleaned_post_dict = self.load_cleaned_data(input_path)
@@ -186,28 +173,22 @@ class PrepareData():
         input_file = Path.cwd() / input_path
         if not input_file.exists():
             raise ValueError(f"File does not exist: {input_file}")
-        cleaned_post_dict = self._loop_cleaned_data(input_file)
+        cleaned_post_dict = self._read_cleaned_data(input_file)
         return cleaned_post_dict
 
-    def process_cleaned_data(self):
-        """Get cleaned Post Dict from ingested data"""
-        if self.write_cleaned_data:
-            with open(self.output_folder / 'Output_cleaned.csv', 'w',
-                      encoding='utf8') as csvfile:
-                # get headerline from class structure
-                headerline = ','.join(CleanedPost._fields)
-                csvfile.write(f'{headerline}\n')
-                # values will be written with CSV writer module
-                datawriter = csv.writer(
-                    csvfile, delimiter=',', lineterminator='\n',
-                    quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
-                cleaned_post_dict = self._loop_loc_per_userid(
-                    datawriter)
-        else:
-            cleaned_post_dict = self._loop_loc_per_userid(None)
-        if self.topic_modeling:
-            self._write_topic_models()
-        return cleaned_post_dict
+    def write_cleaned_data(self, cleaned_post_dict: Dict[str, CleanedPost]):
+        with open(self.output_folder / 'Output_cleaned.csv', 'w',
+                  encoding='utf8') as csvfile:
+            # get headerline from class structure
+            headerline = ','.join(CleanedPost._fields)
+            csvfile.write(f'{headerline}\n')
+            # values will be written with CSV writer module
+            datawriter = csv.writer(
+                csvfile, delimiter=',', lineterminator='\n',
+                quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
+            for cleaned_post in cleaned_post_dict.values():
+                PrepareData._write_location_tocsv(
+                    datawriter, cleaned_post)
 
     def _get_item_stats(self) -> Dict['ClusterType', NamedTuple]:
         """After data is loaded, this collects data and stats
@@ -278,17 +259,15 @@ class PrepareData():
             self.total_item_counter[cls_type].update(item_list)
         # locations
         if lbsn_post.loc_id:
-            # update single item hack
-            # there're more elegant ways to do this
+            # update single item
             self.useritem_counts_global[LOCATIONS][
-                lbsn_post.user_guid].update(
-                (lbsn_post.loc_id,))
-            self.total_item_counter[LOCATIONS].update((lbsn_post.loc_id,))
+                lbsn_post.user_guid].add(lbsn_post.loc_id)
+            self.total_item_counter[LOCATIONS][lbsn_post.loc_id] += 1
 
     @staticmethod
-    def _write_toplist(self, top_list,
-                       list_type, max_items, output_folder,
-                       locid_name_dict=None):
+    def _write_toplist(
+            top_list, list_type, max_items, output_folder,
+            locid_name_dict=None):
         """Write toplists to file
 
         e.g.:
@@ -303,18 +282,31 @@ class PrepareData():
         # only ever write top 1000 to file
         max_to_write = min(1000, max_items)
         top_list = top_list[:max_to_write]
+        # reformat list as lines to be written
         if list_type == LOCATIONS and locid_name_dict:
+            # construct line string and
             # get name for locid, if possible
-            top_list = [(Utils._get_locname(
-                item.name, locid_name_dict), item.ucount) for item in top_list]
-        # construct string
-        top_list_store = ''.join(
-            "%s,%i" % v + '\n' for v in top_list)
+            top_list_rf = []
+            for item in top_list:
+                loc_name = Utils._get_locname(item.name, locid_name_dict)
+                coords = item.name.split(":")
+                ucount = item.ucount
+                line = (f'{loc_name.replace(",","-")},{coords[0]},{coords[1]},'
+                        f'{ucount}')
+                top_list_rf.append(line)
+            top_list = top_list_rf
+        else:
+            # construct line string
+            top_list = ["%s,%i" % v for v in top_list]
         # overwrite, if exists:
         with open(output_folder / f'Output_top{list_type}.txt',
                   'w', encoding='utf8') as out_file:
-            out_file.write(f'{list_type}, usercount\n')
-            out_file.write(top_list_store)
+            if list_type == LOCATIONS:
+                out_file.write(f'{list_type},lat,lng,usercount\n')
+            else:
+                out_file.write(f'{list_type},usercount\n')
+            for line in top_list:
+                out_file.write(f'{line}\n')
 
     def write_toplists(self):
         """Writes toplists (tags, emoji, locations) to file"""
@@ -330,7 +322,7 @@ class PrepareData():
 
         - the global number of distinct users who used each distinct tag
         - this ignores duplicate use of
-        - calculation is based on dict userdict_tagcounters_global,
+        - calculation is based on dict userdict_itemcounters_global,
             with counters of tags for each user
         Returns:
             - list of top tags up to tmax [1000]
@@ -420,17 +412,18 @@ class PrepareData():
             f'{bottomuser_count} users.')
         return len_after
 
-    def _loop_loc_per_userid(self, datawriter=None):
+    def _compile_cleaned_data(self):
         """Will produce final cleaned list
         of items to be processed by clustering.
 
         - optionally writes entries to file, if handler exists
         """
         cleaned_post_dict = defaultdict(CleanedPost)
-        for user_key, locationhash in \
-                self.locations_per_userid_dict.items():
+        for user_guid, locationhash in \
+                self.locations_per_user.items():
+               # loop all distinct user locations
             for location in locationhash:
-                locid_userid = f'{location}::{user_key}'
+                locid_userid = f'{location}::{user_guid}'
                 post_latlng = location.split(':')
 
                 first_post = self.userlocations_firstpost_dict.get(
@@ -439,21 +432,17 @@ class PrepareData():
                     return
                 # create tuple with cleaned photo data
                 cleaned_post = self._compile_cleaned_post(
-                    first_post, locid_userid, post_latlng, user_key)
-                if datawriter is not None:
-                    PrepareData._write_location_tocsv(
-                        datawriter, cleaned_post)
+                    first_post, locid_userid, post_latlng, user_guid)
                 if self.topic_modeling:
                     self._update_topic_models(
-                        cleaned_post, user_key)
-                cleaned_post_dict[cleaned_post.guid] = \
-                    cleaned_post
+                        cleaned_post, user_guid)
+                cleaned_post_dict[cleaned_post.guid] = cleaned_post
                 # update boundary
                 self.bounds._upd_latlng_bounds(
                     cleaned_post.lat, cleaned_post.lng)
         return cleaned_post_dict
 
-    def _loop_cleaned_data(self, cdata: Path):
+    def _read_cleaned_data(self, cdata: Path):
         """Create cleaned post dict from intermediate data file store"""
         cleaned_post_dict = defaultdict(CleanedPost)
         with open(cdata, 'r', newline='', encoding='utf8') as f:
@@ -475,7 +464,7 @@ class PrepareData():
                     cleaned_post.lat, cleaned_post.lng)
         return cleaned_post_dict
 
-    def _write_topic_models(self):
+    def write_topic_models(self):
         """Initialize two lists for topic modeling output
 
         - hashed (anonymized) output (*add salt)
@@ -585,11 +574,11 @@ class PrepareData():
         """
 
         merged_wordlist = PrepareData._get_merged(
-            self.userlocation_wordlist_dict, locid_userid)
+            self.userlocation_terms_dict, locid_userid)
         merged_emojilist = PrepareData._get_merged(
-            self.userlocation_emojilist_dict, locid_userid)
+            self.items_per_userloc[EMOJI], locid_userid)
         merged_taglist = PrepareData._get_merged(
-            self.userlocation_taglist_dict, locid_userid)
+            self.items_per_userloc[TAGS], locid_userid)
         cleaned_post = CleanedPost(
             origin_id=first_post.origin_id,
             lat=float(post_latlng[0]),
@@ -664,10 +653,11 @@ class PrepareData():
             cleaned = True
         self.log.info(
             f'Total user count (UC): '
-            f'{len(self.locations_per_userid_dict)}')
+            f'{len(self.locations_per_user)}')
+        upl = sum(len(v) for v in self.locations_per_user.values())
         self.log.info(
             f'Total user post locations (UPL): '
-            f'{len(self.distinct_userlocations_set)}')
+            f'{upl}')
         if not cleaned:
             return
         if not self.cleaned_stats:
