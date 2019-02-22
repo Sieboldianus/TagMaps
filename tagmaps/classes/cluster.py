@@ -209,7 +209,8 @@ class ClusterGen():
                     distinct_localloc_count)
             else:
                 raise ValueError(f"Clusterer {self.cls_type} unknown.")
-        selected_items = SelectedItems(selected_postguids_list, len(distinct_localloc_count))
+        selected_items = SelectedItems(
+            selected_postguids_list, len(distinct_localloc_count))
         return selected_items
 
     @staticmethod
@@ -337,6 +338,9 @@ class ClusterGen():
             points: A list of lat/lng points to map
             selected_postguids_list: List of selected post guids
         """
+        SelItems = namedtuple(
+            'SelItems',
+            'points guids')
         # no log reporting for selected points
         if silent is None:
             silent = False
@@ -355,7 +359,7 @@ class ClusterGen():
             # clustering
             if len(selected_postguids_list) < 2:
                 # return empty list of points
-                return [], selected_postguids_list
+                return SelItems([], selected_postguids_list)
             selected_posts_list = self._getselect_posts(
                 selected_postguids_list)
         # only used for tag clustering,
@@ -366,16 +370,16 @@ class ClusterGen():
         # (limit by list of column-names)
         points = df.loc[:, ['lng', 'lat']].to_numpy()
         # only return preview fig without clustering
-        return points, selected_postguids_list
+        return SelItems(points, selected_postguids_list)
 
     def _get_np_points(self,
                        item: str = None,
                        silent: bool = None
                        ) -> np.ndarray:
         """Wrapper that only returns points for _get_np_points_guids"""
-        points, __ = self._get_np_points_guids(item, silent)
-        if len(points) > 0:
-            return points
+        sel_items = self._get_np_points_guids(item, silent)
+        if len(sel_items.points) > 0:
+            return sel_items.points
 
     def _cluster_points(self, points,
                         min_span_tree: bool = None,
@@ -465,40 +469,46 @@ class ClusterGen():
             mask_noisy: number of clusters that were ambiguous (from HDBSCAN)
             number_of_clusters: number of identified clusters (from HDBSCAN)
         """
-
+        ClusterResults = namedtuple(
+            'ClusterResults',
+            'labels guids points colors mask_noisy cluster_count')
         if preview_mode is None:
             preview_mode = False
-        result = self._get_np_points_guids(
+        sel_items = self._get_np_points_guids(
             item=item, silent=preview_mode)
-        points = result[0]
-        selected_post_guids = result[1]
-        if len(selected_post_guids) < 2:
-            return
+
+        if len(sel_items.guids) < 2:
+            # no need to cluster
+            return None
         (clusters, sel_colors,
          mask_noisy, number_of_clusters) = self._cluster_points(
-            points=points, preview_mode=preview_mode)
-        return (
-            clusters, selected_post_guids,
-            points, sel_colors, mask_noisy, number_of_clusters)
+            points=sel_items.points, preview_mode=preview_mode)
+        return ClusterResults(
+            clusters, sel_items.guids,
+            sel_items.points, sel_colors, mask_noisy, number_of_clusters)
 
     def _cluster_all_items(self):
         """Cluster all items (e.g. all locations)"""
-        result = self._get_np_points_guids(
+        ClusterResults = namedtuple(
+            'ClusterResults',
+            'labels guids')
+        sel_items = self._get_np_points_guids(
             silent=False, sel_all=True)
-        points = result[0]
-        selected_post_guids = result[1]
         # min_cluster_size = 2 (LOCATIONS)
         # do not allow clusters with one item
-        if len(selected_post_guids) < 2:
+        if len(sel_items.guids) < 2:
             return
-        clusters, _, _, _ = self._cluster_points(
-            points=points, preview_mode=False,
+        cluster_labels, _, _, _ = self._cluster_points(
+            points=sel_items.points, preview_mode=False,
             min_cluster_size=2, allow_single_cluster=False)
-        return clusters, selected_post_guids
+        return ClusterResults(cluster_labels, sel_items.guids)
 
     @staticmethod
     def _get_cluster_guids(clusters, selected_post_guids):
         """Returns two lists: clustered and non clustered guids"""
+        Guids = namedtuple(
+            'Guids',
+            'clustered nonclustered')
         clustered_guids = list()
         np_selected_post_guids = np.asarray(selected_post_guids)
         mask_noisy = (clusters == -1)
@@ -519,7 +529,7 @@ class ClusterGen():
             # https://stackoverflow.com/questions/30346356/how-to-sort-list-of-lists-according-to-length-of-sublists
             # this is need to later compute HImp Value (1 or 0)
             clustered_guids.sort(key=len, reverse=True)
-        return clustered_guids, none_clustered_guids
+        return Guids(clustered_guids, none_clustered_guids)
 
     def _get_update_clusters(self, item: str = None,
                              single_items_dict=None,
@@ -534,27 +544,24 @@ class ClusterGen():
             # default
             itemized = True
         if itemized:
-            cluster_results = self._cluster_item(item)
+            # clusters guids points colors mask_noisy cluster_count
+            cluster = self._cluster_item(item)
         else:
-            cluster_results = self._cluster_all_items()
-        if not cluster_results:
+            cluster = self._cluster_all_items()
+        if not cluster:
             print("--> No cluster (all locations removed).")
             return
-        clusters = cluster_results[0]
-        selected_post_guids = cluster_results[1]
         # get clustered guids/ non-clustered guids
-        result = self._get_cluster_guids(clusters, selected_post_guids)
-        clustered_guids = result[0]
-        none_clustered_guids = result[1]
+        guids = self._get_cluster_guids(cluster.labels, cluster.guids)
         if itemized:
-            single_items_dict[item] = none_clustered_guids
-            if not len(clustered_guids) == 0:
-                cluster_items_dict[item] = clustered_guids
+            single_items_dict[item] = guids.nonclustered
+            if not len(guids.clustered) == 0:
+                cluster_items_dict[item] = guids.clustered
             # dicts modified in place, no need to return
             return
         else:
-            self.clustered_guids_all = clustered_guids
-            self.none_clustered_guids = none_clustered_guids
+            self.clustered_guids_all = guids.clustered
+            self.none_clustered_guids = guids.nonclustered
 
     def get_overall_clusters(self):
         """Get clusters for all items attached to self
@@ -608,14 +615,14 @@ class ClusterGen():
         """
 
         itemized = False
-        ClusterResults = namedtuple(
-            'ClusterResults',
+        ClusterShapes = namedtuple(
+            'ClusterShapes',
             'data cls_type itemized')
         cluster_guids = self.clustered_guids_all
         none_clustered_guids = self.none_clustered_guids
         resultshapes_and_meta = self.get_cluster_centroids(
             cluster_guids, none_clustered_guids)
-        return ClusterResults(resultshapes_and_meta, self.cls_type, itemized)
+        return ClusterShapes(resultshapes_and_meta, self.cls_type, itemized)
 
     def get_item_cluster_centroids(self, item):
         """Get centroids for item clustered data"""
