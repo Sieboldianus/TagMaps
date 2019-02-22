@@ -199,17 +199,17 @@ class UserInterface():
         # maximum of 1000 entries shown
         for item in top_list[:1000]:
             if self._clst.cls_type == LOCATIONS:
-                item_name = Utils._get_locname(item[0], loc_name_dict)
+                item_name = Utils._get_locname(item.name, loc_name_dict)
             else:
-                item_name = item[0]
+                item_name = item.name
             try:
                 # try inserting emoji first,
                 # some emoji can be printed
-                listbox.insert(tk.END, f'{item_name} ({item[1]} user)')
+                listbox.insert(tk.END, f'{item_name} ({item.ucount} user)')
             except TclError:
                 # replace emoji by unicode name on error
                 emoji = Utils._get_emojiname(item_name)
-                listbox.insert(tk.END, f'{emoji} ({item[1]} user)')
+                listbox.insert(tk.END, f'{emoji} ({item.ucount} user)')
 
 
 
@@ -469,14 +469,14 @@ class UserInterface():
             form_string = f'{i},{number_of_clusters},'
             f'{mask_noisy.sum()},{len(mask_noisy)},\n'
             scalecalclist.append(form_string)
-        with open(f'02_Output/scaletest_{sel_item[0]}.txt',
+        with open(f'02_Output/scaletest_{sel_item.name}.txt',
                   "w", encoding='utf-8') as logfile_a:
             for scalecalc in scalecalclist:
                 logfile_a.write(scalecalc)
         plt.figure(1).clf()
         # plt references the last figure accessed
         self.fig1 = plt.figure()
-        TPLT._set_plt_suptitle(self.fig1, sel_item[0], self._clst.cls_type)
+        TPLT._set_plt_suptitle(self.fig1, sel_item.name, self._clst.cls_type)
         self.fig1.canvas.set_window_title('Cluster Preview')
         dist_text = ''
         if self._clst.autoselect_clusters is False:

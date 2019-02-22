@@ -730,7 +730,7 @@ class ClusterGen():
                 shapes_tmp)
         # get shapes for single items (non-clustered)
         none_clustered_guids = self.single_items_dict.get(
-            item[0], None)
+            item.name, None)
         if not none_clustered_guids:
             return resultshapes_and_meta_tmp
         posts = [self.cleaned_post_dict[x]
