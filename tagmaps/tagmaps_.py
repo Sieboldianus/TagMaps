@@ -18,7 +18,7 @@ from .classes.interface import UserInterface
 from .classes.load_data import LoadData
 from .classes.prepare_data import PrepareData
 from .classes.shared_structure import (
-    EMOJI, LOCATIONS, TAGS, TOPICS, PostStructure, ClusterType, PreparedStats)
+    EMOJI, LOCATIONS, TAGS, TOPICS, PostStructure, ClusterType)
 from .classes.utils import Utils
 
 
@@ -170,7 +170,7 @@ class TagMaps():
         self.lbsn_data: PrepareData = None
         self.cleaned_post_dict = None
         self.cleaned_post_list = None
-        self.cleaned_stats: PreparedStats = None
+        self.cleaned_stats = None
         self.clusterer: Dict[ClusterType, ClusterGen] = dict()
         self.itemized_cluster_shapes = list()
         self.global_cluster_centroids = list()

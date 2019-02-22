@@ -24,7 +24,7 @@ from functools import partial
 from tagmaps.classes.alpha_shapes import AlphaShapes
 from tagmaps.classes.shared_structure import (EMOJI, LOCATIONS, TAGS, TOPICS,
                                               AnalysisBounds, CleanedPost,
-                                              ClusterType, PreparedStats)
+                                              ClusterType)
 from tagmaps.classes.plotting import TPLT
 from tagmaps.classes.utils import Utils
 with warnings.catch_warnings():
@@ -181,6 +181,9 @@ class ClusterGen():
             Tuple[List[str], int]: list of post_guids and
                                    number of distinct locations
         """
+        SelectedItems = namedtuple(
+            'SelectedItems',
+            'guids location_count')
         distinct_localloc_count = set()
         selected_postguids_list = list()
         for cleaned_post_location in self.cleaned_post_list:
@@ -206,7 +209,8 @@ class ClusterGen():
                     distinct_localloc_count)
             else:
                 raise ValueError(f"Clusterer {self.cls_type} unknown.")
-        return selected_postguids_list, len(distinct_localloc_count)
+        selected_items = SelectedItems(selected_postguids_list, len(distinct_localloc_count))
+        return selected_items
 
     @staticmethod
     def _filter_tags(
@@ -278,11 +282,9 @@ class ClusterGen():
         Args:
             item: tag, emoji, location
         """
-        query_result = self._select_postguids(item)
-        selected_postguids_list = query_result[0]
-        distinct_localloc_count = query_result[1]
+        sel_items = self._select_postguids(item)
         if silent:
-            return selected_postguids_list
+            return sel_items.guids
         # console reporting
         if self.cls_type == EMOJI:
             item_text = Utils._get_emojiname(item)
@@ -290,7 +292,7 @@ class ClusterGen():
             item_text = item
         type_text = self.cls_type.rstrip('s')
         perc_oftotal_locations = (
-            distinct_localloc_count /
+            sel_items.location_count /
             (self.total_distinct_locations/100)
         )
         perc_text = ""
@@ -299,10 +301,10 @@ class ClusterGen():
                          f'of DLC in area)')
         item_index_pos = self._get_toplist_index(item) + 1
         print(f"({item_index_pos} of {len(self.top_list)}) "
-              f"Found {len(selected_postguids_list)} posts (UPL) "
+              f"Found {len(sel_items.guids)} posts (UPL) "
               f"for {type_text} '{item_text}' "
               f"{perc_text}", end=" ")
-        return selected_postguids_list
+        return sel_items.guids
 
     def _get_toplist_index(self, item_text: str) -> int:
         """Get Position of Item in Toplist"""
@@ -664,7 +666,7 @@ class ClusterGen():
         for a given item"""
         if cluster_guids is None:
             cluster_guids = self.clustered_items_dict.get(
-                item[0], None)
+                item.name, None)
         if not cluster_guids:
             return None, 0
         result = AlphaShapes.get_cluster_shape(

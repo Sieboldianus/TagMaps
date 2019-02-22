@@ -21,7 +21,9 @@ from decimal import Decimal
 import json
 import math
 import collections
-from typing import List, Set, Dict, Tuple, Optional, TextIO, Union, DefaultDict, NamedTuple, Counter as CDict
+from typing import (
+    Type, List, Set, Dict, Tuple, Optional,
+    TextIO, Union, DefaultDict, NamedTuple, Counter as CDict)
 from collections import Counter
 from collections import defaultdict
 from collections import namedtuple
@@ -33,7 +35,7 @@ from tagmaps.classes.utils import Utils
 from tagmaps.classes.shared_structure import (
     EMOJI, LOCATIONS, TAGS, TOPICS, ClusterType)
 from tagmaps.classes.shared_structure import (
-    PostStructure, CleanedPost, AnalysisBounds, PreparedStats)
+    PostStructure, CleanedPost, AnalysisBounds)
 
 
 class PrepareData():
@@ -207,7 +209,7 @@ class PrepareData():
             self._write_topic_models()
         return cleaned_post_dict
 
-    def _get_item_stats(self) -> 'PreparedStats':
+    def _get_item_stats(self) -> Dict['ClusterType', NamedTuple]:
         """After data is loaded, this collects data and stats
         for distribution of tags, emoji and locations
 
@@ -216,8 +218,6 @@ class PrepareData():
         """
         if not self.cleaned_stats:
             self._init_item_stats()
-        # TODO:
-        ## self.cleaned_stats.locid_locname_dict = self.locid_locname_dict
         return self.cleaned_stats
 
     def _init_item_stats(self):

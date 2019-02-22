@@ -123,25 +123,3 @@ class AnalysisBounds():
             f'Min {float(self.lim_lng_min)} {float(self.lim_lat_min)} ' \
             f'Max {float(self.lim_lng_max)} {float(self.lim_lat_max)}'
         return bound_report
-
-
-@attr.s
-class PreparedStats():
-    """Class storing what is needed for running tag cluster"""
-
-    top_items_list = attr.ib(init=False)
-    #top_emoji_list = attr.ib(init=False)
-    #top_locations_list = attr.ib(init=False)
-    total_unique_items = attr.ib(init=False, default=0)
-    #total_unique_emoji = attr.ib(init=False, default=0)
-    #total_unique_locations = attr.ib(init=False, default=0)
-    total_item_count = attr.ib(init=False, default=0)
-    #total_emoji_count = attr.ib(init=False, default=0)
-    #total_location_count = attr.ib(init=False, default=0)
-    single_mostused_item = attr.ib(init=False)
-    #single_mostused_emoji = attr.ib(init=False)
-    #single_mostused_location = attr.ib(init=False)
-    max_items = attr.ib(init=False, default=0)
-    #tmax = attr.ib(init=False, default=0)
-    #emax = attr.ib(init=False, default=0)
-    ## locid_locname_dict = attr.ib(default=dict())
