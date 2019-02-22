@@ -313,9 +313,9 @@ class PrepareData():
         for cls_type in self.cluster_types:
             top_list = self.cleaned_stats[cls_type].top_items_list
             max_items = self.cleaned_stats[cls_type].max_items
-        PrepareData._write_toplist(
-            top_list, cls_type, max_items,
-            self.output_folder, self.locid_locname_dict)
+            PrepareData._write_toplist(
+                top_list, cls_type, max_items,
+                self.output_folder, self.locid_locname_dict)
 
     def _get_top_list(self, cls_type: ClusterType = TAGS) -> NamedTuple:
         """Get Top Tags on a per user basis, i.e.
