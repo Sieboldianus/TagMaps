@@ -164,10 +164,10 @@ class PrepareData():
             cleaned_post_dict = self._compile_cleaned_data()
         else:
             # load from file store
-            cleaned_post_dict = self.load_cleaned_data(input_path)
+            cleaned_post_dict = self._load_cleaned_data(input_path)
         return cleaned_post_dict
 
-    def load_cleaned_data(self, input_path):
+    def _load_cleaned_data(self, input_path):
         """Get cleaned Post Dict from intermediate
         data stored in file"""
         input_file = Path.cwd() / input_path
@@ -453,10 +453,8 @@ class PrepareData():
                 quoting=QUOTE_MINIMAL)
             for cpost in cpost_reader:
                 # row_num += 1
-                self.count_glob += 1
                 cleaned_post = PrepareData._parse_cleaned_post(cpost)
-                cleaned_post_dict[cleaned_post.guid] = \
-                    cleaned_post
+                cleaned_post_dict[cleaned_post.guid] = cleaned_post
                 # update statistics from cleaned post
                 self.add_record(cleaned_post)
                 # update boundary
@@ -530,19 +528,26 @@ class PrepareData():
     @staticmethod
     def _parse_cleaned_post(cpost: Dict[str, str]) -> CleanedPost:
         """Process single cleaned post from (file) dict stream"""
+        # process column with concatenate items (";item1;item2")
+        split_string_dict = dict()
+        for split_col in ["post_body", "hashtags", "emoji"]:
+            item_str = cpost.get(split_col)
+            if item_str:
+                items = set(item_str.split(";"))
+                split_string_dict[split_col] = items
         cleaned_post = CleanedPost(
             origin_id=cpost.get("origin_id"),
             lat=float(cpost.get("lat")),
             lng=float(cpost.get("lng")),
-            guid=cpost.get("post_guid"),
-            user_guid=cpost.get("user_id"),
-            post_body=set(cpost.get("post_body")),
+            guid=cpost.get("guid"),
+            user_guid=cpost.get("user_guid"),
+            post_body=split_string_dict.get("post_body", set()),
             post_create_date=cpost.get("post_create_date"),
             post_publish_date=cpost.get("post_publish_date"),
             post_views_count=int(cpost.get("post_views_count")),
             post_like_count=int(cpost.get("post_like_count")),
-            emoji=set(cpost.get("emoji").split(';')),
-            hashtags=set(cpost.get("hashtags").split(';')),
+            emoji=split_string_dict.get("emoji", set()),
+            hashtags=split_string_dict.get("hashtags", set()),
             loc_id=cpost.get("loc_id"),
             loc_name=cpost.get("loc_name")
         )

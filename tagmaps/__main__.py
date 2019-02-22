@@ -71,6 +71,9 @@ def main():
     with input_data as records:
         for record in records:
             tagmaps.add_record(record)
+    # to load data from intermediate results:
+    # tagmaps.prepare_data(input_path='01_Input/Output_cleaned.csv')
+
     # get statistics for input data
     # and indested data
     input_data.input_stats_report()

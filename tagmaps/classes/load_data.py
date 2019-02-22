@@ -192,6 +192,7 @@ class LoadData():
             self.bounds._upd_latlng_bounds(lat, lng)
         lbsn_post.latitude = lat
         lbsn_post.longitude = lng
+        # Note: loc_id not loaded from file
         lbsn_post.loc_id = str(lat) + ':' + \
             str(lng)  # create loc_id from lat/lng
         # counting of distinct loc ids

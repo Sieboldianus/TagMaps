@@ -108,6 +108,14 @@ class TagMaps():
         @staticmethod
         def data_added_check(func):
             def _wrapper(self, *args, **kwargs):
+                if kwargs and "input_path" in kwargs:
+                    input_path = kwargs['input_path']
+                    # first check if input_path present in args
+                    # return function
+                    # if input_path present
+                    # (load intermediate data mode)
+                    if input_path:
+                        return func(self, *args, **kwargs)
                 # check if data has been added
                 if not self.lbsn_data or self.lbsn_data.count_glob == 0:
                     raise ValueError(
@@ -200,24 +208,17 @@ class TagMaps():
             cleaned = False
         self.lbsn_data.global_stats_report(cleaned=cleaned)
 
-    @TMDec.init_data_check
-    def load_cleaned_data(self, input_path):
-        """Load cleaned data from file (intermediate output)
-
-        Args:
-            input_path (str): Relative path from current directory, e.g.
-                              "01_Input/Output_cleaned.csv".
-        """
-        self.cleaned_post_dict = self.lbsn_data.get_cleaned_post_dict(
-            input_path)
-
     @TMDec.data_added_check
-    def prepare_data(self):
-        """Prepare data and metrics for use in clustering
+    @TMDec.init_data_check
+    def prepare_data(self, input_path=None):
+        """Prepare data and metrics for use in clustering.
+        Optional: provide input_path to cleaned data will load
+        preprocessed data
         """
         # get cleaned data for use in clustering
         if not self.cleaned_post_dict:
-            self.cleaned_post_dict = self.lbsn_data.get_cleaned_post_dict()
+            self.cleaned_post_dict = self.lbsn_data.get_cleaned_post_dict(
+                input_path)
         # a list is faster for looping through,
         # a dict is faster for key lookup,
         # get both here
