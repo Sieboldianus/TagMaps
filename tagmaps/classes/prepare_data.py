@@ -28,9 +28,6 @@ from collections import Counter
 from collections import defaultdict
 from collections import namedtuple
 
-from shapely.geometry import Polygon
-from shapely.geometry import shape
-from shapely.geometry import Point
 from tagmaps.classes.utils import Utils
 from tagmaps.classes.shared_structure import (
     EMOJI, LOCATIONS, TAGS, TOPICS, ClusterType)
