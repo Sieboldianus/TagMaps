@@ -177,6 +177,13 @@ class PrepareData():
         return cleaned_post_dict
 
     def write_cleaned_data(self, cleaned_post_dict: Dict[str, CleanedPost]):
+        self.log.info(
+            f'Writing cleaned intermediate data to file (Output_cleaned.csv)..')
+        # prepare panon
+        panon_set = dict()
+        for cls_type in self.cluster_types:
+            max_items = self.cleaned_stats[cls_type].max_items
+            panon_set[cls_type] = {item.name for item in self.cleaned_stats[cls_type].top_items_list[:max_items]}  
         with open(self.output_folder / 'Output_cleaned.csv', 'w',
                   encoding='utf8') as csvfile:
             # get headerline from class structure
@@ -187,8 +194,10 @@ class PrepareData():
                 csvfile, delimiter=',', lineterminator='\n',
                 quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
             for cleaned_post in cleaned_post_dict.values():
-                PrepareData._write_location_tocsv(
-                    datawriter, cleaned_post)
+                self._write_location_tocsv(
+                    datawriter, cleaned_post,
+                    panon_set)
+        self.log.info(' done.')
 
     def _get_item_stats(self) -> Dict['ClusterType', NamedTuple]:
         """After data is loaded, this collects data and stats
@@ -612,9 +621,9 @@ class PrepareData():
         value = ref_dict[locid_userid]
         return value
 
-    @staticmethod
-    def _write_location_tocsv(datawriter: TextIO,
-                              cleaned_post_location: CleanedPost) -> None:
+    def _write_location_tocsv(self, datawriter: TextIO,
+                              cleaned_post_location: CleanedPost,
+                              panon_set=None) -> None:
         """Writes a single record of cleaned posts to CSV list
 
         - write intermediate cleaned post data to file for later use
@@ -623,15 +632,73 @@ class PrepareData():
                                        output file
         cleaned_post_location   -      cleaned post of type CleanedPost
                                        (namedtuple)
+        panonymize              -      This will limit written item-lists
+                                       (emoji, tags, body-content) to
+                                       the terms that exist in identified
+                                       toplists. The result is a pseudo-
+                                       anonymized post that only contains
+                                       the less identifiable popular terms
+                                       that are used by many users.
         """
+        if panon_set:
+            cleaned_post_location = self._panonymize_cleaned_post(
+                cleaned_post_location, panon_set)
         ploc_list = PrepareData._cleaned_ploc_tolist(
             cleaned_post_location)
         datawriter.writerow(ploc_list)
 
+
+    def _panonymize_cleaned_post(
+            self,
+            upl: CleanedPost,
+            panon_set: Dict['ClusterType', Set[str]]) -> CleanedPost:
+        """Returns a new cleaned post with reduced information detail
+        based on global information patterns"""
+        # input(f"Before: {upl.hashtags}")
+        panon_post = CleanedPost(
+            origin_id=upl.origin_id,
+            lat=upl.lat,
+            lng=upl.lng,
+            guid=upl.guid,
+            user_guid=upl.user_guid,
+            post_body=PrepareData._filter_private_terms(
+                upl.emoji,panon_set[TAGS]),
+            post_create_date=PrepareData._agg_date(upl.post_create_date),
+            post_publish_date=PrepareData._agg_date(upl.post_publish_date),
+            post_views_count=upl.post_views_count,
+            post_like_count=upl.post_like_count,
+            emoji=PrepareData._filter_private_terms(
+                upl.emoji,panon_set[EMOJI]),
+            hashtags=PrepareData._filter_private_terms(
+                upl.hashtags,panon_set[TAGS]),
+            loc_id=upl.loc_id,
+            loc_name=upl.loc_name
+        )
+        # input(f"After: {panon_post.hashtags}")
+        return panon_post
+
     @staticmethod
-    def _cleaned_ploc_tolist(cleaned_post_location: CleanedPost
-                             ) -> List[str]:
+    def _agg_date(
+        str_date: str) -> str:
+        """Remove time info from string, e.g.
+        2010-05-07 16:00:54
+        to 2010-05-07
+        """
+        if str_date:
+            str_date_hr = f'{str_date[:10]}'
+            return str_date_hr
+        return ""
+
+    @staticmethod
+    def _filter_private_terms(
+        str_list: Set[str], top_terms_set: Set[str]) -> Set[str]:
+        filtered_set = {term for term in str_list if term in top_terms_set}
+        return filtered_set
+
+    @staticmethod
+    def _cleaned_ploc_tolist(cleaned_post_location: CleanedPost) -> List[str]:
         """Converts a cleaned post structure to list for CSV write"""
+
         attr_list = list()
         for attr in cleaned_post_location:
             if isinstance(attr, set):
