@@ -16,9 +16,8 @@ import math
 import collections
 from collections import defaultdict, namedtuple
 from pathlib import Path
-from typing import Counter as CDict
 from typing import (DefaultDict, Dict, List, NamedTuple, Set, TextIO, Tuple,
-                    Union)
+                    Union, Counter as CDict)
 
 from _csv import QUOTE_MINIMAL
 from tagmaps.classes.shared_structure import (EMOJI, LOCATIONS, TAGS, TOPICS,

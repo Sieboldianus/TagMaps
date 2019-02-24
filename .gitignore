@@ -18,3 +18,4 @@ tagmaps/tests/pytest-env/
 tagmaps/.pytest_cache/
 conda.recipe
 environment_dev.yml
+.pylintrc
