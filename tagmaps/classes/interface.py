@@ -6,26 +6,25 @@ Module for tag maps tkinker interface
 for (optional) user input
 """
 
+from __future__ import absolute_import
+
 import sys
-import tkinter as tk
-from tkinter import TclError
-import logging
-from tkinter.messagebox import showerror
-import tkinter.messagebox
-import matplotlib
-import numpy as np
-import matplotlib.pyplot as plt
-from typing import List, Set, Dict, Tuple, Optional, TextIO
 import traceback
-import shapely.geometry as geometry
-from tagmaps.classes.plotting import TPLT
-from tagmaps.classes.utils import Utils
-from tagmaps.classes.shared_structure import (
-    CleanedPost, AnalysisBounds,
-    ClusterType, TAGS, LOCATIONS, EMOJI, TOPICS)
+import tkinter as tk
+import tkinter.messagebox
+from tkinter import TclError
+from tkinter.messagebox import showerror
+from typing import Dict, List, Tuple
+
+import matplotlib.pyplot as plt
+import numpy as np
+
 from tagmaps.classes.cluster import ClusterGen
-from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-from matplotlib.figure import Figure
+from tagmaps.classes.plotting import TPLT
+from tagmaps.classes.shared_structure import (EMOJI, LOCATIONS, TAGS, TOPICS,
+                                              AnalysisBounds, CleanedPost,
+                                              ClusterType)
+from tagmaps.classes.utils import Utils
 
 # enable interactive mode for pyplot
 plt.ion()

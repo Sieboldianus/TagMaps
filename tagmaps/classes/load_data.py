@@ -8,30 +8,19 @@ Returns:
                  that is needed for Tag Maps clustering
 """
 
+from __future__ import absolute_import
 
-import sys
-import os
-import ntpath
 import csv
-import logging
-from pathlib import Path
-from glob import glob
-from _csv import QUOTE_MINIMAL
-from decimal import Decimal
 import json
-import math
-import collections
-from typing import List, Set, Dict, Tuple, Optional, TextIO
-from collections import Counter
-from collections import defaultdict
-from collections import namedtuple
+import logging
+import sys
+from decimal import Decimal
+from typing import Dict, Set, TextIO
 
-from shapely.geometry import Polygon
-from shapely.geometry import shape
 from shapely.geometry import Point
+
+from tagmaps.classes.shared_structure import AnalysisBounds, PostStructure
 from tagmaps.classes.utils import Utils
-from tagmaps.classes.shared_structure import (
-    PostStructure, CleanedPost, AnalysisBounds)
 
 
 class LoadData():

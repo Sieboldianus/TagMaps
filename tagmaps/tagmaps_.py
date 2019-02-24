@@ -3,23 +3,21 @@ TagMaps: Tag clustering from spatially referenced
          and tagged records
 """
 
-__author__ = "Alexander Dunkel"
-__license__ = "GNU GPLv3"
+from __future__ import absolute_import
 
-import sys
-import time
 import logging
-from pathlib import Path
-from typing import List, Set, Dict, Tuple, Optional, TextIO, Any, NamedTuple
+from typing import Dict
 
 from .classes.cluster import ClusterGen
 from .classes.compile_output import Compile
 from .classes.interface import UserInterface
-from .classes.load_data import LoadData
 from .classes.prepare_data import PrepareData
-from .classes.shared_structure import (
-    EMOJI, LOCATIONS, TAGS, TOPICS, PostStructure, ClusterType)
+from .classes.shared_structure import (EMOJI, LOCATIONS, TAGS, TOPICS,
+                                       ClusterType, PostStructure)
 from .classes.utils import Utils
+
+__author__ = "Alexander Dunkel"
+__license__ = "GNU GPLv3"
 
 
 class TagMaps():

@@ -12,13 +12,14 @@ Package can be executed directly (__main__) or
 imported using from tagmaps import TagMaps as TM
 """
 
+from __future__ import absolute_import
+
 __author__ = "Alexander Dunkel"
 __license__ = "GNU GPLv3"
 
+
 import sys
 import time
-import logging
-from pathlib import Path
 
 from tagmaps.tagmaps_ import TagMaps
 from tagmaps.classes.load_data import LoadData

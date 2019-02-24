@@ -4,22 +4,18 @@
 Module for tag maps alpha shapes generation
 """
 
-import logging
+from __future__ import absolute_import
+
 import math
-import sys
 from decimal import Decimal
-from math import asin, cos, radians, sin, sqrt
-from typing import Dict, List, Set, Tuple
 
 import numpy as np
 import pyproj
-import shapely.geometry as geometry
-from descartes import PolygonPatch
-from fiona.crs import from_epsg
-from scipy.spatial import Delaunay  # pylint: disable=E0611
-from shapely.ops import cascaded_union, polygonize, transform, triangulate
 
-from tagmaps.classes.shared_structure import AnalysisBounds
+from scipy.spatial import Delaunay  # pylint: disable=E0611
+import shapely.geometry as geometry
+from shapely.ops import cascaded_union, polygonize
+
 from tagmaps.classes.utils import Utils
 
 

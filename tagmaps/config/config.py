@@ -4,20 +4,19 @@
 Config processing for tag maps package.
 """
 
-import os
-import sys
+from __future__ import absolute_import
+
 import argparse
 import configparser
 import csv
+import logging
+import os
+import sys
+from pathlib import Path
+
 import fiona
 import pyproj
-import logging
-from pathlib import Path
-from shapely.geometry import Polygon
 from shapely.geometry import shape
-from shapely.geometry import Point
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 
 class BaseConfig:

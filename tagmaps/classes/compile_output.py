@@ -4,16 +4,20 @@
 Module for compiling TagMaps results and writing output
 """
 
-import fiona
-from pathlib import Path
-from fiona.crs import from_epsg
-import shapely.geometry as geometry
-from typing import List, Set, Dict, Tuple, Optional, TextIO
-from collections import namedtuple
+from __future__ import absolute_import
+
 from operator import itemgetter
+from pathlib import Path
+from typing import Dict, List, TextIO, Tuple
+
+
+import shapely.geometry as geometry
+import fiona
+from fiona.crs import from_epsg
+
+from tagmaps.classes.shared_structure import (EMOJI,
+                                              AnalysisBounds)
 from tagmaps.classes.utils import Utils
-from tagmaps.classes.shared_structure import (AnalysisBounds,
-                                              TAGS, LOCATIONS, EMOJI)
 
 
 class Compile():

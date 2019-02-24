@@ -3,29 +3,29 @@
 """Module with general utility methods used in tag maps package.
 """
 
-import os
-import sys
-import emoji
-import unicodedata
-import math
+from __future__ import absolute_import
+
 import argparse
-import numpy as np
-import re
 import hashlib
 import io
 import logging
-import pyproj
-import fiona
-import regex
-from importlib import reload
-import shapely.geometry as geometry
-from fiona.crs import from_epsg
-from pathlib import Path
-from shapely.ops import transform, cascaded_union, polygonize
+import os
+import re
+import sys
+import unicodedata
 from datetime import timedelta
-from typing import List, Set, Dict, Tuple, Optional, TextIO, Iterable
-from math import radians, cos, sin, asin, sqrt
-from tagmaps.classes.shared_structure import CleanedPost, AnalysisBounds
+from importlib import reload
+import math
+from math import asin, cos, radians, sin, sqrt
+from typing import Dict, Iterable, List, Set, Tuple
+
+import emoji
+import numpy as np
+import pyproj
+import regex
+import shapely.geometry as geometry
+
+from tagmaps.classes.shared_structure import AnalysisBounds, CleanedPost
 
 
 class Utils():

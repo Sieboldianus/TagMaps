@@ -8,31 +8,23 @@ Returns:
     self.cleaned_post_dict: Cleaned list of posts
 """
 
+from __future__ import absolute_import
 
-import sys
-import os
-import ntpath
 import csv
 import logging
-from pathlib import Path
-from glob import glob
-from _csv import QUOTE_MINIMAL
-from decimal import Decimal
-import json
 import math
 import collections
-from typing import (
-    Type, List, Set, Dict, Tuple, Optional,
-    TextIO, Union, DefaultDict, NamedTuple, Counter as CDict)
-from collections import Counter
-from collections import defaultdict
-from collections import namedtuple
+from collections import defaultdict, namedtuple
+from pathlib import Path
+from typing import Counter as CDict
+from typing import (DefaultDict, Dict, List, NamedTuple, Set, TextIO, Tuple,
+                    Union)
 
+from _csv import QUOTE_MINIMAL
+from tagmaps.classes.shared_structure import (EMOJI, LOCATIONS, TAGS, TOPICS,
+                                              AnalysisBounds, CleanedPost,
+                                              ClusterType, PostStructure)
 from tagmaps.classes.utils import Utils
-from tagmaps.classes.shared_structure import (
-    EMOJI, LOCATIONS, TAGS, TOPICS, ClusterType)
-from tagmaps.classes.shared_structure import (
-    PostStructure, CleanedPost, AnalysisBounds)
 
 
 class PrepareData():

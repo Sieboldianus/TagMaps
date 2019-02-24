@@ -4,9 +4,11 @@
 Module for shared structural elements
 """
 
-from typing import List, Set, Dict, Tuple, Optional, TextIO, Any, NamedTuple
+from __future__ import absolute_import
+
 from collections import namedtuple
-from decimal import Decimal
+from typing import List, Tuple
+
 import attr
 
 LOCATIONS: str = 'Locations'

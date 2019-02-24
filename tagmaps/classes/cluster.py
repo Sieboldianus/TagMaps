@@ -4,29 +4,30 @@
 Module for tag maps clustering methods
 """
 
+from __future__ import absolute_import
+
 import logging
 import sys
 import warnings
-from collections import defaultdict
-from collections import namedtuple
+from collections import defaultdict, namedtuple
+from functools import partial
 from multiprocessing.pool import ThreadPool
-from typing import Any, Dict, List, Optional, Set, TextIO, Tuple, NamedTuple
+from typing import Any, Dict, List, NamedTuple, Set, Tuple
 
-import fiona
 import numpy as np
 import pandas as pd
 import pyproj
 import seaborn as sns
 import shapely.geometry as geometry
 from shapely.ops import transform
-from functools import partial
 
 from tagmaps.classes.alpha_shapes import AlphaShapes
+from tagmaps.classes.plotting import TPLT
 from tagmaps.classes.shared_structure import (EMOJI, LOCATIONS, TAGS, TOPICS,
                                               AnalysisBounds, CleanedPost,
                                               ClusterType)
-from tagmaps.classes.plotting import TPLT
 from tagmaps.classes.utils import Utils
+
 with warnings.catch_warnings():
     # filter sklearn\externals\joblib\parallel.py:268:
     # DeprecationWarning: check_pickle is deprecated

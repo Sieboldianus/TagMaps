@@ -2,15 +2,18 @@
 
 """Module for matplotlib, seaborn, pyplot methods.
 """
-from typing import List, Set, Dict, Tuple, Optional, TextIO, Iterable
+
+from __future__ import absolute_import
+
+from typing import Tuple
+
 import matplotlib.pyplot as plt
-from matplotlib.figure import Figure
 from matplotlib.ticker import FuncFormatter
 from descartes import PolygonPatch
-from tagmaps.classes.shared_structure import CleanedPost, AnalysisBounds
+
+from tagmaps.classes.shared_structure import (EMOJI, LOCATIONS, TAGS,
+                                              AnalysisBounds)
 from tagmaps.classes.utils import Utils
-from tagmaps.classes.shared_structure import (
-    TAGS, LOCATIONS, EMOJI, TOPICS)
 
 
 class TPLT():
