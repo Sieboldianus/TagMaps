@@ -405,3 +405,17 @@ class TagMaps():
     def write_cleaned_data(self):
         """Write cleaned data to file for intermediate results store"""
         self.lbsn_data.write_cleaned_data(self.cleaned_post_dict)
+
+    @TMDec.init_data_check
+    def get_pseudo_anonymized_data(self):
+        """Returns dict of cleaned posts with removed
+        personal information.
+        
+        
+        E.g. without terms and tags that are not collectively
+        relevant to users. This is the
+        reduced data that is finally used to generate tagmaps.
+        """
+        panon_cleaned_post_dict = self.lbsn_data.get_panonymized_posts(
+            self.cleaned_post_dict)
+        return panon_cleaned_post_dict

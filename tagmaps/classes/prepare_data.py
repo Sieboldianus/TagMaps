@@ -201,7 +201,7 @@ class PrepareData():
             panon_set[cls_type] = {item.name for item in self.cleaned_stats[cls_type].top_items_list[:max_items]}
         return panon_set
 
-    def get_panonymized_cleaned_posts(
+    def get_panonymized_posts(
             self,
             cleaned_post_dict: Dict[str, CleanedPost]) -> Dict[str, CleanedPost]:
         """Returns a new cleaned post dict with reduced information detail
@@ -213,7 +213,7 @@ class PrepareData():
         """
         panon_cleaned_post_dict = defaultdict(CleanedPost)
         panon_set = self._get_panon_sets()
-        for upl, cleaned_post in cleaned_post_dict:
+        for upl, cleaned_post in cleaned_post_dict.items():
             upl_panon = self._panonymize_cleaned_post(
                 cleaned_post, panon_set)
             panon_cleaned_post_dict[upl] = upl_panon
