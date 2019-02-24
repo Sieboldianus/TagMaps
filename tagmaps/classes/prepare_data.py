@@ -176,11 +176,7 @@ class PrepareData():
     def write_cleaned_data(self, cleaned_post_dict: Dict[str, CleanedPost]):
         self.log.info(
             f'Writing cleaned intermediate data to file (Output_cleaned.csv)..')
-        # prepare panon
-        panon_set = dict()
-        for cls_type in self.cluster_types:
-            max_items = self.cleaned_stats[cls_type].max_items
-            panon_set[cls_type] = {item.name for item in self.cleaned_stats[cls_type].top_items_list[:max_items]}  
+        panon_set = self._get_panon_sets()
         with open(self.output_folder / 'Output_cleaned.csv', 'w',
                   encoding='utf8') as csvfile:
             # get headerline from class structure
@@ -195,6 +191,33 @@ class PrepareData():
                     datawriter, cleaned_post,
                     panon_set)
         self.log.info(' done.')
+
+    def _get_panon_sets(self):
+        """Prepare panon by generating dict of sets with popular terms
+        """
+        panon_set = dict()
+        for cls_type in self.cluster_types:
+            max_items = self.cleaned_stats[cls_type].max_items
+            panon_set[cls_type] = {item.name for item in self.cleaned_stats[cls_type].top_items_list[:max_items]}
+        return panon_set
+
+    def get_panonymized_cleaned_posts(
+            self,
+            cleaned_post_dict: Dict[str, CleanedPost]) -> Dict[str, CleanedPost]:
+        """Returns a new cleaned post dict with reduced information detail
+        based on global information patterns
+        
+        This is not a true anonymization. Returned items have specifically
+        the highly identifyable information removed (specific tags/terms used by few
+        users), which make it harder to identify original users from resulting data.
+        """
+        panon_cleaned_post_dict = defaultdict(CleanedPost)
+        panon_set = self._get_panon_sets()
+        for upl, cleaned_post in cleaned_post_dict:
+            upl_panon = self._panonymize_cleaned_post(
+                cleaned_post, panon_set)
+            panon_cleaned_post_dict[upl] = upl_panon
+        return panon_cleaned_post_dict
 
     def _get_item_stats(self) -> Dict['ClusterType', NamedTuple]:
         """After data is loaded, this collects data and stats
