@@ -8,30 +8,19 @@ Returns:
                  that is needed for Tag Maps clustering
 """
 
+from __future__ import absolute_import
 
-import sys
-import os
-import ntpath
 import csv
-import logging
-from pathlib import Path
-from glob import glob
-from _csv import QUOTE_MINIMAL
-from decimal import Decimal
 import json
-import math
-import collections
-from typing import List, Set, Dict, Tuple, Optional, TextIO
-from collections import Counter
-from collections import defaultdict
-from collections import namedtuple
+import logging
+import sys
+from decimal import Decimal
+from typing import Dict, Set, TextIO
 
-from shapely.geometry import Polygon
-from shapely.geometry import shape
 from shapely.geometry import Point
+
+from tagmaps.classes.shared_structure import AnalysisBounds, PostStructure
 from tagmaps.classes.utils import Utils
-from tagmaps.classes.shared_structure import (
-    PostStructure, CleanedPost, AnalysisBounds)
 
 
 class LoadData():
@@ -83,7 +72,7 @@ class LoadData():
                 self._parse_input_files()))
         return post_pipeline
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, c_type, value, traceback):
         """Contextmanager exit: nothing to do here"""
         return False
 
@@ -189,7 +178,7 @@ class LoadData():
                 post.get(self.cfg.source_map.longitude_col)
             )
             # update boundary
-            self.bounds._upd_latlng_bounds(lat, lng)
+            self.bounds.upd_latlng_bounds(lat, lng)
         lbsn_post.latitude = lat
         lbsn_post.longitude = lng
         # Note: loc_id not loaded from file
@@ -254,8 +243,8 @@ class LoadData():
         return 0
 
     def _get_emoji(self, post_body):
-        emoji_filtered = set(Utils._extract_emoji(post_body))
-        if not len(emoji_filtered) == 0:
+        emoji_filtered = set(Utils.extract_emoji(post_body))
+        if emoji_filtered:
             self.stats.count_emojis_global += len(emoji_filtered)
             # self.total_emoji_counter.update(emoji_filtered)
         return emoji_filtered
@@ -303,8 +292,8 @@ class LoadData():
             self.stats.skipped_count += 1
             return True
         if post.loc_id not in self.cfg.shape_included_locid_hash:
-            LngLatPoint = Point(post.longitude, post.latitude)
-            if not LngLatPoint.within(self.cfg.shp_geom):
+            lng_lat_point = Point(post.longitude, post.latitude)
+            if not lng_lat_point.within(self.cfg.shp_geom):
                 self.stats.skipped_count += 1
                 self.shape_exclude_locid_hash.add(post.loc_id)
                 return True
@@ -346,6 +335,7 @@ class LoadData():
                 self.cfg.max_items = int(inputtext)
 
     def input_stats_report(self):
+        """Return input stats"""
         self.log.info(
             f'\nTotal post count (PC): '
             f'{self.stats.count_glob:02d}')

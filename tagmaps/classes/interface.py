@@ -6,26 +6,23 @@ Module for tag maps tkinker interface
 for (optional) user input
 """
 
+from __future__ import absolute_import
+
 import sys
-import tkinter as tk
-from tkinter import TclError
-import logging
-from tkinter.messagebox import showerror
-import tkinter.messagebox
-import matplotlib
-import numpy as np
-import matplotlib.pyplot as plt
-from typing import List, Set, Dict, Tuple, Optional, TextIO
 import traceback
-import shapely.geometry as geometry
-from tagmaps.classes.plotting import TPLT
-from tagmaps.classes.utils import Utils
-from tagmaps.classes.shared_structure import (
-    CleanedPost, AnalysisBounds,
-    ClusterType, TAGS, LOCATIONS, EMOJI, TOPICS)
+import tkinter as tk
+import tkinter.messagebox
+from tkinter import TclError
+from tkinter.messagebox import showerror
+from typing import Dict, List, Tuple
+
+import matplotlib.pyplot as plt
+import numpy as np
+
 from tagmaps.classes.cluster import ClusterGen
-from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-from matplotlib.figure import Figure
+from tagmaps.classes.plotting import TPLT
+from tagmaps.classes.shared_structure import CleanedPost, LOCATIONS
+from tagmaps.classes.utils import Utils
 
 # enable interactive mode for pyplot
 plt.ion()
@@ -40,6 +37,8 @@ plt.style.use('ggplot')
 
 
 class UserInterface():
+    """User interface class for interacting input"""
+
     def __init__(self,
                  clusterer_list: List[ClusterGen] = None,
                  location_names_dict: Dict[str, str] = None
@@ -72,16 +71,19 @@ class UserInterface():
         self.fig2 = None
         self.fig3 = None
         self.fig4 = None
+        # user selected item
+        self.lastselection = None
         # A frame is created for each window/part of the gui;
         # after it is used, it is destroyed with frame.destroy()
         header_frame = tk.Frame(self.app.floater)
-        canvas = tk.Canvas(header_frame, width=150, height=220,
-                           highlightthickness=0, background="gray7")
-        header_label = tk.Label(canvas,
-                                text="Optional: Exclude tags, "
-                                "emoji or locations.",
-                                background="gray7", fg="gray80",
-                                font="Arial 10 bold")
+        canvas = tk.Canvas(
+            header_frame, width=150, height=220,
+            highlightthickness=0, background="gray7")
+        header_label = tk.Label(
+            canvas, text="Optional: Exclude tags, "
+            "emoji or locations.",
+            background="gray7", fg="gray80",
+            font="Arial 10 bold")
         header_label.pack(padx=10, pady=10)
 
         self._clst_index = tk.IntVar()
@@ -89,34 +91,36 @@ class UserInterface():
         # Radiobuttons for selecting list
         idx = 0
         for clst in self._clst_list:
-            r = tk.Radiobutton(canvas,
-                               text=f'{clst.cls_type}',
-                               variable=self._clst_index,
-                               value=idx,
-                               indicatoron=0,
-                               command=self._change_clusterer,
-                               background="gray20",
-                               fg="gray80",
-                               borderwidth=0,
-                               font="Arial 10 bold",
-                               width=15)
-            r.pack(side='left')
+            radio_b = tk.Radiobutton(
+                canvas, text=f'{clst.cls_type}',
+                variable=self._clst_index,
+                value=idx,
+                indicatoron=0,
+                command=self._change_clusterer,
+                background="gray20",
+                fg="gray80",
+                borderwidth=0,
+                font="Arial 10 bold",
+                width=15)
+            radio_b.pack(side='left')
             idx += 1
         canvas.pack(fill='both', padx=0, pady=0,)
         header_frame.pack(fill='both', padx=0, pady=0)
         listbox_frame = tk.Frame(self.app.floater)
-        canvas = tk.Canvas(listbox_frame, width=150, height=220,
-                           highlightthickness=0, background="gray7")
-        guide_label = tk.Label(canvas,
-                               text=f'Select all items you wish to exclude '
-                               f'from analysis \n '
-                               f'and click on remove. Proceed if ready.',
-                               background="gray7", fg="gray80")
+        canvas = tk.Canvas(
+            listbox_frame, width=150, height=220,
+            highlightthickness=0, background="gray7")
+        guide_label = tk.Label(
+            canvas, text=f'Select all items you wish to exclude '
+            f'from analysis \n '
+            f'and click on remove. Proceed if ready.',
+            background="gray7", fg="gray80")
         guide_label.pack(padx=10, pady=10)
         listbox_font = None
-        listbox = tk.Listbox(canvas,
-                             selectmode=tk.EXTENDED, bd=0, background="gray29",
-                             fg="gray91", width=30, font=listbox_font)
+        listbox = tk.Listbox(
+            canvas,
+            selectmode=tk.EXTENDED, bd=0, background="gray29",
+            fg="gray91", width=30, font=listbox_font)
         listbox.bind('<<ListboxSelect>>', self._onselect)
         scroll = tk.Scrollbar(canvas, orient=tk.VERTICAL,
                               background="gray20", borderwidth=0)
@@ -128,30 +132,32 @@ class UserInterface():
         self._populate_listbox()
         canvas.pack(fill='both', padx=0, pady=0)
         listbox_frame.pack(fill='both', padx=0, pady=0)
-        buttonsFrame = tk.Frame(self.app.floater)
-        canvas = tk.Canvas(buttonsFrame, width=150, height=200,
+        buttons_frame = tk.Frame(self.app.floater)
+        canvas = tk.Canvas(buttons_frame, width=150, height=200,
                            highlightthickness=0, background="gray7")
         UserInterface._create_button(
             canvas, "Remove Selected", lambda: self._delete_fromtoplist(
                 self.listbox),
             left=False)
-        c = tk.Checkbutton(canvas, text="Map Tags",
-                           variable=self.gen_preview_map,
-                           background="gray7", fg="gray80",
-                           borderwidth=0, font="Arial 10 bold")
-        c.pack(padx=10, pady=10)
-        self.tk_scalebar = tk.Scale(canvas,
-                                    from_=(self._clst.cluster_distance/100),
-                                    to=(self._clst.cluster_distance*2),
-                                    orient=tk.HORIZONTAL,
-                                    resolution=0.1,
-                                    command=self._change_cluster_dist,
-                                    length=300,
-                                    label="Cluster Cut Distance (in Meters)",
-                                    background="gray20",
-                                    borderwidth=0,
-                                    fg="gray80",
-                                    font="Arial 10 bold")
+        check_b = tk.Checkbutton(
+            canvas, text="Map Tags",
+            variable=self.gen_preview_map,
+            background="gray7", fg="gray80",
+            borderwidth=0, font="Arial 10 bold")
+        check_b.pack(padx=10, pady=10)
+        self.tk_scalebar = tk.Scale(
+            canvas,
+            from_=(self._clst.cluster_distance/100),
+            to=(self._clst.cluster_distance*2),
+            orient=tk.HORIZONTAL,
+            resolution=0.1,
+            command=self._change_cluster_dist,
+            length=300,
+            label="Cluster Cut Distance (in Meters)",
+            background="gray20",
+            borderwidth=0,
+            fg="gray80",
+            font="Arial 10 bold")
         # set position of slider to center
         # (clusterTreeCuttingDist*10) - (clusterTreeCuttingDist/10)/2)
         self.tk_scalebar.set(self._clst.cluster_distance)
@@ -167,23 +173,23 @@ class UserInterface():
         UserInterface._create_button(
             canvas, "Quit", self._quit_tkinter)
         canvas.pack(fill='both', padx=0, pady=0)
-        buttonsFrame.pack(fill='both', padx=0, pady=0)
+        buttons_frame.pack(fill='both', padx=0, pady=0)
 
     @staticmethod
     def _create_button(canvas, text: str, command, left: bool = True):
         """Create button with text and command
 
         and pack to canvas."""
-        b = tk.Button(canvas, text=text,
-                      command=command,
-                      background="gray20",
-                      fg="gray80",
-                      borderwidth=0,
-                      font="Arial 10 bold")
+        button = tk.Button(canvas, text=text,
+                           command=command,
+                           background="gray20",
+                           fg="gray80",
+                           borderwidth=0,
+                           font="Arial 10 bold")
         if left:
-            b.pack(padx=10, pady=10, side="left")
+            button.pack(padx=10, pady=10, side="left")
         else:
-            b.pack(padx=10, pady=10)
+            button.pack(padx=10, pady=10)
 
     def _populate_listbox(self):
         """Populate tkinter listbox with records
@@ -199,19 +205,17 @@ class UserInterface():
         # maximum of 1000 entries shown
         for item in top_list[:1000]:
             if self._clst.cls_type == LOCATIONS:
-                item_name = Utils._get_locname(item[0], loc_name_dict)
+                item_name = Utils.get_locname(item.name, loc_name_dict)
             else:
-                item_name = item[0]
+                item_name = item.name
             try:
                 # try inserting emoji first,
                 # some emoji can be printed
-                listbox.insert(tk.END, f'{item_name} ({item[1]} user)')
+                listbox.insert(tk.END, f'{item_name} ({item.ucount} user)')
             except TclError:
                 # replace emoji by unicode name on error
-                emoji = Utils._get_emojiname(item_name)
-                listbox.insert(tk.END, f'{emoji} ({item[1]} user)')
-
-
+                emoji = Utils.get_emojiname(item_name)
+                listbox.insert(tk.END, f'{emoji} ({item.ucount} user)')
 
     def start(self):
         """Start up user interface after initialization
@@ -229,16 +233,16 @@ class UserInterface():
         """Show preview map(s) based on tag selection"""
         # Get cluster data first
         (_, _, points, sel_colors,
-         mask_noisy, number_of_clusters) = self._clst._cluster_item(
-            item=sel_item,
-            preview_mode=True)
+         mask_noisy, number_of_clusters) = self._clst.cluster_item(
+             item=sel_item,
+             preview_mode=True)
         ## Cluster Map Plot ##
         if not plt.fignum_exists(1):
             self.fig1 = plt.figure(1)
         else:
             self.fig1.clf()
         self.fig1.add_subplot(111)
-        self.fig1 = TPLT._get_cluster_preview(
+        self.fig1 = TPLT.get_cluster_preview(
             points, sel_colors, sel_item, self._clst.bounds, mask_noisy,
             self._clst.cluster_distance, number_of_clusters,
             self._clst.autoselect_clusters, fig=self.fig1)
@@ -248,12 +252,12 @@ class UserInterface():
             self.fig2 = plt.figure(2)
         else:
             self.fig2.clf()
-        ax = self.fig2.add_subplot(111)
+        axis = self.fig2.add_subplot(111)
         # p is the number of max count of leafs in the tree,
         # this should at least be the number of clusters*10,
         # not lower than 50 [but max 500 to not crash]
         self._clst.clusterer.single_linkage_tree_.plot(
-            axis=ax,
+            axis=axis,
             truncate_mode='lastp',
             p=max(50, min(number_of_clusters*10, 256)))
         item_name = sel_item
@@ -266,31 +270,31 @@ class UserInterface():
             # Unfixed issue:
             # on consecutive updates
             # the colorbar is added multiple times
-            # todo: resolve by retrieving only
+            # possible solution: retrieve only
             # condensed data from hdbscan
             # and create plot in tagmaps
             if not plt.fignum_exists(3):
                 self.fig3 = plt.figure(3)
             else:
                 self.fig3.clf()
-            ax = self.fig3.add_subplot(111)
+            axis = self.fig3.add_subplot(111)
             self._clst.clusterer.condensed_tree_.plot(
-                axis=ax,
+                axis=axis,
                 log_size=True
-                )
+            )
             self.fig3.canvas.set_window_title('Condensed Tree')
-            TPLT._set_plt_suptitle(
+            TPLT.set_plt_suptitle(
                 self.fig3, sel_item, self._clst.cls_type)
-            TPLT.set_plt_tick_params(ax)
+            TPLT.set_plt_tick_params(axis)
             self.fig3.canvas.draw_idle()
         if self.create_min_spanning_tree:
             if not plt.fignum_exists(4):
                 self.fig4 = plt.figure(4)
             else:
                 self.fig4.clf()
-            ax = self.fig4.add_subplot(111)
+            axis = self.fig4.add_subplot(111)
             self._clst.clusterer.minimum_spanning_tree_.plot(
-                axis=ax,
+                axis=axis,
                 edge_cmap='viridis',
                 edge_alpha=0.6,
                 node_size=10,
@@ -298,22 +302,20 @@ class UserInterface():
             self.fig4.canvas.set_window_title(
                 'Minimum Spanning Tree')
             # tkinter.messagebox.showinfo("messagr", str(type(ax)))
-            TPLT._set_plt_suptitle(
+            TPLT.set_plt_suptitle(
                 self.fig4, sel_item, self._clst.cls_type)
-            ax.set_title(
+            axis.set_title(
                 f'Minimum Spanning Tree @ {self._clst.cluster_distance}m',
                 fontsize=12, loc='center')
             self.fig4.legend(fontsize=10)
             self.fig4.canvas.draw()
-        TPLT.set_plt_tick_params(ax)
+        TPLT.set_plt_tick_params(axis)
         self._update_scalebar()
-
-
 
     def _intf_selection_preview(self, sel_item: str):
         """Update preview map based on item selection"""
         # tkinter.messagebox.showinfo("Proceed", f'{sel_item}')
-        points = self._clst._get_np_points(
+        points = self._clst.get_np_points(
             item=sel_item,
             silent=True)
         if points is None:
@@ -330,13 +332,13 @@ class UserInterface():
         self._intf_plot_points(sel_item, points)
 
     def _intf_plot_points(self, item_name: str, points):
-        self.fig1 = TPLT._get_fig_points(
+        self.fig1 = TPLT.get_fig_points(
             self.fig1,
             points, self._clst.bounds)
-        TPLT._set_plt_suptitle(
+        TPLT.set_plt_suptitle(
             self.fig1, item_name, self._clst.cls_type)
 
-    def _report_callback_exception(self, exc, val, tb):
+    def _report_callback_exception(self, __, val, ___):
         """Override for error reporting during tkinter mode"""
         showerror("Error", message=str(val))
         exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -414,11 +416,11 @@ class UserInterface():
         Args:
             evt (event object): event object for selected item
         """
-        w = evt.widget
-        self.lastselection = w.index(tk.ACTIVE)
-        sel_index = w.curselection()[0]
+        widg = evt.widget
+        self.lastselection = widg.index(tk.ACTIVE)
+        sel_index = widg.curselection()[0]
         if (self.gen_preview_map.get() == 1 and
-                len(w.curselection()) == 1):
+                len(widg.curselection()) == 1):
             # generate preview map
             # only if selection box is checked
             # and only if one item is checked
@@ -458,7 +460,7 @@ class UserInterface():
             self.tk_scalebar.set(i)
             self.app.update()
             # self._clst.cluster_distance = i
-            clusters, self.selected_postlist_guids = (
+            clusters, __ = (
                 self._clst.cluster_item(sel_item, None, True)
             )
             mask_noisy = (clusters == -1)
@@ -466,17 +468,17 @@ class UserInterface():
             number_of_clusters = len(np.unique(clusters[~mask_noisy]))
             if number_of_clusters == 1:
                 break
-            form_string = f'{i},{number_of_clusters},'
-            f'{mask_noisy.sum()},{len(mask_noisy)},\n'
+            form_string = (f'{i},{number_of_clusters},'
+                           f'{mask_noisy.sum()},{len(mask_noisy)},\n')
             scalecalclist.append(form_string)
-        with open(f'02_Output/scaletest_{sel_item[0]}.txt',
+        with open(f'02_Output/scaletest_{sel_item.name}.txt',
                   "w", encoding='utf-8') as logfile_a:
             for scalecalc in scalecalclist:
                 logfile_a.write(scalecalc)
         plt.figure(1).clf()
         # plt references the last figure accessed
         self.fig1 = plt.figure()
-        TPLT._set_plt_suptitle(self.fig1, sel_item[0], self._clst.cls_type)
+        TPLT.set_plt_suptitle(self.fig1, sel_item.name, self._clst.cls_type)
         self.fig1.canvas.set_window_title('Cluster Preview')
         dist_text = ''
         if self._clst.autoselect_clusters is False:
@@ -499,7 +501,7 @@ class UserInterface():
         for index in selection[::-1]:
             listbox.delete(index)
             id_list_selected.append(self._clst.top_list[index][0])
-            del(self._clst.top_list[index])
+            del self._clst.top_list[index]
         # remove all cleaned posts from processing list if
         # location is removed
         if self._clst.cls_type == LOCATIONS:
@@ -526,13 +528,13 @@ class UserInterface():
                                in self._clst.cleaned_post_dict.values()
                                if post_record.loc_id in post_locids]
         if UserInterface._query_user(
-            f'This will also remove '
-            f'{len(postguids_to_remove)} posts from further processing.\n'
+                f'This will also remove '
+                f'{len(postguids_to_remove)} posts from further processing.\n'
                 f'Continue?', f'Continue?') is True:
             # the following code will remove
             # dict records and list entries from current clusterer
             for post_guid in postguids_to_remove:
-                del(self._clst.cleaned_post_dict[post_guid])
+                del self._clst.cleaned_post_dict[post_guid]
             # To modify the list in-place, assign to its slice:
             self._clst.cleaned_post_list[:] = list(
                 self._clst.cleaned_post_dict.values())
@@ -585,25 +587,28 @@ class FloatingWindow(tk.Toplevel):
         self.grip.bind("<ButtonRelease-1>", self._stop_move)
         self.grip.bind("<B1-Motion>", self._on_motion)
         # center Floating Window
-        w = self.winfo_reqwidth()
-        h = self.winfo_reqheight()
-        ws = self.winfo_screenwidth()
-        hs = self.winfo_screenheight()
-        x = (ws/2) - (w/2)
-        y = (hs/2) - (h/2)
-        self.geometry('+%d+%d' % (x, y))
+        w_win = self.winfo_reqwidth()
+        h_win = self.winfo_reqheight()
+        ws_win = self.winfo_screenwidth()
+        hs_win = self.winfo_screenheight()
+        x_win = (ws_win/2) - (w_win/2)
+        y_win = (hs_win/2) - (h_win/2)
+        self.geometry('+%d+%d' % (x_win, y_win))
+        # coordinates of floating window
+        self.x_move = None
+        self.y_move = None
 
     def _start_move(self, event):
-        self.x = event.x
-        self.y = event.y
+        self.x_move = event.x
+        self.y_move = event.y
 
-    def _stop_move(self, event):
-        self.x = None
-        self.y = None
+    def _stop_move(self, __):
+        self.x_move = None
+        self.y_move = None
 
     def _on_motion(self, event):
-        deltax = event.x - self.x
-        deltay = event.y - self.y
-        x = self.winfo_x() + deltax
-        y = self.winfo_y() + deltay
-        self.geometry("+%s+%s" % (x, y))
+        deltax = event.x - self.x_move
+        deltay = event.y - self.y_move
+        x_win = self.winfo_x() + deltax
+        y_win = self.winfo_y() + deltay
+        self.geometry("+%s+%s" % (x_win, y_win))

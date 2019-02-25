@@ -4,20 +4,24 @@
 Module for compiling TagMaps results and writing output
 """
 
-import fiona
-from pathlib import Path
-from fiona.crs import from_epsg
-import shapely.geometry as geometry
-from typing import List, Set, Dict, Tuple, Optional, TextIO
-from collections import namedtuple
+from __future__ import absolute_import
+
 from operator import itemgetter
+from pathlib import Path
+from typing import Dict, List, TextIO, Tuple
+from math import sqrt
+
+import shapely.geometry as geometry
+import fiona
+from fiona.crs import from_epsg
+
+from tagmaps.classes.shared_structure import (EMOJI,
+                                              AnalysisBounds)
 from tagmaps.classes.utils import Utils
-from tagmaps.classes.shared_structure import (AnalysisBounds,
-                                              TAGS, LOCATIONS, EMOJI)
 
 
 class Compile():
-
+    """Compile results into shapefiles, add statistics, normalize."""
     @classmethod
     def write_shapes(cls,
                      bounds: AnalysisBounds,
@@ -35,10 +39,12 @@ class Compile():
             attached statistic information
         TODO: refactor into compile & write shapes; update output_folder
         """
-        bound_points_shapely = Utils._get_shapely_bounds(
+        if output_folder:
+            print("")
+        bound_points_shapely = Utils.get_shapely_bounds(
             bounds)
         # data always in lat/lng WGS1984
-        __, epsg_code = Utils._get_best_utmzone(
+        __, epsg_code = Utils.get_best_utmzone(
             bound_points_shapely)
         cls._compile_merge_shapes(shapes_and_meta_list, epsg_code)
 
@@ -368,6 +374,8 @@ class Compile():
         """Helper Function for updating ArcGIS legend
         - not implemented
         """
+        if not weights_dict:
+            return
         return
 
     @staticmethod
@@ -403,3 +411,36 @@ class Compile():
             value_normalized = cls._normalize_value(
                 weights_tuple, local_value)
         return value_normalized
+
+    @staticmethod
+    def get_weight(weighting_id: int,
+                   post_count: int,
+                   unique_user_count: int):
+        """Get Weight for input metrics
+        user count and post count based on
+        three types of weighting formulas (id):
+        1: weightsv1 -> Standard weighting formula
+           (x**y means x raised to the power y);
+           +1 to UserCount: prevent 1-2
+           Range from being misaligned
+        2: weightsv2 -> less importance
+           on User_Count compared
+           to photo count [Join_Count];
+           +1 to UserCount: prevent 1-2
+           Range from being misaligned
+        3: weightsv3 -> Ignores User_Count,
+           this will emphasize individual
+           and very active users
+        """
+        if weighting_id == 1:
+            weighted_value = post_count * (
+                sqrt(1/(post_count / (
+                    unique_user_count+1))**3))
+        elif weighting_id == 2:
+            weighted_value = post_count * (
+                sqrt(1/(post_count / (
+                    unique_user_count+1))**2))
+        elif weighting_id == 3:
+            weighted_value = sqrt(
+                (post_count+(2*sqrt(post_count)))*2)
+        return weighted_value

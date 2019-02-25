@@ -4,23 +4,24 @@
 Config processing for tag maps package.
 """
 
-import os
-import sys
+from __future__ import absolute_import
+
 import argparse
 import configparser
 import csv
+import logging
+import os
+import sys
+from pathlib import Path
+
 import fiona
 import pyproj
-import logging
-from pathlib import Path
-from shapely.geometry import Polygon
 from shapely.geometry import shape
-from shapely.geometry import Point
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 
 class BaseConfig:
+    """Optional class for handling of typical config parameters"""
+
     def __init__(self):
         # Set Default Config options here
         # or define options as input args
@@ -319,8 +320,9 @@ class BaseConfig:
             print(f"{file} not found.")
             return
         store_set = set()
-        with open(file, newline="", encoding="utf8") as f:
-            store_set = set([line.lower().rstrip("\r\n") for line in f])
+        with open(file, newline="", encoding="utf8") as f_handle:
+            store_set = set(
+                [line.lower().rstrip("\r\n") for line in f_handle])
         return store_set
 
     def load_place_stoplist(self, file):
@@ -328,12 +330,12 @@ class BaseConfig:
         if not os.path.isfile(file) or self.ignore_stoplists is True:
             return
         store_set = set()
-        with open(file, newline="", encoding="utf8") as f:
-            f.readline()
+        with open(file, newline="", encoding="utf8") as f_handle:
+            f_handle.readline()
             # Get placeid
             store_set = set(
                 [line.rstrip("\r\n").split(",")[0]
-                 for line in f if len(line) > 0]
+                 for line in f_handle if len(line) > 0]
             )
         self.sort_out_places = True
         return store_set
@@ -347,10 +349,10 @@ class BaseConfig:
         store_dict = dict()
         if os.path.isfile(file) or self.ignore_place_corrections is True:
             return
-        with open(file, newline="", encoding="utf8") as f:
-            f.readline()
-            for line in f:
-                if len(line) == 0:
+        with open(file, newline="", encoding="utf8") as f_handle:
+            f_handle.readline()
+            for line in f_handle:
+                if not line:
                     continue
                 linesplit = line.rstrip("\r\n").split(",")
                 if len(linesplit) == 1:
