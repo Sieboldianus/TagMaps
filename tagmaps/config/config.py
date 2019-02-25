@@ -73,7 +73,7 @@ class BaseConfig:
         self.load_from_intermediate = None
         self.parse_args()
 
-        if not self.input_folder.exists():
+        if not self.load_from_intermediate and not self.input_folder.exists():
             raise ValueError(f"Folder {self.input_folder} not found.")
         if not self.config_folder.exists():
             raise ValueError(f"Folder {self.config_folder} not found.")
