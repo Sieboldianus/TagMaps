@@ -70,6 +70,7 @@ class BaseConfig:
         self.config_folder = self.resource_path / "00_Config"
         self.input_folder = self.resource_path / "01_Input"
         self.output_folder = Path.cwd() / "02_Output"
+        self.load_from_intermediate = None
         self.parse_args()
 
         if not self.input_folder.exists():
@@ -226,6 +227,11 @@ class BaseConfig:
                             help="Complete path for config folder",
                             default="",
                             type=str)
+        parser.add_argument("-lI", "--loadIntermediate",
+                            help="Load from intermediate (cleaned) data "
+                            "from path",
+                            default="",
+                            type=str)
 
         args = parser.parse_args()
         if args.verbose:
@@ -276,6 +282,8 @@ class BaseConfig:
             self.input_folder = args.inputFolder
         if args.configFolder:
             self.config_folder = args.configFolder
+        if args.loadIntermediate:
+            self.load_from_intermediate = args.loadIntermediate
 
     def load_filterlists(self):
         """Load filterlists for filtering terms (instring and full match)

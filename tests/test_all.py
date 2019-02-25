@@ -6,13 +6,13 @@ evoked with tagmaps --autoMode --maxItems 50
 
 import sys
 import os
-import argparse
 import traceback
 from pathlib import Path
 from tagmaps.__main__ import main as tm_main
 
 
 def tagmaps_system_integration_test():
+    """Test complete method integration using main()"""
     # override resource path
     os.environ["TAGMAPS_RESOURCES"] = str(Path.cwd() / "resources")
     try:

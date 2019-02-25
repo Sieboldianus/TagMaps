@@ -68,16 +68,19 @@ def main():
         local_saturation_check=cfg.local_saturation_check,
         max_items=cfg.max_items,
         logging_level=cfg.logging_level)
-    # read input records from csv
-    with input_data as records:
-        for record in records:
-            tagmaps.add_record(record)
-    # to load data from intermediate results:
-    # tagmaps.prepare_data(input_path='01_Input/Output_cleaned.csv')
 
-    # get statistics for input data
-    # and indested data
-    input_data.input_stats_report()
+    if cfg.load_from_intermediate:
+        # load data from intermediate (already filtered) results
+        tagmaps.prepare_data(input_path=cfg.load_from_intermediate)
+    else:
+        # read and process unfiltered input records from csv
+        with input_data as records:
+            for record in records:
+                tagmaps.add_record(record)
+        # get statistics for
+        # unfiltered input data
+        # and indested data
+        input_data.input_stats_report()
     tagmaps.global_stats_report()
 
     # get current time for monitoring
@@ -91,7 +94,7 @@ def main():
     # calculate and report item stats
     tagmaps.item_stats_report()
 
-    if cfg.write_cleaned_data:
+    if cfg.write_cleaned_data and not cfg.load_from_intermediate:
         # write intermediate results
         tagmaps.write_cleaned_data()
         tagmaps.write_toplists()
