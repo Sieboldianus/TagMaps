@@ -9,7 +9,8 @@ test:
     # test dev install
     - pip install -e . --no-dependencies
     # run main test
-    - python tests/test_all.py --maxItems 50 --autoMode --loadIntermediate "resources/01_Input/flickr_dresden_cc-by-licenses.csv"
+    cleaned_data_file=$(readlink -f .resources/01_Input/flickr_dresden_cc-by-licenses.csv)
+    - python tests/test_all.py --maxItems 50 --autoMode --loadIntermediate=$cleaned_data_file
     # create badges
     - pylint --output-format=text tagmaps | tee pylint.txt || pylint-exit $?
     - score=$(sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p' pylint.txt)
