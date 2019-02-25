@@ -79,8 +79,9 @@ def main():
                 tagmaps.add_record(record)
         # get statistics for
         # unfiltered input data
-        # and indested data
         input_data.input_stats_report()
+
+    # show statistics for ingested data
     tagmaps.global_stats_report()
 
     # get current time for monitoring
