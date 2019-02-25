@@ -207,7 +207,7 @@ class PrepareData():
         panon_cleaned_post_dict = defaultdict(CleanedPost)
         panon_set = self._get_panon_sets()
         for upl, cleaned_post in cleaned_post_dict.items():
-            upl_panon = self._panonymize_cleaned_post(
+            upl_panon = PrepareData._panonymize_cleaned_post(
                 cleaned_post, panon_set)
             panon_cleaned_post_dict[upl] = upl_panon
         return panon_cleaned_post_dict
@@ -408,7 +408,7 @@ class PrepareData():
         if listtype == LOCATIONS:
             # keep all locations
             return len(top_list)
-        elif listtype == EMOJI:
+        if listtype == EMOJI:
             # emoji use a smaller area than tags on the map
             # therefore we can keep more emoji
             # (e.g..: use 2 instead of 5)
@@ -660,8 +660,8 @@ class PrepareData():
             cleaned_post_location)
         datawriter.writerow(ploc_list)
 
+    @staticmethod
     def _panonymize_cleaned_post(
-            self,
             upl: CleanedPost,
             panon_set: Dict['ClusterType', Set[str]]) -> CleanedPost:
         """Returns a new cleaned post with reduced information detail

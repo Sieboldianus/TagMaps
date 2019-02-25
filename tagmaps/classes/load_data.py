@@ -148,8 +148,7 @@ class LoadData():
         if post_guid in self.guid_hash or len(post) < 15:
             self.stats.skipped_count += 1
             return None
-        else:
-            self.guid_hash.add(post_guid)
+        self.guid_hash.add(post_guid)
         origin_id = post.get(self.cfg.source_map.originid_col)
         if (self.filter_origin and
                 not origin_id == self.filter_origin):

@@ -31,6 +31,7 @@ pages:
   stage: deploy
   script:
     - mkdir .public
+    - cp resources/img6.png .public
     - cp pylint.svg .public
     - cp pipeline.svg .public
     - cp pypi.svg .public
