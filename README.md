@@ -8,7 +8,7 @@ Spatio-Temporal Tag and Photo Location Clustering for generating Tag Maps
 This Library uses the single-linkage tree that is available from [HDBSCAN](https://github.com/scikit-learn-contrib/hdbscan) to cut trees at a specific user-defined distance for all available tags in the given dataset. 
 Afterwards, Alpha Shapes are generated as a means to allow 'soft' placement of tags on a map, according to their area of use. Two Shapefiles are generated that can be used to visualize results, for example, in ESRI ArcGIS. 
 
-![Tag Map Example](/resources/img6.png?raw=true)
+![Tag Map Example](https://ad.vgiscience.org/TagCluster/img6.png?raw=true)
 
 Based on the papers:
 
