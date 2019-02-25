@@ -1,6 +1,6 @@
 """
-TagMaps: Tag clustering from spatially referenced
-         and tagged records
+TagMaps: Tag, Emoji and Location clustering
+         from spatially referenced and tagged records
 """
 
 from __future__ import absolute_import
