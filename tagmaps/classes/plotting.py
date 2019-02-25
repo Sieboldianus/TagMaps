@@ -27,7 +27,7 @@ class TPLT():
           These are the plots/subplots. Here, only one axes is used.
         - Colorbars and other stuff are also inside the figure.
           Adding a colorbar creates a new axe (unless specified otherwise)
-        - two modes exist, OO (object oriented) and 
+        - two modes exist, OO (object oriented) and
           pyplot("state-machine interface"),
           use OO-Mode if possible because it is more flexible and works
           better with Jupyter Mode
@@ -47,84 +47,109 @@ class TPLT():
         return dist_y_lat, dist_x_lng
 
     @staticmethod
-    def plt_setxy_lim(ax, bounds: AnalysisBounds):
+    def plt_setxy_lim(axis, bounds: AnalysisBounds):
         """Set global plotting bounds basedon Analysis Bounds"""
-        ax.set_xlim(
+        axis.set_xlim(
             [bounds.lim_lng_min, bounds.lim_lng_max])
-        ax.set_ylim(
+        axis.set_ylim(
             [bounds.lim_lat_min, bounds.lim_lat_max])
 
     @staticmethod
-    def _get_fig_points(fig, points, bounds, point_size=None):
-        # a new figure window
+    def get_fig_points(fig, points, bounds, point_size=None):
+        """Get figure for numpy.ndarray of points"""
         if not fig:
+            # create a new figure window
             fig = plt.figure(1)
             fig.add_subplot(111)
-        ax = fig.get_axes()[0]
+        axis = fig.get_axes()[0]
         # only one subplot (nrows, ncols, axnum)
         if point_size:
-            ax.scatter(points.T[0], points.T[1],
-                       color='red', alpha=0.5, s=point_size, linewidths=0)
+            axis.scatter(points.T[0], points.T[1],
+                         color='red', alpha=0.5, s=point_size, linewidths=0)
         else:
-            ax.scatter(points.T[0], points.T[1],
-                       color='red', **TPLT.PLOT_KWDS)
+            axis.scatter(points.T[0], points.T[1],
+                         color='red', **TPLT.PLOT_KWDS)
         fig.canvas.set_window_title('Preview Map')
-        TPLT.plt_setxy_lim(ax, bounds)
-        ax.tick_params(labelsize=10)
+        TPLT.plt_setxy_lim(axis, bounds)
+        axis.tick_params(labelsize=10)
         return fig
 
     @staticmethod
-    def _get_sel_preview(points, item, bounds, cls_type):
+    def get_sel_preview(points, item, bounds, cls_type):
         """Returns plt map for item selection preview"""
         # img_ratio = TPLT._get_img_ratio(bounds)
         fig = None
-        fig = TPLT._get_fig_points(fig, points, bounds)
-        TPLT._set_plt_suptitle(fig, item, cls_type)
+        fig = TPLT.get_fig_points(fig, points, bounds)
+        TPLT.set_plt_suptitle(fig, item, cls_type)
         return fig
 
     @staticmethod
-    def _get_centroid_preview(points, item, bounds, cls_type, point_size):
+    def get_centroid_preview(points, item, bounds, cls_type, point_size):
         """Returns plt map for item selection preview"""
         # img_ratio = TPLT._get_img_ratio(bounds)
         fig = None
-        fig = TPLT._get_fig_points(fig, points, bounds, point_size)
-        TPLT._set_plt_suptitle(fig, item, cls_type)
+        fig = TPLT.get_fig_points(fig, points, bounds, point_size)
+        TPLT.set_plt_suptitle(fig, item, cls_type)
         return fig
 
     @staticmethod
-    def _get_cluster_preview(points, sel_colors, item_text, bounds, mask_noisy,
-                             cluster_distance, number_of_clusters, auto_select_clusters=None,
-                             shapes=None, fig=None, cls_type=None):
+    def get_cluster_preview(
+            points, sel_colors, item_text, bounds, mask_noisy,
+            cluster_distance, number_of_clusters, auto_select_clusters=None,
+            shapes=None, fig=None, cls_type=None):
+        """Get cluster preview figure
+
+        Args:
+            points (numpy.ndarray): Point coordinates
+            sel_colors ([type]): Cluster colors
+            item_text ([type]): Text for suptitle
+            bounds ([type]): Bounds of plotting area
+            mask_noisy ([type]): Statistics for output of noisy clusters text
+            cluster_distance ([type]): Cluster distance
+            number_of_clusters (int): Total number of clusters
+            auto_select_clusters ([type], optional): Defaults to None.
+                If clusters have been auto-selected (no cluster distance)
+            shapes ([type], optional): Defaults to None.
+                Optional shapes for cluster outline/polygons.
+            fig ([type], optional): Defaults to None.
+                Optional figure for printing results.
+            cls_type ([type], optional): Defaults to None.
+                Cluster type, used to format text(s)
+
+        Returns:
+           figure [plt.fig]: Mpl Figure object
+        """
+
         if auto_select_clusters is None:
             auto_select_clusters = False
         # img_ratio = TPLT._get_img_ratio(bounds)
         if not fig:
             fig = plt.figure(1)
             fig.add_subplot(111)
-        ax = fig.get_axes()[0]
+        axis = fig.get_axes()[0]
         # create main cluster points map
-        ax.scatter(points.T[0], points.T[1],
-                   c=sel_colors, **TPLT.PLOT_KWDS)
+        axis.scatter(points.T[0], points.T[1],
+                     c=sel_colors, **TPLT.PLOT_KWDS)
         fig.canvas.set_window_title('Cluster Preview')
-        TPLT._set_plt_suptitle(fig, item_text, cls_type)
+        TPLT.set_plt_suptitle(fig, item_text, cls_type)
         dist_text = ''
         if shapes:
             for shape in shapes:
-                patch = TPLT._get_poly_patch(ax, shape)
-                ax.add_patch(patch)
+                patch = TPLT._get_poly_patch(shape)
+                axis.add_patch(patch)
         if auto_select_clusters is False:
             dist_text = '@ ' + str(int(cluster_distance)) + 'm'
-        ax.set_title(f'Cluster Preview {dist_text}',
-                     fontsize=12, loc='center')
+        axis.set_title(f'Cluster Preview {dist_text}',
+                       fontsize=12, loc='center')
         noisy_txt = '{} / {}'.format(mask_noisy.sum(), len(mask_noisy))
-        ax.text(bounds.lim_lng_max,
-                bounds.lim_lat_max,
-                f'{number_of_clusters} Clusters (Noise: {noisy_txt})',
-                fontsize=10, horizontalalignment='right',
-                verticalalignment='top', fontweight='bold')
+        axis.text(bounds.lim_lng_max,
+                  bounds.lim_lat_max,
+                  f'{number_of_clusters} Clusters (Noise: {noisy_txt})',
+                  fontsize=10, horizontalalignment='right',
+                  verticalalignment='top', fontweight='bold')
         # set plotting bounds
-        TPLT.plt_setxy_lim(ax, bounds)
-        TPLT.set_plt_tick_params(ax)
+        TPLT.plt_setxy_lim(axis, bounds)
+        TPLT.set_plt_tick_params(axis)
         # define new figure so this one is not
         # overwritten in interactive notebook mode
         # plt.figure()
@@ -133,34 +158,35 @@ class TPLT():
     @staticmethod
     def get_single_linkage_tree_preview(
             item_text, fig, cluster_distance, cls_type):
-
-        TPLT._set_plt_suptitle(fig, item_text, cls_type)
+        """Gets figure for single linkage tree from HDBSCAN results"""
+        TPLT.set_plt_suptitle(fig, item_text, cls_type)
         fig.canvas.set_window_title('Single Linkage Tree')
-        ax = fig.get_axes()[0]
-        ax.set_title('Single Linkage Tree', fontsize=12,
-                     loc='center')
+        axis = fig.get_axes()[0]
+        axis.set_title('Single Linkage Tree', fontsize=12,
+                       loc='center')
         # plot cutting distance
-        y = Utils._get_radians_from_meters(
+        y_value = Utils.get_radians_from_meters(
             cluster_distance)
-        ax.relim()
-        xmin = ax.get_xlim()[0]
-        xmax = ax.get_xlim()[1]
-        ax.plot(
-            [xmin, xmax], [y, y], color='k',
+        axis.relim()
+        xmin = axis.get_xlim()[0]
+        xmax = axis.get_xlim()[1]
+        axis.plot(
+            [xmin, xmax], [y_value, y_value], color='k',
             label=f'Cluster (Cut) Distance {int(cluster_distance)}m'
         )
-        ax.legend(fontsize=10)
-        # replace y labels with meters text (instead of radians dist)
-        ax.yaxis.set_major_formatter(FuncFormatter(TPLT.y_formatter))
-        TPLT.set_plt_tick_params(ax)
+        axis.legend(fontsize=10)
+        # replace y_value labels with meters text (instead of radians dist)
+        axis.yaxis.set_major_formatter(FuncFormatter(TPLT.y_formatter))
+        TPLT.set_plt_tick_params(axis)
         return fig
 
     @staticmethod
-    def y_formatter(x, pos):
-        return f'{Utils._get_meters_from_radians(x):3.0f}m'
+    def y_formatter(y_value, __):
+        """Format radians y-labels as meters for improved legebility"""
+        return f'{Utils.get_meters_from_radians(y_value):3.0f}m'
 
     @staticmethod
-    def _set_plt_suptitle(fig, item: str, cls_type):
+    def set_plt_suptitle(fig, item: str, cls_type):
         """Sets suptitle for plot (plt) and Cluster Type"""
         TPLT._set_pltspec_suptitle(
             fig, item, cls_type)
@@ -193,19 +219,19 @@ class TPLT():
         if cls_type == LOCATIONS:
             title = item.upper()
         elif cls_type == EMOJI:
-            emoji_name = Utils._get_emojiname(item)
+            emoji_name = Utils.get_emojiname(item)
             title = f'{item} ({emoji_name})'
         else:
             title = item.upper()
         return title
 
     @staticmethod
-    def set_plt_tick_params(ax):
+    def set_plt_tick_params(axis):
         """Sets common plt tick params"""
-        ax.tick_params(labelsize=10)
+        axis.tick_params(labelsize=10)
 
     @staticmethod
-    def _get_poly_patch(ax, polygon):
+    def _get_poly_patch(polygon):
         """Returns a matplotlib polygon-patch from shapely polygon"""
         patch = PolygonPatch(polygon, fc='#999999',
                              ec='#000000', fill=True,

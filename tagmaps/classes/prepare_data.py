@@ -80,7 +80,7 @@ class PrepareData():
         # The following dicts store, per cls_type,
         # distinct items on a per user basis, e.g.
         # self.useritem_counts_global[TAGS][USER] = {term1, term2, term3}
-        self.useritem_counts_global:  Dict[
+        self.useritem_counts_global: Dict[
             ClusterType, DefaultDict[str, Set[str]]] = dict()
         for cls_type in self.cluster_types:
             self.useritem_counts_global[cls_type] = defaultdict(set)
@@ -165,6 +165,7 @@ class PrepareData():
         return cleaned_post_dict
 
     def write_cleaned_data(self, cleaned_post_dict: Dict[str, CleanedPost]):
+        """Write cleaned data to intermediate file"""
         self.log.info(
             f'Writing cleaned intermediate data to file (Output_cleaned.csv)..')
         panon_set = self._get_panon_sets()
@@ -189,7 +190,8 @@ class PrepareData():
         panon_set = dict()
         for cls_type in self.cluster_types:
             max_items = self.cleaned_stats[cls_type].max_items
-            panon_set[cls_type] = {item.name for item in self.cleaned_stats[cls_type].top_items_list[:max_items]}
+            panon_set[cls_type] = {
+                item.name for item in self.cleaned_stats[cls_type].top_items_list[:max_items]}
         return panon_set
 
     def get_panonymized_posts(
@@ -197,7 +199,7 @@ class PrepareData():
             cleaned_post_dict: Dict[str, CleanedPost]) -> Dict[str, CleanedPost]:
         """Returns a new cleaned post dict with reduced information detail
         based on global information patterns
-        
+
         This is not a true anonymization. Returned items have specifically
         the highly identifyable information removed (specific tags/terms used by few
         users), which make it harder to identify original users from resulting data.
@@ -210,7 +212,7 @@ class PrepareData():
             panon_cleaned_post_dict[upl] = upl_panon
         return panon_cleaned_post_dict
 
-    def _get_item_stats(self) -> Dict['ClusterType', NamedTuple]:
+    def get_item_stats(self) -> Dict['ClusterType', NamedTuple]:
         """After data is loaded, this collects data and stats
         for distribution of tags, emoji and locations
 
@@ -267,7 +269,7 @@ class PrepareData():
             if cls_type not in self.cluster_types:
                 continue
             if cls_type in [TAGS, TOPICS]:
-                # todo: TOPIC implementation
+                # to do: TOPIC implementation
                 item_list = lbsn_post.hashtags
             else:
                 item_list = lbsn_post.emoji
@@ -275,7 +277,7 @@ class PrepareData():
                 continue
             self.useritem_counts_global[cls_type][
                 lbsn_post.user_guid].update(
-                item_list)
+                    item_list)
             self.total_item_counter[cls_type].update(item_list)
         # locations
         if lbsn_post.loc_id:
@@ -288,7 +290,7 @@ class PrepareData():
     def _write_toplist(
             top_list, list_type, max_items, output_folder,
             locid_name_dict=None):
-        """Write toplists to file
+        """Write toplists to fileget_locname
 
         e.g.:
             tag, usercount
@@ -296,7 +298,7 @@ class PrepareData():
             toptag2, 560
             ...
         """
-        if len(top_list) == 0:
+        if not top_list:
             return
 
         # only ever write top 1000 to file
@@ -308,7 +310,7 @@ class PrepareData():
             # get name for locid, if possible
             top_list_rf = []
             for item in top_list:
-                loc_name = Utils._get_locname(item.name, locid_name_dict)
+                loc_name = Utils.get_locname(item.name, locid_name_dict)
                 coords = item.name.split(":")
                 ucount = item.ucount
                 line = (f'{loc_name.replace(",","-")},{coords[0]},{coords[1]},'
@@ -414,14 +416,15 @@ class PrepareData():
                 self.limit_bottom_user_count/2)
         else:
             bottomuser_count = self.limit_bottom_user_count
-        indexMin = next((i for i, (t1, t2) in enumerate(
-            top_list) if t2 < bottomuser_count
-        ), None)
-        if not indexMin:
+        index_min = next(
+            (i for i, (t1, t2) in enumerate(
+                top_list) if t2 < bottomuser_count
+             ), None)
+        if not index_min:
             return
         len_before = len(top_list)
         # delete based on slicing
-        del top_list[indexMin:]
+        del top_list[index_min:]
         len_after = len(top_list)
         if len_before == len_after:
             # if no change, return
@@ -458,16 +461,16 @@ class PrepareData():
                         cleaned_post, user_guid)
                 cleaned_post_dict[cleaned_post.guid] = cleaned_post
                 # update boundary
-                self.bounds._upd_latlng_bounds(
+                self.bounds.upd_latlng_bounds(
                     cleaned_post.lat, cleaned_post.lng)
         return cleaned_post_dict
 
     def _read_cleaned_data(self, cdata: Path):
         """Create cleaned post dict from intermediate data file store"""
         cleaned_post_dict = defaultdict(CleanedPost)
-        with open(cdata, 'r', newline='', encoding='utf8') as f:
+        with open(cdata, 'r', newline='', encoding='utf8') as f_handle:
             cpost_reader = csv.DictReader(
-                f,
+                f_handle,
                 delimiter=',',
                 quotechar='"',
                 quoting=QUOTE_MINIMAL)
@@ -478,7 +481,7 @@ class PrepareData():
                 # update statistics from cleaned post
                 self.add_record(cleaned_post)
                 # update boundary
-                self.bounds._upd_latlng_bounds(
+                self.bounds.upd_latlng_bounds(
                     cleaned_post.lat, cleaned_post.lng)
         return cleaned_post_dict
 
@@ -490,22 +493,22 @@ class PrepareData():
         """
         headerline = "topics,post_ids,user_ids\n"
         with open(
-            self.output_folder / 'Output_usertopics_anonymized.csv',
+                self.output_folder / 'Output_usertopics_anonymized.csv',
                 'w', encoding='utf8') as csvfile_anon, open(
                     self.output_folder / 'Output_usertopics.csv',
                     'w', encoding='utf8') as csvfile:
             dw_list = list()
             for cfile in (csvfile, csvfile_anon):
                 cfile.write(headerline)
-                dw = csv.writer(cfile, delimiter=',',
-                                lineterminator='\n', quotechar='"',
-                                quoting=csv.QUOTE_NONNUMERIC)
-                dw_list.append(dw)
+                datawriter = csv.writer(cfile, delimiter=',',
+                                        lineterminator='\n', quotechar='"',
+                                        quoting=csv.QUOTE_NONNUMERIC)
+                dw_list.append(datawriter)
             self._write_topic_rows(dw_list)
 
     def _write_topic_rows(self, dw_list):
         """Write Topic models to file"""
-        dw = dw_list[0]
+        datawriter = dw_list[0]
         dw_anon = dw_list[1]
 
         def _join_encode(keys):
@@ -520,9 +523,9 @@ class PrepareData():
             dw_anon.writerow([joined_topics,
                               "{" + joined_encoded_keys + "}",
                               Utils.encode_string(user_key)])
-            dw.writerow([joined_topics,
-                         "{" + joined_keys + "}",
-                         str(user_key)])
+            datawriter.writerow([joined_topics,
+                                 "{" + joined_keys + "}",
+                                 str(user_key)])
 
     def _update_topic_models(self,
                              cleaned_post_location,
@@ -531,8 +534,7 @@ class PrepareData():
         required dictionaries with merged words from
         title, tags and post_body
         """
-        if not len(
-                cleaned_post_location.hashtags) == 0:
+        if cleaned_post_location.hashtags:
             self.user_topiclist_dict[user_key] |= \
                 cleaned_post_location.hashtags
             # also use descriptions for Topic Modeling
@@ -658,7 +660,6 @@ class PrepareData():
             cleaned_post_location)
         datawriter.writerow(ploc_list)
 
-
     def _panonymize_cleaned_post(
             self,
             upl: CleanedPost,
@@ -673,15 +674,15 @@ class PrepareData():
             guid=upl.guid,
             user_guid=upl.user_guid,
             post_body=PrepareData._filter_private_terms(
-                upl.emoji,panon_set[TAGS]),
+                upl.emoji, panon_set[TAGS]),
             post_create_date=PrepareData._agg_date(upl.post_create_date),
             post_publish_date=PrepareData._agg_date(upl.post_publish_date),
             post_views_count=upl.post_views_count,
             post_like_count=upl.post_like_count,
             emoji=PrepareData._filter_private_terms(
-                upl.emoji,panon_set[EMOJI]),
+                upl.emoji, panon_set[EMOJI]),
             hashtags=PrepareData._filter_private_terms(
-                upl.hashtags,panon_set[TAGS]),
+                upl.hashtags, panon_set[TAGS]),
             loc_id=upl.loc_id,
             loc_name=upl.loc_name
         )
@@ -690,7 +691,7 @@ class PrepareData():
 
     @staticmethod
     def _agg_date(
-        str_date: str) -> str:
+            str_date: str) -> str:
         """Remove time info from string, e.g.
         2010-05-07 16:00:54
         to 2010-05-07
@@ -702,7 +703,7 @@ class PrepareData():
 
     @staticmethod
     def _filter_private_terms(
-        str_list: Set[str], top_terms_set: Set[str]) -> Set[str]:
+            str_list: Set[str], top_terms_set: Set[str]) -> Set[str]:
         filtered_set = {term for term in str_list if term in top_terms_set}
         return filtered_set
 
@@ -719,7 +720,7 @@ class PrepareData():
         return attr_list
 
     def _get_cleaned_wordlist(self, post_body_string):
-        cleaned_post_body = Utils._remove_special_chars(post_body_string)
+        cleaned_post_body = Utils.remove_special_chars(post_body_string)
         cleaned_wordlist = PrepareData._get_wordlist(cleaned_post_body)
         return cleaned_wordlist
 

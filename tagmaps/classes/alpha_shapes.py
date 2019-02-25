@@ -16,13 +16,13 @@ from scipy.spatial import Delaunay  # pylint: disable=E0611
 import shapely.geometry as geometry
 from shapely.ops import cascaded_union, polygonize
 
-from tagmaps.classes.utils import Utils
+from tagmaps.classes.compile_output import Compile
 
 
 class AlphaShapes():
-
+    """Converts (cluster) point clouds to shapes"""
     @staticmethod
-    def _get_single_cluster_shape(
+    def get_single_cluster_shape(
             item, single_post, crs_wgs,
             crs_proj, cluster_distance):
         """Get Shapes for items with no clusters
@@ -30,10 +30,10 @@ class AlphaShapes():
         """
         shapetype = "Single cluster"
         # project lat/lng to UTM
-        x, y = pyproj.transform(
+        point_x, point_y = pyproj.transform(
             crs_wgs, crs_proj,
             single_post.lng, single_post.lat)
-        pcoordinate = geometry.Point(x, y)
+        pcoordinate = geometry.Point(point_x, point_y)
         # single dots are presented
         # as buffers with 0.5% of width-area
         result_polygon = pcoordinate.buffer(
@@ -75,24 +75,24 @@ class AlphaShapes():
                 set([post.user_guid for post in posts]))
             sum_views = sum(
                 [post.post_views_count for post in posts])
-
-            weightsv1 = Utils._get_weight(
+            # needs to be moved to CompileOutput:
+            weightsv1 = Compile.get_weight(
                 1, post_count, unique_user_count)
 
-            weightsv2 = Utils._get_weight(
+            weightsv2 = Compile.get_weight(
                 2, post_count, unique_user_count)
-            weightsv3 = Utils._get_weight(
+            weightsv3 = Compile.get_weight(
                 3, post_count, unique_user_count)
             distinct_locations = {post.loc_id
                                   for post in posts}
             # simple list comprehension with projection:
             points = [geometry.Point(
-                      pyproj.transform(
-                          crs_wgs,
-                          crs_proj,
-                          Decimal(location.split(':')[1]),
-                          Decimal(location.split(':')[0])))
-                      for location in distinct_locations]
+                pyproj.transform(
+                    crs_wgs,
+                    crs_proj,
+                    Decimal(location.split(':')[1]),
+                    Decimal(location.split(':')[0]))
+            ) for location in distinct_locations]
 
             # get poly shape from points
             result = AlphaShapes._get_poly(points, cluster_distance)
@@ -108,7 +108,7 @@ class AlphaShapes():
                      unique_user_count, item[0], item[1],
                      weightsv1, weightsv2, weightsv3,
                      shapetype))
-        if len(alphashapes_and_meta_tmp) > 0:
+        if alphashapes_and_meta_tmp:
             # finally sort and append all
             # cluster shapes for this tag
             alphashapes_and_meta_tmp = sorted(
@@ -190,8 +190,8 @@ class AlphaShapes():
                 # /100000
                 poly_shape = AlphaShapes.alpha_shape(
                     points, alpha=cluster_distance/alpha)
-                if (type(poly_shape) is not
-                        geometry.multipolygon.MultiPolygon
+                if not (isinstance(poly_shape,
+                                   geometry.multipolygon.MultiPolygon)
                         and not isinstance(poly_shape, bool)):
                     shapetype = "Multipolygon Alpha Shape /" + \
                         str(alpha)
@@ -205,8 +205,8 @@ class AlphaShapes():
                     # /100000
                     poly_shape = AlphaShapes.alpha_shape(
                         points, alpha=cluster_distance/alpha)
-                    if (type(poly_shape) is not
-                            geometry.multipolygon.MultiPolygon
+                    if not (isinstance(
+                            poly_shape, geometry.multipolygon.MultiPolygon)
                             and not isinstance(poly_shape, bool)):
                         shapetype = "Multipolygon Alpha Shape /" + \
                             str(alpha)
@@ -226,8 +226,8 @@ class AlphaShapes():
         if (isinstance(poly_shape, bool)
                 or poly_shape.is_empty or
                 AlphaShapes._few_polyinpoints(points, poly_shape)):
-            shapetype = "BoolAlpha/Empty -> Fallback "
-            "to PointCloud Convex Hull"
+            shapetype = ("BoolAlpha/Empty -> Fallback "
+                         "to PointCloud Convex Hull")
             # convex hull
             poly_shape = point_collection.convex_hull
         # Finally do a buffer to smooth alpha
@@ -246,11 +246,11 @@ class AlphaShapes():
         Better solution would be to revise QHull Delauney/Alpha,
         but even with centered axis, this issue remains (see alpha_shape).
         """
-        x = 1
+        p_count = 1
         for point in points:
             if point.within(poly):
-                x += 1
-        perc = x/(len(points)/100)
+                p_count += 1
+        perc = p_count/(len(points)/100)
         if perc < 50:
             return True
         return False
@@ -293,12 +293,13 @@ class AlphaShapes():
             poly_shape, shapetype = AlphaShapes._get_poly_two_to_five(
                 point_collection, cluster_distance)
         elif (pointcount == 1 or
-              type(poly_shape) is geometry.point.Point
+              isinstance(poly_shape, geometry.point.Point)
               or poly_shape is None):
             poly_shape, shapetype = AlphaShapes._get_poly_one(
                 point_collection, cluster_distance)
         # final check for multipolygon
-        if type(poly_shape) is geometry.multipolygon.MultiPolygon or poly_shape.is_empty:
+        if (isinstance(poly_shape, geometry.multipolygon.MultiPolygon)
+                or poly_shape.is_empty):
             # usually not executed
             poly_shape = poly_shape.convex_hull
             shapetype = "Convex Hull Final Fallback"
@@ -357,8 +358,8 @@ class AlphaShapes():
 
         if centeraxis:
             # Center axis for avoiding floating point precision issues
-            co = coords[0]
-            coords = coords - co
+            norm_co = coords[0]
+            coords = coords - norm_co
         tri = Delaunay(coords)
         # print problematic points:
         # print(tri.coplanar)
@@ -369,39 +370,41 @@ class AlphaShapes():
         edges = set()
         edge_points = []
         # loop over triangles:
-        # ia, ib, ic = indices of corner points of the
+        # vert_ia, ib, ic = indices of corner points of the
         # triangle
-        for ia, ib, ic in tri.vertices:
-            pa = coords[ia]
-            pb = coords[ib]
-            pc = coords[ic]
+        for vert_ia, vert_ib, vert_ic in tri.vertices:
+            pa_v = coords[vert_ia]
+            pb_v = coords[vert_ib]
+            pc_v = coords[vert_ic]
             # Lengths of sides of triangle
-            a = math.sqrt((pa[0]-pb[0])**2 + (pa[1]-pb[1])**2)
-            b = math.sqrt((pb[0]-pc[0])**2 + (pb[1]-pc[1])**2)
-            c = math.sqrt((pc[0]-pa[0])**2 + (pc[1]-pa[1])**2)
+            a_val = math.sqrt((pa_v[0]-pb_v[0])**2 + (pa_v[1]-pb_v[1])**2)
+            b_val = math.sqrt((pb_v[0]-pc_v[0])**2 + (pb_v[1]-pc_v[1])**2)
+            c_val = math.sqrt((pc_v[0]-pa_v[0])**2 + (pc_v[1]-pa_v[1])**2)
             # Semiperimeter of triangle
-            s = (a + b + c)/2.0
+            s_res = (a_val + b_val + c_val)/2.0
             # Area of triangle by Heron's formula
             try:
-                area = math.sqrt(s*(s-a)*(s-b)*(s-c))
+                area = math.sqrt(
+                    s_res*(s_res-a_val)*(s_res-b_val)*(s_res-c_val))
             except ValueError:
                 return False
             if area == 0:
                 return False
-            circum_r = a*b*c/(4.0*area)
+            circum_r = a_val*b_val*c_val/(4.0*area)
             # Here's the radius filter.
             # print circum_r
             if circum_r < 1.0/alpha:
-                add_edge(edges, edge_points, coords, ia, ib)
-                add_edge(edges, edge_points, coords, ib, ic)
-                add_edge(edges, edge_points, coords, ic, ia)
+                add_edge(edges, edge_points, coords, vert_ia, vert_ib)
+                add_edge(edges, edge_points, coords, vert_ib, vert_ic)
+                add_edge(edges, edge_points, coords, vert_ic, vert_ia)
 
         if centeraxis:
             # return to original axis center
             edge_points = [np.array(
-                [edgepoint[0]+co, edgepoint[1]+co]) for edgepoint in edge_points]
+                [edgepoint[0]+norm_co, edgepoint[1]+norm_co]
+            ) for edgepoint in edge_points]
 
-        m = geometry.MultiLineString(edge_points)
-        triangles = list(polygonize(m))
+        mmulti_line_str = geometry.MultiLineString(edge_points)
+        triangles = list(polygonize(mmulti_line_str))
         return cascaded_union(triangles)  # , edge_points
         # return geometry.polygon.asPolygon(edge_points,holes=None)

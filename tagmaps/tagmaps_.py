@@ -87,6 +87,8 @@ class TagMaps():
         """Decorators for checking states in TagMaps class"""
         @staticmethod
         def init_data_check(func):
+            """Check if lbsn_data has been initialized"""
+
             def _wrapper(self, *args, **kwargs):
                 # init lbsn data
                 if self.lbsn_data is None:
@@ -96,6 +98,8 @@ class TagMaps():
 
         @staticmethod
         def prepare_clustering_check(func):
+            """Check if clusters have been initialized"""
+
             def _wrapper(self, *args, **kwargs):
                 # add clusterer
                 if not self.clusterer:
@@ -105,6 +109,8 @@ class TagMaps():
 
         @staticmethod
         def data_added_check(func):
+            """Check if (any) data has been added"""
+
             def _wrapper(self, *args, **kwargs):
                 if kwargs and "input_path" in kwargs:
                     input_path = kwargs['input_path']
@@ -124,6 +130,8 @@ class TagMaps():
 
         @staticmethod
         def prepare_data_check(func):
+            """Check if data has been prepared"""
+
             def _wrapper(self):
                 # prepare stats
                 if self.cleaned_stats is None:
@@ -222,7 +230,7 @@ class TagMaps():
         # get both here
         self.cleaned_post_list = list(self.cleaned_post_dict.values())
         # get prepared data for statistics and clustering
-        self.cleaned_stats = self.lbsn_data._get_item_stats()
+        self.cleaned_stats = self.lbsn_data.get_item_stats()
 
     @TMDec.prepare_data_check
     @TMDec.data_added_check
@@ -230,7 +238,7 @@ class TagMaps():
         """Stats reporting for tags, emoji (and locations)"""
         location_name_count = len(
             self.lbsn_data.locid_locname_dict)
-        if location_name_count > 0:
+        if location_name_count:
             self.log.info(
                 f"Number of locations with names: "
                 f"{location_name_count}")
@@ -374,19 +382,19 @@ class TagMaps():
     @TMDec.prepare_clustering_check
     def get_selection_map(self, cls_type: ClusterType, item):
         """Return plt.figure for item selection."""
-        fig = self.clusterer[cls_type]._get_sel_preview(item)
+        fig = self.clusterer[cls_type].get_sel_preview(item)
         return fig
 
     @TMDec.prepare_clustering_check
     def get_cluster_map(self, cls_type: ClusterType, item):
         """Return plt.figure for item clusters."""
-        fig = self.clusterer[cls_type]._get_cluster_preview(item)
+        fig = self.clusterer[cls_type].get_cluster_preview(item)
         return fig
 
     @TMDec.prepare_clustering_check
     def get_cluster_shapes_map(self, cls_type: ClusterType, item):
         """Return plt.figure for item cluster shapes."""
-        fig = self.clusterer[cls_type]._get_clustershapes_preview(item)
+        fig = self.clusterer[cls_type].get_clustershapes_preview(item)
         return fig
 
     @TMDec.prepare_clustering_check
@@ -408,8 +416,8 @@ class TagMaps():
     def get_pseudo_anonymized_data(self):
         """Returns dict of cleaned posts with removed
         personal information.
-        
-        
+
+
         E.g. without terms and tags that are not collectively
         relevant to users. This is the
         reduced data that is finally used to generate tagmaps.

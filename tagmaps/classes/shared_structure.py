@@ -22,7 +22,7 @@ ClusterType: Tuple[Tuple[str, int]] = (
     (TOPICS, 4),
 )
 
-CleanedPost_ = namedtuple(
+CleanedPost_ = namedtuple(  # pylint: disable=C0103
     'CleanedPost',
     'origin_id lat lng guid user_guid '
     'post_create_date post_publish_date '
@@ -43,7 +43,6 @@ class CleanedPost(CleanedPost_):
     efficient as regular tuples because they
     do not have per-instance dictionaries.
     """
-    pass
 
 
 @attr.s
@@ -100,7 +99,7 @@ class AnalysisBounds():
         self.lim_lng_min = None
         self.lim_lng_max = None
 
-    def _upd_latlng_bounds(self, lat, lng):
+    def upd_latlng_bounds(self, lat, lng):
         """Update lat/lng bounds based on coordinate pair."""
         if self.lim_lat_min is None or \
                 (lat < self.lim_lat_min and not lat == 0):
@@ -116,9 +115,10 @@ class AnalysisBounds():
             self.lim_lng_max = lng
 
     def get_bound_report(self):
+        """Report on spatial bounds"""
         if (self.lim_lat_min is None
-            or self.lim_lat_max is None
-            or self.lim_lng_min is None
+                or self.lim_lat_max is None
+                or self.lim_lng_min is None
                 or self.lim_lng_max is None):
             return f'Bounds have not been initlialized'
         bound_report = f'Bounds are: ' \

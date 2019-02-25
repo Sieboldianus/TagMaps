@@ -35,7 +35,7 @@ class Utils():
     """
 
     @staticmethod
-    def _get_shapely_bounds(
+    def get_shapely_bounds(
             bounds: AnalysisBounds) -> geometry.MultiPoint:
         """Returns boundary shape from 4 coordinates"""
         bound_points_shapely = geometry.MultiPoint([
@@ -45,7 +45,7 @@ class Utils():
         return bound_points_shapely
 
     @staticmethod
-    def _get_best_utmzone(
+    def get_best_utmzone(
             bound_points_shapely: geometry.MultiPoint):
         """Calculate best UTM Zone SRID/EPSG Code
         Args:
@@ -97,29 +97,29 @@ class Utils():
         return empty_string_tuple
 
     @staticmethod
-    def encode_string(s):
+    def encode_string(text_s):
         """Encode string in Sha256,
         produce hex
 
         - returns a string of double length,
         containing only hexadecimal digits"""
         encoded_string = hashlib.sha3_256(
-            s.encode("utf8")).hexdigest()
+            text_s.encode("utf8")).hexdigest()
         return encoded_string
 
     @staticmethod
-    def _remove_special_chars(s):
+    def remove_special_chars(text_s):
         """Removes a list of special chars from string"""
-        SPECIAL_CHARS = "?.!/;:,[]()'-&#"
-        s_cleaned = s.translate(
-            {ord(c): " " for c in SPECIAL_CHARS})
+        special_chars = "?.!/;:,[]()'-&#"
+        s_cleaned = text_s.translate(
+            {ord(c): " " for c in special_chars})
         return s_cleaned
 
     @staticmethod
-    def _is_number(s):
+    def _is_number(number_s):
         """Check if variable is number (float)"""
         try:
-            float(s)
+            float(number_s)
             return True
         except ValueError:
             return False
@@ -149,7 +149,7 @@ class Utils():
         reload(logging)
         # Create or get logger with specific name
         log = logging.getLogger("tagmaps")
-        if len(log.handlers) > 0:
+        if log.handlers:
             # only add log handlers once
             return log
         if logging_level is None:
@@ -164,7 +164,7 @@ class Utils():
         log.setLevel(logging_level)
         # Set Output to Replace in case of
         # encoding issues (console/windows)
-        if type(sys.stdout) == io.TextIOWrapper:
+        if isinstance(sys.stdout, io.TextIOWrapper):
             # only for console output (not Juypter Notebook stream)
             sys.stdout = io.TextIOWrapper(
                 sys.stdout.detach(), sys.stdout.encoding, 'replace')
@@ -227,9 +227,9 @@ class Utils():
     @staticmethod
     def daterange(start_date, end_date):
         """Return time difference between two dates"""
-        for n in range(
+        for n_val in range(
                 int((end_date - start_date).days)):
-            yield start_date + timedelta(n)
+            yield start_date + timedelta(n_val)
 
     @staticmethod
     def haversine(lon1, lat1, lon2, lat2):
@@ -243,16 +243,16 @@ class Utils():
         # haversine formula
         dlon = lon2 - lon1
         dlat = lat2 - lat1
-        a = (sin(dlat/2)**2 + cos(lat1) *
-             cos(lat2) * sin(dlon/2)**2)
-        c = 2 * asin(sqrt(a))
+        a_value = (sin(dlat/2)**2 + cos(lat1) *
+                   cos(lat2) * sin(dlon/2)**2)
+        c_value = 2 * asin(sqrt(a_value))
         # Radius of earth in kilometers is 6371
-        km = 6371 * c
-        m = km*1000
-        return m
+        km_dist = 6371 * c_value
+        m_dist = km_dist*1000
+        return m_dist
 
     @staticmethod
-    def _get_radians_from_meters(dist):
+    def get_radians_from_meters(dist):
         """Get approx. distance in radians from meters
 
         Args:
@@ -275,7 +275,7 @@ class Utils():
         return radians_dist
 
     @staticmethod
-    def _get_meters_from_radians(dist):
+    def get_meters_from_radians(dist):
         """Get approx. distance in meters from radians
         distance
 
@@ -298,7 +298,7 @@ class Utils():
         return meters_dist
 
     @staticmethod
-    def _get_emojiname(emoji_string):
+    def get_emojiname(emoji_string):
         """"Tries to get a name representation for
         emoji. Emoji can either be a single character,
         or a number of characters that construct a grapheme cluster.
@@ -311,9 +311,9 @@ class Utils():
             # if single character
             emoji_name = Utils._get_unicode_name(emoji_string)
         if not emoji_name:
-            for c in emoji_string:
+            for char_s in emoji_string:
                 emoji_name = Utils._get_unicode_name(
-                    c)
+                    char_s)
                 if emoji_name:
                     break
         if not emoji_name:
@@ -344,10 +344,11 @@ class Utils():
         # name = name(str_emoji)
         try:
             if unicodedata.name(
-                char_unicode).startswith(
-                    ("EMOJI MODIFIER",
-                     "VARIATION SELECTOR",
-                     "ZERO WIDTH")
+                    char_unicode
+            ).startswith(
+                ("EMOJI MODIFIER",
+                 "VARIATION SELECTOR",
+                 "ZERO WIDTH")
             ):
                 return False
             else:
@@ -357,7 +358,8 @@ class Utils():
             return True
 
     @staticmethod
-    def split_count(text_with_emoji):
+    def split_emoji_count(text_with_emoji):
+        """Split emoji from string and count"""
         emoji_list = []
         # use \X (eXtended grapheme cluster) regular expression:
         data = regex.findall(r'\X', text_with_emoji)
@@ -368,11 +370,12 @@ class Utils():
 
     @staticmethod
     def extract_flags(text_with_flags):
+        """Extract emoji flags from string"""
         flags = regex.findall(u'[\U0001F1E6-\U0001F1FF]', text_with_flags)
         return flags
 
     @staticmethod
-    def _extract_emoji(string_with_emoji: str) -> Set[str]:
+    def extract_emoji(string_with_emoji: str) -> Set[str]:
         """Extract emoji and flags using regex package
 
         This is a new version to extract emoji (see old method:
@@ -393,7 +396,7 @@ class Utils():
         Total distinct emoji (DEC): 1349
         """
 
-        emoji_split = Utils.split_count(string_with_emoji)
+        emoji_split = Utils.split_emoji_count(string_with_emoji)
         emoji_list = [emoji for emoji in emoji_split]
         flags_list = Utils.extract_flags(string_with_emoji)
         emoji_list.extend(flags_list)
@@ -475,44 +478,12 @@ class Utils():
 
     @staticmethod
     def get_rectangle_bounds(points):
-        limYMin = np.min(points.T[1])
-        limYMax = np.max(points.T[1])
-        limXMin = np.min(points.T[0])
-        limXMax = np.max(points.T[0])
-        return limYMin, limYMax, limXMin, limXMax
-
-    @staticmethod
-    def _get_weight(id: int,
-                    post_count: int,
-                    unique_user_count: int):
-        """Get Weight for input metrics
-        user count and post count based on
-        three types of weighting formulas (id):
-        1: weightsv1 -> Standard weighting formula
-           (x**y means x raised to the power y);
-           +1 to UserCount: prevent 1-2
-           Range from being misaligned
-        2: weightsv2 -> less importance
-           on User_Count compared
-           to photo count [Join_Count];
-           +1 to UserCount: prevent 1-2
-           Range from being misaligned
-        3: weightsv3 -> Ignores User_Count,
-           this will emphasize individual
-           and very active users
-        """
-        if id == 1:
-            weighted_value = post_count * (
-                sqrt(1/(post_count / (
-                    unique_user_count+1))**3))
-        elif id == 2:
-            weighted_value = post_count * (
-                sqrt(1/(post_count / (
-                    unique_user_count+1))**2))
-        elif id == 3:
-            weighted_value = sqrt(
-                (post_count+(2*sqrt(post_count)))*2)
-        return weighted_value
+        """Get rectangle bounds for numpy.ndarray of point coordinates"""
+        lim_y_min = np.min(points.T[1])
+        lim_y_max = np.max(points.T[1])
+        lim_x_min = np.min(points.T[0])
+        lim_x_max = np.max(points.T[0])
+        return lim_y_min, lim_y_max, lim_x_min, lim_x_max
 
     @staticmethod
     def filter_tags(taglist: Iterable[str],
@@ -543,7 +514,7 @@ class Utils():
             # exclude numbers and those tags that are in sort_out_always_set
             # or sort_out_always_instr_set
             if (len(tag) == 1 or tag == '""'
-                or tag.isdigit()
+                    or tag.isdigit()
                     or tag in sort_out_always_set):
                 count_skipped += 1
                 continue
@@ -557,21 +528,21 @@ class Utils():
                 count_tags, count_skipped)
 
     @staticmethod
-    def _get_index_of_tup(
-            l: List[Tuple[str, int]], index: int, value: str) -> int:
+    def get_index_of_tup(
+            l_tuple_str: List[Tuple[str, int]], index: int, value: str) -> int:
         """Get index pos from list of tuples.
 
         Stops iterating through the list as
         soon as it finds the value
         """
-        for pos, t in enumerate(l):
-            if t[index] == value:
+        for pos, tuple_str in enumerate(l_tuple_str):
+            if tuple_str[index] == value:
                 return pos
         # Matches behavior of list.index
         raise ValueError("list.index(x): x not in list")
 
     @staticmethod
-    def _get_locname(item: str, loc_name_dict: Dict[str, str]):
+    def get_locname(item: str, loc_name_dict: Dict[str, str]):
         """Gets location name from ID, if available"""
         if loc_name_dict:
             item_name = loc_name_dict.get(item, item)
