@@ -164,11 +164,21 @@ class PrepareData():
         cleaned_post_dict = self._read_cleaned_data(input_file)
         return cleaned_post_dict
 
-    def write_cleaned_data(self, cleaned_post_dict: Dict[str, CleanedPost]):
+    def write_cleaned_data(
+            self, cleaned_post_dict: Dict[str, CleanedPost] = None,
+            panon: bool = None):
         """Write cleaned data to intermediate file"""
         self.log.info(
-            f'Writing cleaned intermediate data to file (Output_cleaned.csv)..')
-        panon_set = self._get_panon_sets()
+            f'Writing cleaned intermediate '
+            f'data to file (Output_cleaned.csv)..')
+        if cleaned_post_dict is None:
+            cleaned_post_dict = self.get_cleaned_post_dict()
+        if panon is None:
+            panon = True
+        if panon:
+            panon_set = self._get_panon_sets()
+        else:
+            panon_set = None
         with open(self.output_folder / 'Output_cleaned.csv', 'w',
                   encoding='utf8') as csvfile:
             # get headerline from class structure
