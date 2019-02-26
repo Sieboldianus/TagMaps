@@ -32,6 +32,32 @@ Based on the papers:
     - download `BasemapLayout_World.mxd` from [resources folder](/resources/BasemapLayout_World.mxd) and replace missing links with 2 resulting Shapefiles in `/02_Output`
     - adjust minimum and maximum Font Sizes, Weighting Formula or other metrics to your needs.
 
+**Some background**:
+
+Tag Maps Package can be used with any tagged & spatially referenced data, but it has been specifically deveoped with Social Media data in mind (Flickr, Twitter etc.).
+There're two ways to feed input data:  
+1. Unfiltered raw data  
+    - Use `tagmaps.add_record(record)` where record is of type `PostStructure` (see [shared_structure.py](/classes/shared_structure.py))
+    - How you clean up data totally depends on the type, have a look at LoadData class in [load_data.py](/classes/load_data.py) for Twitter and Flickr cleanup
+2. Filtered data  
+    - the result from 1 is a `UserPostLocation` (**UPL**), which is a reference of type 'CleanedPost'. A UPL simply has all posts of a single user at a single coordinate merged,
+      e.g. a reduced list of terms, tags and emoji based on global occurrence (i.e. no duplicates).
+    - there're other metrics used throughout the package:
+        - **UPL** - User post location
+        - **UC** - User count
+        - **PC** - Post count
+        - **PTC** - Total tag count ("Post Tag Count")
+        - **PEC** - Total emoji count
+        - **UD** - User days (counting distinct users per day)
+        - **DTC** - Total distinct tags
+        - **DEC** - Total distinct emoji
+        - **DLC** - Total distinct locations
+3. The filtered data that is used for tagmaps can be exported using `tagmaps.write_cleaned_data()`. 
+   Since this will remove all terms/tags/emoji that do not appear in the top 1000 (e.g.) occurring global list of terms,
+   this will produce a highly pseudo-anonymized set of information, with only collectively relevant terms remaining.
+   The default value (1000) can be adjusted using `max_items` arg, e.g. the smaller max_items, the higher the effect of anonymization/generalization. 
+
+
 ## Tutorial
 
 There's a tutorial available [here](https://ad.vgiscience.org/tagmaps_tutorial) that guides though the process of generating Tag Maps.
