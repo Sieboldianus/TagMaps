@@ -63,7 +63,7 @@ class TPLT():
             fig.add_subplot(111)
         axis = fig.get_axes()[0]
         # only one subplot (nrows, ncols, axnum)
-        if point_size:
+        if point_size is not None:
             axis.scatter(points.T[0], points.T[1],
                          color='red', alpha=0.5, s=point_size, linewidths=0)
         else:

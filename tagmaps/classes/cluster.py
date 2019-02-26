@@ -422,6 +422,7 @@ class ClusterGen():
             async_result = POOL.apply_async(
                 ClusterGen._fit_cluster, (self.clusterer, tag_radians_data))
             self.clusterer = async_result.get()
+
         if self.autoselect_clusters:
             cluster_labels = self.clusterer.labels_
         else:
@@ -622,17 +623,23 @@ class ClusterGen():
             cluster_guids, none_clustered_guids)
         return ClusterShapes(resultshapes_and_meta, self.cls_type, itemized)
 
-    def get_item_cluster_centroids(self, item):
+    def get_item_cluster_centroids(self, item, single_clusters=None):
         """Get centroids for item clustered data"""
+        if single_clusters is None:
+            single_clusters = True
         self._get_update_clusters(
             item=item)
         cluster_guids = self.clustered_items_dict[item]
-        none_clustered_guids = self.single_items_dict[item]
+        if single_clusters:
+            none_clustered_guids = self.single_items_dict[item]
+        else:
+            none_clustered_guids = None
         resultshapes_and_meta = self.get_cluster_centroids(
             cluster_guids, none_clustered_guids)
         return resultshapes_and_meta
 
-    def get_cluster_centroids(self, clustered_guids, none_clustered_guids):
+    def get_cluster_centroids(
+            self, clustered_guids, none_clustered_guids=None):
         """Get centroids for clustered data"""
         resultshapes_and_meta = list()
         for post_cluster in clustered_guids:
@@ -651,6 +658,8 @@ class ClusterGen():
                 resultshapes_and_meta.append(
                     (result_centroid, unique_user_count)
                 )
+        if not none_clustered_guids:
+            return resultshapes_and_meta
         # noclusterphotos = [cleanedPhotoDict[x] for x in singlePhotoGuidList]
         for no_cluster_post in none_clustered_guids:
             post = self.cleaned_post_dict[no_cluster_post]
@@ -813,24 +822,48 @@ class ClusterGen():
         return fig
 
     @CGDec.input_topic_format
-    def _get_cluster_centroid_data(
-            self, item, zipped=None, projected=None):
+    def get_cluster_centroid_data(
+            self, item, zipped=None, projected=None, single_clusters=None):
+        """Returns centroids for cluster selection based on item
+
+        Args:
+            item (str or list of str): Item to be selected
+            zipped ([type], optional): Will merge centroids and user_count,
+                                       defaults to False
+            projected (bool, optional): Will return projected data (UTM),
+                                        otherwise, centroids are returned
+                                        in decimal degrees (WGS1984),
+                                        defaults to False
+            single_clusters:            Return single item cluster centroids,
+                                        defaults to True
+
+        Returns:
+            Tuple: [0] point (List of coordinate pairs),
+                   [1] user_count (count of user_count per centroid)
+        """
         if zipped is None:
             zipped = False
         if projected is None:
             projected = False
+        if single_clusters is None:
+            single_clusters = True
         shapes = self.get_item_cluster_centroids(
-            item=item)
+            item=item, single_clusters=single_clusters)
+        points = [meta[0] for meta in shapes]
         user_count = [meta[1] for meta in shapes]
         if not projected:
-            shapes_wgs = self._project_geom_back(shapes)
-        latlng_list = []
-        for shape in shapes_wgs:
-            lng = shape.x
-            lat = shape.y
-            latlng_list.append((lng, lat))
+            # AlphaShapes automatically projects data
+            # to compute shapes. If no projection is
+            # requested, we have to convert it back to
+            # original WGS1984 decimal degrees data
+            points = self._project_centroids_back(points)
+        # extract centroid coordinates from
+        # shapely geometry.Point
+        latlng_list = [[point.x, point.y] for point in points]
+        # convert coords to numpy.nd array
         points = np.array(latlng_list)
         if zipped:
+            zip_list = []
             zip_list = list()
             x_id = 0
             # zip_list.append(("latitude", "longitude","usercount"))
@@ -839,15 +872,18 @@ class ClusterGen():
                 x_id += 1
             result = np.asarray(zip_list)
             # result = np.c_[points, np.asarray([user_count]).T]
-            #result = np.column_stack((points, np.asarray([user_count])))
+            # result = np.column_stack((points, np.asarray([user_count])))
         else:
             result = (points, user_count)
         return result
 
     @CGDec.input_topic_format
-    def get_cluster_centroid_preview(self, item):
+    def get_cluster_centroid_preview(self, item, single_clusters=None):
         """Returns plt map for item selection cluster centroids"""
-        points, user_count = self._get_cluster_centroid_data(item)
+        if single_clusters is None:
+            single_clusters = True
+        points, user_count = self.get_cluster_centroid_data(
+            item=item, single_clusters=single_clusters)
         fig = TPLT.get_centroid_preview(
             points, item, self.bounds, self.cls_type, user_count)
         return fig
@@ -909,7 +945,7 @@ class ClusterGen():
         cluster_guids, _ = self._get_cluster_guids(
             clusters, selected_post_guids)
         shapes, _ = self._get_item_clustershapes(item, cluster_guids)
-        shapes_wgs = self._project_geom_back(shapes)
+        shapes_wgs = self._project_centroids_back(shapes)
         fig = TPLT.get_cluster_preview(
             points=points, sel_colors=sel_colors, item_text=item,
             bounds=self.bounds, mask_noisy=mask_noisy,
@@ -919,7 +955,7 @@ class ClusterGen():
             shapes=shapes_wgs, cls_type=self.cls_type)
         return fig
 
-    def _project_geom_back(self, shapes):
+    def _project_centroids_back(self, shapes):
         """Proj shapes back to WGS1984 for plotting in matplotlib
 
         simple list comprehension with projection:
@@ -928,8 +964,14 @@ class ClusterGen():
             pyproj.transform,
             self.crs_proj,  # source coordinate system
             self.crs_wgs)  # destination coordinate system
-        shapes_wgs = [transform(project, shape[0]) for shape in shapes]
+        shapes_wgs = [(ClusterGen._project_geometry(
+            shape, project)) for shape in shapes]
         return shapes_wgs
+
+    @staticmethod
+    def _project_geometry(geom_shape, proj_trans):
+        geom_shape_proj = transform(proj_trans, geom_shape)
+        return geom_shape_proj
 
     def get_singlelinkagetree_preview(self, item):
         """Returns figure for single linkage tree from HDBSCAN clustering"""
