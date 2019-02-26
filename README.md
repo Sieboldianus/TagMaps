@@ -1,4 +1,4 @@
-![PyPI version](https://ad.vgiscience.org/TagMaps/pypi.svg) ![pylint](https://ad.vgiscience.org/TagMaps/pylint.svg) ![pipeline](https://ad.vgiscience.org/TagMaps/pipeline.svg)
+![PyPI version](https://ad.vgiscience.org/tagmaps/pypi.svg) ![pylint](https://ad.vgiscience.org/tagmaps/pylint.svg) ![pipeline](https://ad.vgiscience.org/tagmaps/pipeline.svg)
 
 Tag Maps
 =============
@@ -8,7 +8,7 @@ Spatio-Temporal Tag and Photo Location Clustering for generating Tag Maps
 This Library uses the single-linkage tree that is available from [HDBSCAN](https://github.com/scikit-learn-contrib/hdbscan) to cut trees at a specific user-defined distance for all available tags in the given dataset. 
 Afterwards, Alpha Shapes are generated as a means to allow 'soft' placement of tags on a map, according to their area of use. Two Shapefiles are generated that can be used to visualize results, for example, in ESRI ArcGIS. 
 
-![Tag Map Example](https://ad.vgiscience.org/TagMaps/img6.png?raw=true)
+![Tag Map Example](https://ad.vgiscience.org/tagmaps/img6.png?raw=true)
 
 Based on the papers:
 
@@ -55,7 +55,7 @@ There're two ways to feed input data:
 3. The filtered data that is used for tagmaps can be exported using `tagmaps.write_cleaned_data()`. 
    Since this will remove all terms/tags/emoji that do not appear in the top 1000 (e.g.) occurring global list of terms,
    this will produce a highly pseudo-anonymized set of information, with only collectively relevant terms remaining.
-   The default value (1000) can be adjusted using `max_items` arg, e.g. the smaller max_items, the higher the effect of anonymization/generalization. 
+   The default value (1000) can be adjusted using `max_items` arg, e.g. the smaller max_items, the higher is the effect of anonymization/generalization. 
 
 
 ## Tutorial
