@@ -18,6 +18,7 @@ from importlib import reload
 import math
 from math import asin, cos, radians, sin, sqrt
 from typing import Dict, Iterable, List, Set, Tuple
+from collections import namedtuple
 
 import emoji
 import numpy as np
@@ -479,11 +480,14 @@ class Utils():
     @staticmethod
     def get_rectangle_bounds(points):
         """Get rectangle bounds for numpy.ndarray of point coordinates"""
+        RectangleBounds = namedtuple(
+            'RectangleBounds',
+            'lim_lat_min lim_lat_max lim_lng_min lim_lng_max')
         lim_y_min = np.min(points.T[1])
         lim_y_max = np.max(points.T[1])
         lim_x_min = np.min(points.T[0])
         lim_x_max = np.max(points.T[0])
-        return lim_y_min, lim_y_max, lim_x_min, lim_x_max
+        return RectangleBounds(lim_y_min, lim_y_max, lim_x_min, lim_x_max)
 
     @staticmethod
     def filter_tags(taglist: Iterable[str],
