@@ -182,7 +182,7 @@ class TPLT():
 
     @staticmethod
     def y_formatter(y_value, __):
-        """Format radians y-labels as meters for improved legebility"""
+        """Format radians y-labels as meters for improved legibility"""
         return f'{Utils.get_meters_from_radians(y_value):3.0f}m'
 
     @staticmethod

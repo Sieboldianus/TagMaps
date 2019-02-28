@@ -375,7 +375,11 @@ class ClusterGen():
     def get_np_points(self, item: str = None, silent: bool = None
                       ) -> np.ndarray:
         """Wrapper that only returns points for _get_np_points_guids"""
-        sel_items = self.get_np_points_guids(item, silent)
+        if item is None:
+            sel_all = True
+        else:
+            sel_all = False
+        sel_items = self.get_np_points_guids(item, silent, sel_all)
         if sel_items.points.size:
             return sel_items.points
 
@@ -965,7 +969,7 @@ class ClusterGen():
             self.crs_proj,  # source coordinate system
             self.crs_wgs)  # destination coordinate system
         shapes_wgs = [(ClusterGen._project_geometry(
-            shape, project)) for shape in shapes]
+            shape[0], project)) for shape in shapes]
         return shapes_wgs
 
     @staticmethod
