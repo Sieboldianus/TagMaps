@@ -688,20 +688,18 @@ class ClusterGen():
                 item.name, None)
         if not cluster_guids:
             return None, 0
-        result = AlphaShapes.get_cluster_shape(
+        alphashapes_data = AlphaShapes.get_cluster_shape(
             item, cluster_guids, self.cleaned_post_dict,
             self.crs_wgs, self.crs_proj, self.cluster_distance,
             self.local_saturation_check)
-        cluster_shapes = result[0]
-        cluster_shapes_area = result[1]
-        return cluster_shapes, cluster_shapes_area
+        return alphashapes_data
 
     def _get_item_clusterarea(
             self,
             item: Tuple[str, int]) -> float:
         """Wrapper: only get cluster shape area for item"""
-        __, cluster_shapes_area = self._get_item_clustershapes(item)
-        return cluster_shapes_area
+        alphashape_data = self._get_item_clustershapes(item)
+        return alphashape_data.item_area
 
     @staticmethod
     def _is_saturated_item(
