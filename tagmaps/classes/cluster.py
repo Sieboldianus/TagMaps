@@ -949,6 +949,8 @@ class ClusterGen():
         cluster_guids, _ = self._get_cluster_guids(
             clusters, selected_post_guids)
         shapes, _ = self._get_item_clustershapes(item, cluster_guids)
+        # get only shapely shapes, not usercount and other info
+        shapes = [meta[0] for meta in shapes]
         shapes_wgs = self._project_centroids_back(shapes)
         fig = TPLT.get_cluster_preview(
             points=points, sel_colors=sel_colors, item_text=item,
@@ -969,7 +971,7 @@ class ClusterGen():
             self.crs_proj,  # source coordinate system
             self.crs_wgs)  # destination coordinate system
         shapes_wgs = [(ClusterGen._project_geometry(
-            shape[0], project)) for shape in shapes]
+            shape, project)) for shape in shapes]
         return shapes_wgs
 
     @staticmethod
