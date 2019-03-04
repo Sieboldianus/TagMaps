@@ -728,8 +728,8 @@ class ClusterGen():
         shapes_tmp = result[0]
         item_area = result[1]
         if (self.local_saturation_check
-                and not item_area == 0
-                and not tnum == 1):
+                and item_area != 0
+                and tnum != 1):
             if self._is_saturated_item(item_area,
                                        topitem_area):
                 # next item
