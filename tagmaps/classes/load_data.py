@@ -84,6 +84,20 @@ class LoadData():
             self.stats.partcount += 1
             return open(file_name, 'r', newline='', encoding='utf8')
 
+    def is_intermediate(self):
+        """Auto test if intermediate data is present"""
+        post_reader = self._process_inputfile(self._parse_input_files())
+        for post in post_reader:
+            pguid = post.get(self.cfg.source_map.post_guid_col)
+            if pguid is None and post.get("guid") is not None:
+                # if column name is "guid",
+                # data is likely of type intermediate
+                self.log.info(
+                    "Intermediate data detected.. skipping filtering step.\n")
+                return True
+            else:
+                return False
+
     def _process_inputfile(self, file_handle):
         """File parse for CSV or JSON from open file handle
 
@@ -111,6 +125,7 @@ class LoadData():
         for post in post_reader:
             # row_num += 1
             lbsn_post = self._parse_post(post)
+            input(f'{lbsn_post}')
             if lbsn_post is None:
                 continue
             else:
@@ -126,7 +141,9 @@ class LoadData():
             print(" " * len(msg), end='\r')
         sys.stdout.flush()
         if self.stats.count_glob == 0:
-            raise ValueError("No posts found in input data.")
+            raise ValueError(
+                f"No posts found in input data. "
+                f"First file: {next(iter(self.filelist or []), None)}.")
         self.log.info(msg)
 
     def _report_progress(self):

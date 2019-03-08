@@ -44,7 +44,7 @@ class BaseConfig:
         self.write_gis_comp_line = True
         self.auto_mode = False
         self.max_items = 1000
-        self.filter_origin = ""
+        self.filter_origin = None
         self.logging_level = logging.INFO
 
         # additional auto settings
@@ -204,7 +204,7 @@ class BaseConfig:
         parser.add_argument("-fO",
                             "--filterOrigin",
                             type=str,
-                            default="",
+                            default=None,
                             help="If provided, will filter input data "
                             "based on origin_id column.",
                             )

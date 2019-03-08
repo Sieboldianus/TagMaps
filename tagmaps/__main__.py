@@ -69,9 +69,15 @@ def main():
         max_items=cfg.max_items,
         logging_level=cfg.logging_level)
 
-    if cfg.load_from_intermediate:
+    if cfg.load_from_intermediate or input_data.is_intermediate():
         # load data from intermediate (already filtered) results
-        tagmaps.prepare_data(input_path=cfg.load_from_intermediate)
+        if not cfg.load_from_intermediate:
+            # if path empty, get first file
+            filename = next(iter(input_data.filelist))
+            cfg.write_cleaned_data = False
+        else:
+            filename = cfg.load_from_intermediate
+        tagmaps.load_intermediate(input_path=filename)
     else:
         # read and process unfiltered input records from csv
         with input_data as records:
@@ -81,6 +87,8 @@ def main():
         # unfiltered input data
         input_data.input_stats_report()
 
+    # prepare loaded data for clustering
+    tagmaps.prepare_data()
     # show statistics for ingested data
     tagmaps.global_stats_report()
 

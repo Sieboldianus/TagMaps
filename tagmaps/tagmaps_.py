@@ -232,6 +232,12 @@ class TagMaps():
         # get prepared data for statistics and clustering
         self.cleaned_stats = self.lbsn_data.get_item_stats()
 
+    @TMDec.init_data_check
+    def load_intermediate(self, input_path):
+        """Load data from intermediate (already filtered) data"""
+        self.cleaned_post_dict = self.lbsn_data.get_cleaned_post_dict(
+            input_path)
+
     @TMDec.prepare_data_check
     @TMDec.data_added_check
     def item_stats_report(self):
