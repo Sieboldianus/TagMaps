@@ -8,6 +8,7 @@ from __future__ import absolute_import
 
 import math
 from decimal import Decimal
+from collections import namedtuple
 
 import numpy as np
 import pyproj
@@ -17,6 +18,12 @@ import shapely.geometry as geometry
 from shapely.ops import cascaded_union, polygonize
 
 from tagmaps.classes.compile_output import Compile
+
+# results will be compiled as namedtuple
+AlphaShapesAndMeta = namedtuple(
+    'AlphaShapesAndMeta',
+    'shape post_count views user_count item_name item_totalcount '
+    'weightsv1 weightsv2 weightsv3 shapetype')
 
 
 class AlphaShapes():
@@ -46,13 +53,12 @@ class AlphaShapes():
                 result_polygon.is_empty):
             return None
         # append statistics for item with no cluster
-        result_tuple = (
-            result_polygon, 1,
-            max(single_post.post_views_count,
-                single_post.post_like_count),
-            1, str(item[0]),
-            item[1], 1, 1, 1, shapetype)
-        return result_tuple
+        single_cluster_result = AlphaShapesAndMeta(
+            result_polygon, 1, max(single_post.post_views_count,
+                                   single_post.post_like_count), 1, str(item[0]),
+            item[1], 1, 1, 1, shapetype
+        )
+        return single_cluster_result
 
     @staticmethod
     def get_cluster_shape(
@@ -65,7 +71,7 @@ class AlphaShapes():
         # we define a new list of Temp Alpha Shapes outside the loop,
         # so that it is not overwritten each time
         alphashapes_and_meta_tmp = list()
-        tag_area = 0
+        item_area = 0
         for post_guids in clustered_post_guids:
             # for each cluster for this toptag
             posts = [cleaned_post_dict[x]
@@ -102,18 +108,21 @@ class AlphaShapes():
             # Geom, Join_Count, Views,  COUNT_User,ImpTag,TagCountG,HImpTag
             if result_polygon is not None and not result_polygon.is_empty:
                 if local_saturation_check:
-                    tag_area += result_polygon.area
-                alphashapes_and_meta_tmp.append(
-                    (result_polygon, post_count, sum_views,
-                     unique_user_count, item[0], item[1],
-                     weightsv1, weightsv2, weightsv3,
-                     shapetype))
+                    item_area += result_polygon.area
+                alphashapedata = AlphaShapesAndMeta(
+                    result_polygon, post_count, sum_views,
+                    unique_user_count, item[0], item[1],
+                    weightsv1, weightsv2, weightsv3,
+                    shapetype)
+                alphashapes_and_meta_tmp.append(alphashapedata)
         if alphashapes_and_meta_tmp:
             # finally sort and append all
             # cluster shapes for this tag
             alphashapes_and_meta_tmp = sorted(
                 alphashapes_and_meta_tmp, key=lambda x: -x[6])
-        return alphashapes_and_meta_tmp, tag_area
+        AlphaShapesArea = namedtuple(
+            'AlphaShapesArea', 'alphashape item_area')
+        return AlphaShapesArea(alphashapes_and_meta_tmp, item_area)
 
     @staticmethod
     def _get_poly_five_to_ten(

@@ -375,7 +375,11 @@ class ClusterGen():
     def get_np_points(self, item: str = None, silent: bool = None
                       ) -> np.ndarray:
         """Wrapper that only returns points for _get_np_points_guids"""
-        sel_items = self.get_np_points_guids(item, silent)
+        if item is None:
+            sel_all = True
+        else:
+            sel_all = False
+        sel_items = self.get_np_points_guids(item, silent, sel_all)
         if sel_items.points.size:
             return sel_items.points
 
@@ -684,20 +688,18 @@ class ClusterGen():
                 item.name, None)
         if not cluster_guids:
             return None, 0
-        result = AlphaShapes.get_cluster_shape(
+        alphashapes_data = AlphaShapes.get_cluster_shape(
             item, cluster_guids, self.cleaned_post_dict,
             self.crs_wgs, self.crs_proj, self.cluster_distance,
             self.local_saturation_check)
-        cluster_shapes = result[0]
-        cluster_shapes_area = result[1]
-        return cluster_shapes, cluster_shapes_area
+        return alphashapes_data
 
     def _get_item_clusterarea(
             self,
             item: Tuple[str, int]) -> float:
         """Wrapper: only get cluster shape area for item"""
-        __, cluster_shapes_area = self._get_item_clustershapes(item)
-        return cluster_shapes_area
+        alphashape_data = self._get_item_clustershapes(item)
+        return alphashape_data.item_area
 
     @staticmethod
     def _is_saturated_item(
@@ -726,8 +728,8 @@ class ClusterGen():
         shapes_tmp = result[0]
         item_area = result[1]
         if (self.local_saturation_check
-                and not item_area == 0
-                and not tnum == 1):
+                and item_area != 0
+                and tnum != 1):
             if self._is_saturated_item(item_area,
                                        topitem_area):
                 # next item
@@ -945,6 +947,8 @@ class ClusterGen():
         cluster_guids, _ = self._get_cluster_guids(
             clusters, selected_post_guids)
         shapes, _ = self._get_item_clustershapes(item, cluster_guids)
+        # get only shapely shapes, not usercount and other info
+        shapes = [meta[0] for meta in shapes]
         shapes_wgs = self._project_centroids_back(shapes)
         fig = TPLT.get_cluster_preview(
             points=points, sel_colors=sel_colors, item_text=item,
