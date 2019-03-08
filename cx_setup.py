@@ -84,7 +84,7 @@ EXECUTABLES = [
                targetName="tagmaps.exe")
 ]
 
-BUILD_NAME = f'TagMaps-Win-{VERSION}'
+BUILD_NAME = f'tagmaps-{VERSION}-win-amd64-3.6'
 
 setup(name="tagmaps",
       version=VERSION,
