@@ -106,7 +106,9 @@ def main():
     if cfg.write_cleaned_data and not cfg.load_from_intermediate:
         # write intermediate results
         tagmaps.write_cleaned_data()
-        tagmaps.write_toplists()
+        # tagmaps.write_toplists()
+        if cfg.topic_modeling:
+            tagmaps.write_topics()
 
     if cfg.statistics_only is False:
         # restart time monitoring for

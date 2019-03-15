@@ -548,7 +548,7 @@ class PrepareData():
             self.user_topiclist_dict[user_key] |= \
                 cleaned_post_location.hashtags
             # also use descriptions for Topic Modeling
-            self. user_topiclist_dict[user_key] |= \
+            self.user_topiclist_dict[user_key] |= \
                 cleaned_post_location.post_body
             # Bit wise or and assignment in one step.
             # -> assign PhotoGuid to UserDict list
@@ -616,10 +616,17 @@ class PrepareData():
             self.items_per_userloc[EMOJI], locid_userid)
         merged_taglist = PrepareData._get_merged(
             self.items_per_userloc[TAGS], locid_userid)
+        try:
+            lat = float(post_latlng[0])
+            lng = float(post_latlng[1])
+        except ValueError:
+            lat = None
+            lng = None
+            pass
         cleaned_post = CleanedPost(
             origin_id=first_post.origin_id,
-            lat=float(post_latlng[0]),
-            lng=float(post_latlng[1]),
+            lat=lat,
+            lng=lng,
             guid=first_post.guid,
             user_guid=user_key,
             post_body=merged_wordlist,

@@ -49,6 +49,7 @@ class LoadData():
         self.log = logging.getLogger("tagmaps")
         self.bounds = AnalysisBounds()
         self.distinct_locations_set = set()
+        self.ignore_empty_latlng = False
         # basic statistics collection
         self.stats = DataStats()
         if user_variety_input:
@@ -125,7 +126,6 @@ class LoadData():
         for post in post_reader:
             # row_num += 1
             lbsn_post = self._parse_post(post)
-            input(f'{lbsn_post}')
             if lbsn_post is None:
                 continue
             else:
@@ -184,8 +184,13 @@ class LoadData():
         if self.cfg.sort_out_places and \
                 self._is_sortout_place(post):
             return None
+        lat = None
+        lng = None
         if self._is_empty_latlng(post):
-            return None
+            if self.ignore_empty_latlng:
+                pass
+            else:
+                return None
         else:
             # assign lat/lng coordinates from dict
             lat, lng = self._correct_placelatlng(
@@ -195,11 +200,19 @@ class LoadData():
             )
             # update boundary
             self.bounds.upd_latlng_bounds(lat, lng)
-        lbsn_post.latitude = lat
-        lbsn_post.longitude = lng
-        # Note: loc_id not loaded from file
-        lbsn_post.loc_id = str(lat) + ':' + \
-            str(lng)  # create loc_id from lat/lng
+            lbsn_post.latitude = lat
+            lbsn_post.longitude = lng
+        if lat is None or lng is None:
+            # Try to substitude place_guid
+            # if self.ignore_empty_latlng has been set to True
+            lbsn_post.loc_id = post.get(
+                self.cfg.source_map.place_guid_col)
+            if not lbsn_post.loc_id:
+                self.log.warning('Neither coordinates nor place guid found.')
+        else:
+            # Note: loc_id not loaded from file
+            # create loc_id from lat/lng
+            lbsn_post.loc_id = str(lat) + ':' + str(lng)
         # counting of distinct loc ids
         self.distinct_locations_set.add(lbsn_post.loc_id)
         lbsn_post.loc_name = post.get(self.cfg.source_map.place_name_col)

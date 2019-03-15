@@ -418,6 +418,11 @@ class TagMaps():
         """Write cleaned data to file for intermediate results store"""
         self.lbsn_data.write_cleaned_data(self.cleaned_post_dict)
 
+    @TMDec.prepare_data_check
+    def write_topics(self):
+        """Write topics to file (e.g. for advanced topic modeling)"""
+        self.lbsn_data.write_topic_models()
+
     @TMDec.init_data_check
     def get_pseudo_anonymized_data(self):
         """Returns dict of cleaned posts with removed
