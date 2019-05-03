@@ -92,8 +92,9 @@ class BaseConfig:
         parser.add_argument("-s",
                             "--source",
                             default="fromLBSN",
-                            help="Specify source of data. "
-                            "This is needed to read data.")
+                            help="Specify type of source of data. "
+                            "This is needed to read data. "
+                            "Defaults to 'fromLBSN'.")
         parser.add_argument("-r",
                             "--disableRemoveLongTail",
                             action="store_true",
