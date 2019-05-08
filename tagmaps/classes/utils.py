@@ -10,6 +10,7 @@ import hashlib
 import io
 import logging
 import os
+import platform
 import re
 import sys
 import unicodedata
@@ -137,7 +138,8 @@ class Utils():
         """
         # set console view parameters
         # stretch console
-        os.system('mode con: cols=197 lines=40')
+        if platform.system() == 'Windows':
+            os.system('mode con: cols=197 lines=40')
         logging.getLogger("fiona.collection").disabled = True
 
     @staticmethod
