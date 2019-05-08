@@ -5,6 +5,8 @@ channels:
   - travis
 dependencies:
   - python=3.6.7
+  - pip
+  - pylint
   - fiona>=1.8.6
   - shapely>=1.6.4
   - pandas>=0.24.2
@@ -21,7 +23,5 @@ dependencies:
   - regex>=2019.04.14
   - scipy>=1.2.1
   - pip:
-    - pylint
-    - anybadge
-    - pylint-exit
-
+      - anybadge
+      - pylint-exit
