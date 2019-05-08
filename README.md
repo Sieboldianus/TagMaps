@@ -108,6 +108,10 @@ GNU GPLv3
 
 ## Changelog & Download
 
+2019-05-08: TagMaps v.0.17.5
+
+- as of this version, tagmaps package is available on Anaconda Cloud
+
 2019-03-08: [**TagMaps v0.17.4**](https://cloudstore.zih.tu-dresden.de/index.php/s/AcfL5ZkRhPas0O4/download)
 
 - First version of public API, e.g. load tagmaps to other packages with `import tagmaps` or `from tagmaps import TagMaps`
