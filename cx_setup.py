@@ -41,7 +41,8 @@ INCLUDES_MOD = [
     'numpy',
     'scipy._distributor_init',
     'multiprocessing',
-    'gdal'
+    'gdal',
+    'pyproj.datadir'
 ]
 
 # windows pipenv:
@@ -58,6 +59,8 @@ INCLUDE_FOLDERS_FILES = [
     (os.path.join(PYTHON_INSTALL_DIR, 'DLLs', 'sqlite3.dll'),
      os.path.join('lib', 'sqlite3.dll'),
      ),
+    # (os.path.join(PYTHON_INSTALL_DIR, 'Library', 'bin', 'geos_c.dll'),
+    # os.path.join('lib', 'geos_c.dll'),
     # os.path.join(PYTHON_INSTALL_DIR, 'Library', 'bin', 'mkl_intel_thread.dll'),
     # os.path.join(os.environ['GDAL_DATA'], 'gcs.csv'),
     'resources/01_Input/',
