@@ -19,3 +19,4 @@ tagmaps/.pytest_cache/
 conda.recipe
 environment_dev.yml
 .pylintrc
+venv/
