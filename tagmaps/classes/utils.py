@@ -20,6 +20,7 @@ import math
 from math import asin, cos, radians, sin, sqrt
 from typing import Dict, Iterable, List, Set, Tuple
 from collections import namedtuple
+from pathlib import Path
 
 import emoji
 import numpy as np
@@ -35,6 +36,16 @@ class Utils():
 
     Primarily @classmethods and @staticmethods
     """
+    def set_proj_dir():
+        """Update PROJ_LIB location if not found."""
+        if not os.environ.get('PROJ_LIB'):
+            local_proj_path = Path.cwd() / "proj"
+            if not local_proj_path.exists():
+                raise ValueError("Pyproj 'proj' datadir not found. Either specify "
+                                 "PROJ_LIB environmental variable or copy 'proj' "
+                                 "folder to local path of executable")
+            os.environ['PROJ_LIB'] = str(local_proj_path)
+            pyproj.datadir.set_data_dir(str(local_proj_path))
 
     @staticmethod
     def get_shapely_bounds(

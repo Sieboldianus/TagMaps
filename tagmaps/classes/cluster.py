@@ -101,6 +101,7 @@ class ClusterGen():
         self.bound_points_shapely = Utils.get_shapely_bounds(
             self.bounds)
         # data always in lat/lng WGS1984
+        Utils.set_proj_dir()
         self.crs_wgs = pyproj.Proj(init='epsg:4326')
         self.crs_proj, __ = Utils.get_best_utmzone(
             self.bound_points_shapely)
