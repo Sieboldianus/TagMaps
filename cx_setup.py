@@ -2,8 +2,19 @@
 
 """Setup config for cx_freeze (build)
 
-To build self-executable tagmaps on Windows:
-    - Install OSGeosW64 and add /OSGeo4W64/bin to Path
+This cx_freeze setup is configured to build
+self executable folder on Windows for Windows
+users who cannot use package manager. The resulting
+tagmaps.exe can be directly run.
+
+Has been tested with conda environment.
+
+Run build with:
+    python cx_setup.py build
+
+Extra Requirements for build:
+    - install OSGeosW64, add C:/OSGeo4W64/bin to PATH
+    - install mkl-service
 """
 
 import glob
@@ -20,8 +31,6 @@ os.environ['TCL_LIBRARY'] = os.path.join(
     PYTHON_INSTALL_DIR, 'tcl', 'tcl8.6')
 os.environ['TK_LIBRARY'] = os.path.join(
     PYTHON_INSTALL_DIR, 'tcl', 'tk8.6')
-os.environ['PROJ_LIB'] = os.path.join(
-    PYTHON_INSTALL_DIR, 'Library', 'share', 'proj')
 
 # opcode is not a virtualenv module,
 # so we can use it to find the stdlib; this is the same
@@ -71,9 +80,7 @@ NUMPY_DLLS_FULLPATH.append(
     os.path.join(PYTHON_INSTALL_DIR, 'Library', 'bin', 'libiomp5md.dll')
 )
 
-# windows pipenv:
-# copy tcl86t.dll, tk86t.dll and sqlite3.dll
-# to venv_folder/DLLs/*
+# files that need manual attention
 INCLUDE_FOLDERS_FILES = [
     (DISTUTILS_PATH, 'distutils'),
     (os.path.join(PYTHON_INSTALL_DIR, 'DLLs', 'tcl86t.dll'),
@@ -85,12 +92,19 @@ INCLUDE_FOLDERS_FILES = [
     (os.path.join(PYTHON_INSTALL_DIR, 'DLLs', 'sqlite3.dll'),
      os.path.join('lib', 'sqlite3.dll'),
      ),
-    # (os.path.join(PYTHON_INSTALL_DIR, 'Library', 'bin', 'geos_c.dll'),
-    # os.path.join('lib', 'geos_c.dll'),
-    #os.path.join(PYTHON_INSTALL_DIR, 'Library', 'bin', 'mkl_intel_thread.dll'),
-    #os.path.join(PYTHON_INSTALL_DIR, 'Library', 'bin', 'libiomp5md.dll'),
-    os.path.join(PYTHON_INSTALL_DIR, 'Library', 'bin', 'geos_c.dll'),
-    # pyproj.datadir (proj.4) manual hook:
+    # both files of geos need to be available in both directories
+    (os.path.join(PYTHON_INSTALL_DIR, 'Library', 'bin', 'geos.dll'),
+     os.path.join('Library', 'lib', 'geos.dll')
+     ),
+    (os.path.join(PYTHON_INSTALL_DIR, 'Library', 'bin', 'geos_c.dll'),
+     os.path.join('Library', 'lib', 'geos_c.dll')
+     ),
+    (os.path.join(PYTHON_INSTALL_DIR, 'Library', 'bin', 'geos.dll'),
+     os.path.join('geos.dll')
+     ),
+    (os.path.join(PYTHON_INSTALL_DIR, 'Library', 'bin', 'geos_c.dll'),
+     os.path.join('geos_c.dll')
+     ),
     (os.path.join(PYTHON_INSTALL_DIR, 'Library', 'share', 'proj'),
      os.path.join('proj')
      ),
