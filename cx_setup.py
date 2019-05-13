@@ -83,13 +83,13 @@ NUMPY_DLLS_FULLPATH.append(
 # files that need manual attention
 INCLUDE_FOLDERS_FILES = [
     (DISTUTILS_PATH, 'distutils'),
-    (os.path.join(PYTHON_INSTALL_DIR, 'DLLs', 'tcl86t.dll'),
+    (os.path.join(PYTHON_INSTALL_DIR, 'Library', 'bin', 'tcl86t.dll'),
      os.path.join('lib', 'tcl86t.dll'),
      ),
-    (os.path.join(PYTHON_INSTALL_DIR, 'DLLs', 'tk86t.dll'),
+    (os.path.join(PYTHON_INSTALL_DIR, 'Library', 'bin', 'tk86t.dll'),
      os.path.join('lib', 'tk86t.dll'),
      ),
-    (os.path.join(PYTHON_INSTALL_DIR, 'DLLs', 'sqlite3.dll'),
+    (os.path.join(PYTHON_INSTALL_DIR, 'Library', 'bin', 'sqlite3.dll'),
      os.path.join('lib', 'sqlite3.dll'),
      ),
     # both files of geos need to be available in both directories
