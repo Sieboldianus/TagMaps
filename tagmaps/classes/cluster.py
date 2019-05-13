@@ -17,6 +17,7 @@ from typing import Any, Dict, List, NamedTuple, Set, Tuple
 import numpy as np
 import pandas as pd
 import pyproj
+from pyproj import Transformer
 import seaborn as sns
 import shapely.geometry as geometry
 from shapely.ops import transform
@@ -102,9 +103,11 @@ class ClusterGen():
             self.bounds)
         # data always in lat/lng WGS1984
         Utils.set_proj_dir()
-        self.crs_wgs = pyproj.Proj(init='epsg:4326')
+        self.crs_wgs = pyproj.Proj(init='epsg:4326', preserve_units=False)
         self.crs_proj, __ = Utils.get_best_utmzone(
             self.bound_points_shapely)
+        self.proj_transformer = Transformer.from_proj(
+            self.crs_wgs, self.crs_proj)
 
     @classmethod
     def new_clusterer(cls,
@@ -652,8 +655,7 @@ class ClusterGen():
             unique_user_count = len(set([post.user_guid for post in posts]))
             # get points and project coordinates to suitable UTM
             points = [geometry.Point(
-                pyproj.transform(self.crs_wgs, self.crs_proj,
-                                 post.lng, post.lat)
+                self.proj_transformer.transform(post.lng, post.lat)
             ) for post in posts]
             point_collection = geometry.MultiPoint(list(points))
             # convex hull enough for calculating centroid
@@ -668,8 +670,7 @@ class ClusterGen():
         # noclusterphotos = [cleanedPhotoDict[x] for x in singlePhotoGuidList]
         for no_cluster_post in none_clustered_guids:
             post = self.cleaned_post_dict[no_cluster_post]
-            x_point, y_point = pyproj.transform(
-                self.crs_wgs, self.crs_proj,
+            x_point, y_point = self.proj_transformer.transform(
                 post.lng, post.lat)
             p_center = geometry.Point(x_point, y_point)
             if p_center is not None and not p_center.is_empty:
@@ -691,8 +692,8 @@ class ClusterGen():
             return None, 0
         alphashapes_data = AlphaShapes.get_cluster_shape(
             item, cluster_guids, self.cleaned_post_dict,
-            self.crs_wgs, self.crs_proj, self.cluster_distance,
-            self.local_saturation_check)
+            self.cluster_distance,
+            self.local_saturation_check, self.proj_transformer)
         return alphashapes_data
 
     def _get_item_clusterarea(
@@ -748,8 +749,8 @@ class ClusterGen():
                  for x in none_clustered_guids]
         for single_post in posts:
             shapes_single_tmp = AlphaShapes.get_single_cluster_shape(
-                item, single_post, self.crs_wgs,
-                self.crs_proj, self.cluster_distance)
+                item, single_post, self.cluster_distance,
+                self.proj_transformer)
             if not shapes_single_tmp:
                 continue
             # Use append, since always single Tuple
@@ -965,17 +966,19 @@ class ClusterGen():
 
         simple list comprehension with projection:
         """
-        project = partial(
-            pyproj.transform,
-            self.crs_proj,  # source coordinate system
-            self.crs_wgs)  # destination coordinate system
+        # project = partial(
+        #    pyproj.transform,
+        #    self.crs_proj,  # source coordinate system
+        #    self.crs_wgs)  # destination coordinate system
+        proj_transformer = Transformer.from_proj(
+            self.crs_proj, self.crs_wgs)
         shapes_wgs = [(ClusterGen._project_geometry(
-            shape, project)) for shape in shapes]
+            shape, proj_transformer)) for shape in shapes]
         return shapes_wgs
 
     @staticmethod
-    def _project_geometry(geom_shape, proj_trans):
-        geom_shape_proj = transform(proj_trans, geom_shape)
+    def _project_geometry(geom_shape, project):
+        geom_shape_proj = project.transform(geom_shape)
         return geom_shape_proj
 
     def get_singlelinkagetree_preview(self, item):

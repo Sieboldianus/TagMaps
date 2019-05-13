@@ -10,6 +10,7 @@ import math
 from decimal import Decimal
 from collections import namedtuple
 
+import logging
 import numpy as np
 import pyproj
 
@@ -30,15 +31,14 @@ class AlphaShapes():
     """Converts (cluster) point clouds to shapes"""
     @staticmethod
     def get_single_cluster_shape(
-            item, single_post, crs_wgs,
-            crs_proj, cluster_distance):
+            item, single_post,
+            cluster_distance: float, proj_transformer):
         """Get Shapes for items with no clusters
         Will return a buffer based on cluster distance
         """
         shapetype = "Single cluster"
         # project lat/lng to UTM
-        point_x, point_y = pyproj.transform(
-            crs_wgs, crs_proj,
+        point_x, point_y = proj_transformer.transform(
             single_post.lng, single_post.lat)
         pcoordinate = geometry.Point(point_x, point_y)
         # single dots are presented
@@ -64,14 +64,15 @@ class AlphaShapes():
     def get_cluster_shape(
             item, clustered_post_guids,
             cleaned_post_dict,
-            crs_wgs, crs_proj,
             cluster_distance: float,
-            local_saturation_check):
+            local_saturation_check,
+            proj_transformer):
         """Returns alpha shapes and tag_area (sqm) for a point cloud"""
         # we define a new list of Temp Alpha Shapes outside the loop,
         # so that it is not overwritten each time
         alphashapes_and_meta_tmp = list()
         item_area = 0
+
         for post_guids in clustered_post_guids:
             # for each cluster for this toptag
             posts = [cleaned_post_dict[x]
@@ -93,11 +94,8 @@ class AlphaShapes():
                                   for post in posts}
             # simple list comprehension with projection:
             points = [geometry.Point(
-                pyproj.transform(
-                    crs_wgs,
-                    crs_proj,
-                    Decimal(location.split(':')[1]),
-                    Decimal(location.split(':')[0]))
+                proj_transformer.transform(
+                    float(location.split(':')[1]), float(location.split(':')[0]))
             ) for location in distinct_locations]
 
             # get poly shape from points
