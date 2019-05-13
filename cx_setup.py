@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 
-"""Setup config for cx_freeze (build)"""
+"""Setup config for cx_freeze (build)
+
+To build self-executable tagmaps on Windows:
+    - Install OSGeosW64 and add /OSGeo4W64/bin to Path
+"""
 
 import os.path
 import opcode
@@ -42,7 +46,9 @@ INCLUDES_MOD = [
     'scipy._distributor_init',
     'multiprocessing',
     'gdal',
-    'pyproj.datadir'
+    'pyproj.datadir',
+    'shapely.geometry',
+    'mkl'
 ]
 
 # windows pipenv:
@@ -61,7 +67,13 @@ INCLUDE_FOLDERS_FILES = [
      ),
     # (os.path.join(PYTHON_INSTALL_DIR, 'Library', 'bin', 'geos_c.dll'),
     # os.path.join('lib', 'geos_c.dll'),
-    # os.path.join(PYTHON_INSTALL_DIR, 'Library', 'bin', 'mkl_intel_thread.dll'),
+    os.path.join(PYTHON_INSTALL_DIR, 'Library', 'bin', 'mkl_intel_thread.dll'),
+    os.path.join(PYTHON_INSTALL_DIR, 'Library', 'bin', 'libiomp5md.dll'),
+    os.path.join(PYTHON_INSTALL_DIR, 'Library', 'bin', 'geos_c.dll'),
+    # pyproj.datadir (proj.4) manual hook:
+    (os.path.join(PYTHON_INSTALL_DIR, 'Library', 'share', 'proj'),
+     os.path.join('lib', 'py_proj', 'proj_dir', 'share', 'proj')
+     ),
     # os.path.join(os.environ['GDAL_DATA'], 'gcs.csv'),
     'resources/01_Input/',
     'resources/00_Config/',
