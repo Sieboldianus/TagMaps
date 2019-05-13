@@ -6,6 +6,8 @@ To build self-executable tagmaps on Windows:
     - Install OSGeosW64 and add /OSGeo4W64/bin to Path
 """
 
+import glob
+import json
 import os.path
 import opcode
 from pathlib import Path
@@ -18,7 +20,8 @@ os.environ['TCL_LIBRARY'] = os.path.join(
     PYTHON_INSTALL_DIR, 'tcl', 'tcl8.6')
 os.environ['TK_LIBRARY'] = os.path.join(
     PYTHON_INSTALL_DIR, 'tcl', 'tk8.6')
-
+os.environ['PROJ_LIB'] = os.path.join(
+    PYTHON_INSTALL_DIR, 'Library', 'share', 'proj')
 
 # opcode is not a virtualenv module,
 # so we can use it to find the stdlib; this is the same
@@ -48,8 +51,25 @@ INCLUDES_MOD = [
     'gdal',
     'pyproj.datadir',
     'shapely.geometry',
-    'mkl'
 ]
+
+# include all mkl files
+# https://stackoverflow.com/questions/54337644/cannot-load-mkl-intel-thread-dll-on-python-executable
+# https://github.com/anthony-tuininga/cx_Freeze/issues/214
+# get json file that has mkl files list (exclude the "service" file)
+MKL_FILES_JSON_FILE = glob.glob(
+    os.path.join(PYTHON_INSTALL_DIR, "conda-meta", "mkl-[!service]*.json"))[0]
+with open(MKL_FILES_JSON_FILE) as file:
+    MKL_FILES_JSON_DATA = json.load(file)
+# get the list of files from the json data file
+NUMPY_MKL_DLLS = MKL_FILES_JSON_DATA["files"]
+# get the full path of these files
+NUMPY_DLLS_FULLPATH = list(map(lambda currPath: os.path.join(
+    PYTHON_INSTALL_DIR, currPath), NUMPY_MKL_DLLS))
+# add libiomp5md.dll, as it is also needed for Intel MKL
+NUMPY_DLLS_FULLPATH.append(
+    os.path.join(PYTHON_INSTALL_DIR, 'Library', 'bin', 'libiomp5md.dll')
+)
 
 # windows pipenv:
 # copy tcl86t.dll, tk86t.dll and sqlite3.dll
@@ -67,14 +87,14 @@ INCLUDE_FOLDERS_FILES = [
      ),
     # (os.path.join(PYTHON_INSTALL_DIR, 'Library', 'bin', 'geos_c.dll'),
     # os.path.join('lib', 'geos_c.dll'),
-    os.path.join(PYTHON_INSTALL_DIR, 'Library', 'bin', 'mkl_intel_thread.dll'),
-    os.path.join(PYTHON_INSTALL_DIR, 'Library', 'bin', 'libiomp5md.dll'),
+    #os.path.join(PYTHON_INSTALL_DIR, 'Library', 'bin', 'mkl_intel_thread.dll'),
+    #os.path.join(PYTHON_INSTALL_DIR, 'Library', 'bin', 'libiomp5md.dll'),
     os.path.join(PYTHON_INSTALL_DIR, 'Library', 'bin', 'geos_c.dll'),
     # pyproj.datadir (proj.4) manual hook:
     (os.path.join(PYTHON_INSTALL_DIR, 'Library', 'share', 'proj'),
-     os.path.join('lib', 'py_proj', 'proj_dir', 'share', 'proj')
+     os.path.join('proj')
      ),
-    # os.path.join(os.environ['GDAL_DATA'], 'gcs.csv'),
+    os.path.join(os.environ['GDAL_DATA'], 'gcs.csv'),
     'resources/01_Input/',
     'resources/00_Config/',
     'resources/00_generateClusters_OnlyEmoji.cmd',
@@ -82,7 +102,8 @@ INCLUDE_FOLDERS_FILES = [
     'resources/00_generateClusters_OnlyTags.cmd',
     ('tagmaps/matplotlibrc',
      "matplotlibrc")
-]
+] + NUMPY_DLLS_FULLPATH
+
 PACKAGES_MOD = ["tkinter", "hdbscan"]
 EXCLUDES_MOD = [
     "scipy.spatial.cKDTree",
