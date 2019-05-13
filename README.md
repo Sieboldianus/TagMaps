@@ -108,9 +108,10 @@ GNU GPLv3
 
 ## Changelog & Download
 
-2019-05-08: TagMaps v.0.17.5
+2019-05-08: [**TagMaps v.0.17.6**](https://cloudstore.zih.tu-dresden.de/index.php/s/ahl8mKQVcXOGo8d/download)
 
-- as of this version, tagmaps package is available on Anaconda Cloud
+- as of this version, tagmaps package is available on Anaconda Cloud (install with `conda install -c sieboldianus tagmaps`). The conda-forge recipe is currently under review and should be available soon.
+- fixed a bug with newer versions of pyproj (>2.0.0) that would result in very slow projection performance
 
 2019-03-08: [**TagMaps v0.17.4**](https://cloudstore.zih.tu-dresden.de/index.php/s/AcfL5ZkRhPas0O4/download)
 
