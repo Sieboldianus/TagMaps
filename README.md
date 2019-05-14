@@ -1,4 +1,4 @@
-![PyPI version](https://ad.vgiscience.org/tagmaps/pypi.svg) ![pylint](https://ad.vgiscience.org/tagmaps/pylint.svg) ![pipeline](https://ad.vgiscience.org/tagmaps/pipeline.svg) ![conda](https://anaconda.org/sieboldianus/tagmaps/badges/version.svg)
+![PyPI version](https://ad.vgiscience.org/tagmaps/pypi.svg) ![pylint](https://ad.vgiscience.org/tagmaps/pylint.svg) ![pipeline](https://ad.vgiscience.org/tagmaps/pipeline.svg) ![Conda Version](https://img.shields.io/conda/vn/conda-forge/tagmaps.svg)
 
 # Tag Maps
 
@@ -19,8 +19,8 @@ Based on the papers:
 ## Installation
 
 1. The easiest way for Windows users is to download the newest pre-compiled build from [releases](../../releases) and run `tagmaps.exe`
-2. For all other OS, the recommended way is to install with `pip install tagmaps`
-3. For devs, if conda package manager is available, use `conda env create -f environment.yml`
+2. The recommended way to install the package is with `conda install tagmaps`. Before, make sure that **conda-forge** is added as a channel: `conda config --add channels conda-forge`
+3. If you need to install with pip, it is recommended to install all dependencies first (e.g. Windows users: use [Gohlke wheels](<https://www.lfd.uci.edu/~gohlke/pythonlibs/>) if available) and then run `pip install tagmaps`
 
 ## Quickstart
 
@@ -110,7 +110,7 @@ GNU GPLv3
 
 2019-05-08: [**TagMaps v.0.17.6**](https://cloudstore.zih.tu-dresden.de/index.php/s/ahl8mKQVcXOGo8d/download)
 
-- as of this version, tagmaps package is available on Anaconda Cloud (install with `conda install -c sieboldianus tagmaps`). The conda-forge recipe is currently under review and should be available soon.
+- as of this version, tagmaps package is available on [conda-forge](<https://anaconda.org/conda-forge/tagmaps>)
 - fixed a bug with newer versions of pyproj (>2.0.0) that would result in very slow projection performance
 
 2019-03-08: [**TagMaps v0.17.4**](https://cloudstore.zih.tu-dresden.de/index.php/s/AcfL5ZkRhPas0O4/download)
