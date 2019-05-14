@@ -31,12 +31,12 @@ def main():
     """Main tag maps method for direct execution of package.
 
     The order of execution is pretty linear:
-        1. LoadData (apply basic filters, stoplists etc.) - /01_Input/
+        1. LoadData (cleanup, apply basic filters, stoplists etc.) - /01_Input/
         2. PrepareData (global statistics, remove long tail, prepare
            cleaned data structure)
         3. Optional: user input for cluster distance/item selection
         4. Cluster Step: calculate itemized / global clusters
-        5. Alpha Shapes: for each cluter, calculate spatial shape/ boundary
+        5. Alpha Shapes: for each cluster, calculate spatial shape/ boundary
         6. Compile Output: normalize results, add statistics, shapefile
         7. Write results: Write Shapefile to file  - /02_Output/
     """
