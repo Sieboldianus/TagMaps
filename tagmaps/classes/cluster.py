@@ -417,15 +417,14 @@ class ClusterGen():
                         preview_mode: bool = None,
                         min_cluster_size: int = None,
                         allow_single_cluster: bool = True):
+        """Cluster points using HDBSCAN"""
         if min_span_tree is None:
             min_span_tree = False
         if preview_mode is None:
             preview_mode = False
         if allow_single_cluster is None:
             allow_single_cluster = True
-        # cluster data
         # conversion to radians for HDBSCAN
-        # (does not support decimal degrees)
         tag_radians_data = np.radians(points)  # pylint: disable=E1111
         if min_cluster_size is None:
             min_cluster_size = max(
@@ -435,19 +434,8 @@ class ClusterGen():
             gen_min_span_tree=min_span_tree,
             allow_single_cluster=allow_single_cluster,
             min_samples=1)
-        # clusterer = hdbscan.HDBSCAN(
-        #                   min_cluster_size=10,
-        #                   metric='haversine',
-        #                   gen_min_span_tree=False,
-        #                   allow_single_cluster=True)
-        # clusterer = hdbscan.robust_single_linkage_.RobustSingleLinkage(
-        #                   cut=0.000035)
-        # srsl_plt = hdbscan.robust_single_linkage_.plot()
         # Start clusterer on different thread
-        # to prevent GUI from freezing, see:
-        # http://stupidpythonideas.blogspot.de/2013/10/why-your-gui-app-freezes.html
-        # https://stackoverflow.com/questions/6893968/how-to-get-the-return-value-from-a-thread-in-python
-
+        # to prevent GUI from freezing
         with warnings.catch_warnings():
             # disable joblist multithread warning
             # because there's only one thread
@@ -459,8 +447,6 @@ class ClusterGen():
         if self.autoselect_clusters:
             cluster_labels = self.clusterer.labels_
         else:
-            # min_cluster_size:
-            # 0.000035 without haversine: 223 m (or 95 m for 0.000015)
             cluster_labels = self.clusterer.single_linkage_tree_.get_clusters(
                 Utils.get_radians_from_meters(
                     self.cluster_distance), min_cluster_size=2)
@@ -472,9 +458,6 @@ class ClusterGen():
         mask_noisy = (cluster_labels == -1)
         number_of_clusters = len(
             np.unique(cluster_labels[~mask_noisy]))  # nopep8 false positive? pylint: disable=E1130
-        # palette = sns.color_palette("hls", )
-        #           sns.color_palette(None, len(sel_labels))
-        #           sns.color_palette(None, 100)
         palette = sns.color_palette("husl", number_of_clusters+1)
         sel_colors = [palette[x] if x >= 0
                       else (0.5, 0.5, 0.5)
@@ -558,8 +541,7 @@ class ClusterGen():
                 clustered_guids.append(current_clustered_guids)
             none_clustered_guids = list(np_selected_post_guids[clusters == -1])
             # Sort descending based on size of cluster
-            # https://stackoverflow.com/questions/30346356/how-to-sort-list-of-lists-according-to-length-of-sublists
-            # this is need to later compute HImp Value (1 or 0)
+            # this is needed to later compute HImp Value (1 or 0)
             clustered_guids.sort(key=len, reverse=True)
         return Guids(clustered_guids, none_clustered_guids)
 
@@ -689,20 +671,6 @@ class ClusterGen():
             pyproj.transform(self.crs_wgs, self.crs_proj,
                              lng, lat)
         return lng_proj, lat_proj
-
-    def _proj_geom(self, geom: geometry, backwards: bool = False):
-        """Project geometry using shapely.ops.transform
-
-        If pyproj > 2.0.0, it would be possible to use pyproj.transformer
-        for geometry as well. But shapely.ops.transform is of similar,
-        and is therefore always used, ignoring pyproj versions.
-        """
-        if backwards:
-            project = self.proj_transformer_partial_back
-        else:
-            project = self.proj_transformer_partial
-        geom_proj = transform(project, geom)
-        return geom_proj
 
     def get_cluster_centroids(
             self, clustered_guids, none_clustered_guids=None):
@@ -933,13 +901,10 @@ class ClusterGen():
             zip_list = []
             zip_list = list()
             x_id = 0
-            # zip_list.append(("latitude", "longitude","usercount"))
             for point in points:
                 zip_list.append((point[0], point[1], user_count[x_id]))
                 x_id += 1
             result = np.asarray(zip_list)
-            # result = np.c_[points, np.asarray([user_count]).T]
-            # result = np.column_stack((points, np.asarray([user_count])))
         else:
             result = (points, user_count)
         return result
