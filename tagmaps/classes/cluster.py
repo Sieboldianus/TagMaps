@@ -17,10 +17,10 @@ from typing import Any, Dict, List, NamedTuple, Set, Tuple
 import numpy as np
 import pandas as pd
 import pyproj
-from pyproj import Transformer
 import seaborn as sns
 import shapely.geometry as geometry
-from shapely.ops import transform
+from pyproj import Proj  # pylint: disable=C0412
+from shapely.ops import transform  # pylint: disable=C0412
 
 from tagmaps.classes.alpha_shapes import AlphaShapes
 from tagmaps.classes.plotting import TPLT
@@ -28,6 +28,14 @@ from tagmaps.classes.shared_structure import (EMOJI, LOCATIONS, TAGS, TOPICS,
                                               AnalysisBounds, CleanedPost,
                                               ClusterType)
 from tagmaps.classes.utils import Utils
+
+# transformer only available from pyproj>=2.0.0
+# load if available to improve projection speed
+try:
+    from pyproj import Transformer  # pylint: disable=C0412
+except ImportError:
+    pass
+
 
 with warnings.catch_warnings():
     # filter sklearn\externals\joblib\parallel.py:268:
@@ -103,11 +111,28 @@ class ClusterGen():
             self.bounds)
         # data always in lat/lng WGS1984
         Utils.set_proj_dir()
-        self.crs_wgs = pyproj.Proj(init='epsg:4326', preserve_units=False)
+        # define input and UTM projections
+        self.crs_wgs = Proj(init='epsg:4326', preserve_units=False)
         self.crs_proj, __ = Utils.get_best_utmzone(
             self.bound_points_shapely)
-        self.proj_transformer = Transformer.from_proj(
-            self.crs_wgs, self.crs_proj)
+        # define projection function ahead, if available
+        try:
+            self.proj_transformer = Transformer.from_proj(
+                self.crs_wgs, self.crs_proj)
+            self.proj_transformer_back = Transformer.from_proj(
+                self.crs_proj, self.crs_wgs)
+        except ValueError:
+            self.proj_transformer = None
+            self.proj_transformer_back = None
+        # partial used for geometry projection
+        self.proj_transformer_partial = partial(
+            pyproj.transform,
+            self.crs_wgs,
+            self.crs_proj)
+        self.proj_transformer_partial_back = partial(
+            pyproj.transform,
+            self.crs_proj,
+            self.crs_wgs)
 
     @classmethod
     def new_clusterer(cls,
@@ -646,6 +671,39 @@ class ClusterGen():
             cluster_guids, none_clustered_guids)
         return resultshapes_and_meta
 
+    def _proj_coords(self, lng: float, lat: float):
+        """Project coordinates based on available packages
+
+        If pyproj > 2.0.0, pyproj.transformer is available,
+        which provides a more convenient and faster way to
+        project many coordinates.
+
+        However, pyproj <2.0.0 does not support pyproj.transformer,
+        in this case (self.proj_transformer is None) use pyproj.transform
+        directly.
+        """
+        if self.proj_transformer:
+            lng_proj, lat_proj = self.proj_transformer.transform(
+                lng, lat)
+        else:
+            pyproj.transform(self.crs_wgs, self.crs_proj,
+                             lng, lat)
+        return lng_proj, lat_proj
+
+    def _proj_geom(self, geom: geometry, backwards: bool = False):
+        """Project geometry using shapely.ops.transform
+
+        If pyproj > 2.0.0, it would be possible to use pyproj.transformer
+        for geometry as well. But shapely.ops.transform is of similar,
+        and is therefore always used, ignoring pyproj versions.
+        """
+        if backwards:
+            project = self.proj_transformer_partial_back
+        else:
+            project = self.proj_transformer_partial
+        geom_proj = transform(project, geom)
+        return geom_proj
+
     def get_cluster_centroids(
             self, clustered_guids, none_clustered_guids=None):
         """Get centroids for clustered data"""
@@ -655,7 +713,7 @@ class ClusterGen():
             unique_user_count = len(set([post.user_guid for post in posts]))
             # get points and project coordinates to suitable UTM
             points = [geometry.Point(
-                self.proj_transformer.transform(post.lng, post.lat)
+                self._proj_coords(post.lng, post.lat)
             ) for post in posts]
             point_collection = geometry.MultiPoint(list(points))
             # convex hull enough for calculating centroid
@@ -670,7 +728,7 @@ class ClusterGen():
         # noclusterphotos = [cleanedPhotoDict[x] for x in singlePhotoGuidList]
         for no_cluster_post in none_clustered_guids:
             post = self.cleaned_post_dict[no_cluster_post]
-            x_point, y_point = self.proj_transformer.transform(
+            x_point, y_point = self._proj_coords(
                 post.lng, post.lat)
             p_center = geometry.Point(x_point, y_point)
             if p_center is not None and not p_center.is_empty:
@@ -693,7 +751,7 @@ class ClusterGen():
         alphashapes_data = AlphaShapes.get_cluster_shape(
             item, cluster_guids, self.cleaned_post_dict,
             self.cluster_distance,
-            self.local_saturation_check, self.proj_transformer)
+            self.local_saturation_check, self._proj_coords)
         return alphashapes_data
 
     def _get_item_clusterarea(
@@ -724,7 +782,12 @@ class ClusterGen():
             return False
 
     def _get_item_shapeslist(self, item, topitem_area, tnum):
-        """Get all item shapes for item clusters"""
+        """Get all item shapes for item clusters
+
+        Note: A function ref to self._proj_coords is handed
+        to AlphaShapes.get_single_cluster_shape(). Coordinates are then
+        projected inside AlphaShapes Class, depending on the pyproj version.
+        """
         resultshapes_and_meta_tmp = list()
         result = self._get_item_clustershapes(item)
         shapes_tmp = result[0]
@@ -750,7 +813,7 @@ class ClusterGen():
         for single_post in posts:
             shapes_single_tmp = AlphaShapes.get_single_cluster_shape(
                 item, single_post, self.cluster_distance,
-                self.proj_transformer)
+                self._proj_coords)
             if not shapes_single_tmp:
                 continue
             # Use append, since always single Tuple
@@ -966,19 +1029,15 @@ class ClusterGen():
 
         simple list comprehension with projection:
         """
-        # project = partial(
-        #    pyproj.transform,
-        #    self.crs_proj,  # source coordinate system
-        #    self.crs_wgs)  # destination coordinate system
-        proj_transformer = Transformer.from_proj(
-            self.crs_proj, self.crs_wgs)
+        project = self.proj_transformer_partial_back
         shapes_wgs = [(ClusterGen._project_geometry(
-            shape, proj_transformer)) for shape in shapes]
+            shape, project)) for shape in shapes]
         return shapes_wgs
 
     @staticmethod
     def _project_geometry(geom_shape, project):
-        geom_shape_proj = project.transform(geom_shape)
+        # geom_shape_proj = project.transform(geom_shape)
+        geom_shape_proj = transform(project, geom_shape)
         return geom_shape_proj
 
     def get_singlelinkagetree_preview(self, item):

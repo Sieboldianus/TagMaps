@@ -7,12 +7,9 @@ Module for tag maps alpha shapes generation
 from __future__ import absolute_import
 
 import math
-from decimal import Decimal
 from collections import namedtuple
 
-import logging
 import numpy as np
-import pyproj
 
 from scipy.spatial import Delaunay  # pylint: disable=E0611
 import shapely.geometry as geometry
@@ -32,13 +29,13 @@ class AlphaShapes():
     @staticmethod
     def get_single_cluster_shape(
             item, single_post,
-            cluster_distance: float, proj_transformer):
+            cluster_distance: float, proj_coords):
         """Get Shapes for items with no clusters
         Will return a buffer based on cluster distance
         """
         shapetype = "Single cluster"
         # project lat/lng to UTM
-        point_x, point_y = proj_transformer.transform(
+        point_x, point_y = proj_coords(
             single_post.lng, single_post.lat)
         pcoordinate = geometry.Point(point_x, point_y)
         # single dots are presented
@@ -66,7 +63,7 @@ class AlphaShapes():
             cleaned_post_dict,
             cluster_distance: float,
             local_saturation_check,
-            proj_transformer):
+            proj_coords):
         """Returns alpha shapes and tag_area (sqm) for a point cloud"""
         # we define a new list of Temp Alpha Shapes outside the loop,
         # so that it is not overwritten each time
@@ -94,7 +91,7 @@ class AlphaShapes():
                                   for post in posts}
             # simple list comprehension with projection:
             points = [geometry.Point(
-                proj_transformer.transform(
+                proj_coords(
                     float(location.split(':')[1]), float(location.split(':')[0]))
             ) for location in distinct_locations]
 
