@@ -77,17 +77,21 @@ class LoadData():
         """Contextmanager exit: nothing to do here"""
         return False
 
-    def _parse_input_files(self):
+    def _parse_input_files(self, count: bool = None):
         """Loops input input filelist and
         returns opened file handles
         """
+
         for file_name in self.filelist:
-            self.stats.partcount += 1
+            if count:
+                self.stats.partcount += 1
             return open(file_name, 'r', newline='', encoding='utf8')
 
     def is_intermediate(self):
         """Auto test if intermediate data is present"""
-        post_reader = self._process_inputfile(self._parse_input_files())
+        post_reader = self._process_inputfile(
+            self._parse_input_files(
+                count=True))
         for post in post_reader:
             pguid = post.get(self.cfg.source_map.post_guid_col)
             if pguid is None and post.get("guid") is not None:
