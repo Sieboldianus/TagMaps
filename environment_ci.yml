@@ -4,24 +4,24 @@ channels:
   - defaults
   - travis
 dependencies:
-  - python=3.6.7
+  - python>=3.5
   - pip
   - pylint
-  - fiona>=1.8.6
-  - shapely>=1.6.4
+  - fiona
+  - shapely
   - pandas>=0.24.2
-  - pyproj>=2.0.0
-  - numpy>=1.15.4
-  - matplotlib>=3.0.3
+  - pyproj>=1.9.6
+  - numpy
+  - matplotlib
   - emoji>=0.5.1
-  - cython>=0.29.7
+  - cython
   - hdbscan>=0.8.20
-  - gdal>=2.4.0
-  - attrs>=19.1.0
-  - seaborn>=0.9.0
-  - descartes>=1.1.0
-  - regex>=2019.04.14
-  - scipy>=1.2.1
+  - gdal
+  - attrs
+  - seaborn
+  - descartes
+  - regex
+  - scipy
   - bitarray
   - pip:
       - anybadge
