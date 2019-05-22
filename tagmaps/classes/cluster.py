@@ -69,7 +69,7 @@ class ClusterGen():
             def _wrapper(self, item, **kwargs):
                 if self.cls_type == TOPICS:
                     if isinstance(item, list):
-                        item = ClusterGen.concat_topic(item)
+                        item = Utils.concat_topic(item)
                     elif not '-' in item:
                         raise ValueError(
                             "Please supply either list of terms, or"
@@ -264,7 +264,7 @@ class ClusterGen():
             selected_postguids_list: List[str],
             distinct_localloc_count: Set[str]):
         """Check topics against tags, body and emoji"""
-        item_list = ClusterGen._split_topic(item)
+        item_list = Utils.split_topic(item)
         if (ClusterGen._compare_anyinlist(
                 item_list, cleaned_photo_location.hashtags)
                 or ClusterGen._compare_anyinlist(
@@ -942,19 +942,7 @@ class ClusterGen():
             cls_type=self.cls_type)
         return fig
 
-    @staticmethod
-    def concat_topic(term_list):
-        """Concatenate list of terms (e.g. TOPIC) to string"""
-        if any('-' in s for s in term_list):
-            raise ValueError(
-                "No '-' characters supported in topic list terms")
-        topic_name = '-'.join(term_list)
-        return topic_name
 
-    @staticmethod
-    def _split_topic(term_concat):
-        topic_terms = term_concat.split('-')
-        return topic_terms
 
     @CGDec.input_topic_format
     def get_clustershapes_preview(self, item):
@@ -1008,7 +996,7 @@ class ClusterGen():
     def get_singlelinkagetree_preview(self, item):
         """Returns figure for single linkage tree from HDBSCAN clustering"""
         if self.cls_type == TOPICS:
-            item = ClusterGen.concat_topic(item)
+            item = Utils.concat_topic(item)
         (_, _, _, _, _, number_of_clusters) = self.cluster_item(
             item=item,
             preview_mode=True)

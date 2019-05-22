@@ -36,6 +36,23 @@ class Utils():
 
     Primarily @classmethods and @staticmethods
     """
+
+    @staticmethod
+    def concat_topic(term_list):
+        """Concatenate list of terms (e.g. TOPIC) to string"""
+        if any('-' in s for s in term_list):
+            raise ValueError(
+                "No '-' characters supported in topic list terms")
+        topic_name = '-'.join(term_list)
+        return topic_name
+
+    @staticmethod
+    def split_topic(term_concat):
+        """Split concat topic"""
+        topic_terms = term_concat.split('-')
+        return topic_terms
+
+    @staticmethod
     def set_proj_dir():
         """Update PROJ_LIB location if not found."""
         if not os.environ.get('PROJ_LIB'):
