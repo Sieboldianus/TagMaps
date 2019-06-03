@@ -22,7 +22,7 @@ Based on the papers:
 2. The recommended way to install the package is with `conda install tagmaps`. Before, make sure that **conda-forge** is added as a channel: `conda config --add channels conda-forge`
 3. If you need to install with pip, it is recommended to install all dependencies first (e.g. Windows users: use [Gohlke wheels](<https://www.lfd.uci.edu/~gohlke/pythonlibs/>) if available) and then run `pip install tagmaps`
 
-See the [Wiki](https://github.com/Sieboldianus/TagMaps/wiki/Installation) for a complete guide to setup tagmaps package in Windows 10.
+See the [Wiki](https://github.com/Sieboldianus/TagMaps/wiki) for a complete guide to setup tagmaps package in Windows 10.
 
 ## Quickstart
 
