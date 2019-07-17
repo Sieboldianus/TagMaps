@@ -16,7 +16,7 @@ Based on the papers:
 
 > Dunkel, A. (2016). Assessing the perceived environment through crowdsourced spatial photo content for application to the fields of landscape and urban planning. Thesis, TU Dresden Landscape and Environmental Planning. [DOI](https://nbn-resolving.org/urn:nbn:de:bsz:14-qucosa-207927) / [PDF](http://alexanderdunkel.com/Dissertation_AlexanderDunkel.pdf)
 
-Overview of processing steps (Toronto highpark example):
+Overview of processing steps (Toronto High Park example):
 
 ![Tag Map Example](https://ad.vgiscience.org/tagmaps/tagmaps_steps.png?raw=true)
 
