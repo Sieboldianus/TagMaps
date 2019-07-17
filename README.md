@@ -16,6 +16,15 @@ Based on the papers:
 
 > Dunkel, A. (2016). Assessing the perceived environment through crowdsourced spatial photo content for application to the fields of landscape and urban planning. Thesis, TU Dresden Landscape and Environmental Planning. [DOI](https://nbn-resolving.org/urn:nbn:de:bsz:14-qucosa-207927) / [PDF](http://alexanderdunkel.com/Dissertation_AlexanderDunkel.pdf)
 
+Overview of processing steps (Toronto highpark example):
+
+![Tag Map Example](https://ad.vgiscience.org/tagmaps/tagmaps_steps.png?raw=true)
+
+* a) individual photo locations (raw data)
+* b) photo locations combined to clusters
+* c) tag location clustering (HDBSCAN) and Alpha-Shape generation
+* d) soft placement of all relevant tags using alpha shapes
+
 ## Installation
 
 1. The easiest way for Windows users is to download the newest pre-compiled build from [releases](../../releases) and run `tagmaps.exe`

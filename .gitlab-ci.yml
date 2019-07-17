@@ -33,6 +33,7 @@ pages:
   script:
     - mkdir .public
     - cp resources/img6.png .public
+    - cp resources/tagmaps_steps.png .public
     - cp pylint.svg .public
     - cp pipeline.svg .public
     - cp pypi.svg .public
