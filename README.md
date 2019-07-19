@@ -21,7 +21,7 @@ Overview of processing steps (Toronto High Park example):
 * **a)** individual photo locations (raw data)
 * **b)** photo locations combined to clusters
 * **c)** tag location clustering (HDBSCAN) and Alpha-Shape generation
-* **d)** soft placement of all relevant tags using alpha shapes
+* **d)** soft placement of all relevant tag clusters using alpha shapes
 
 ![Tag Map Example](https://ad.vgiscience.org/tagmaps/tagmaps_steps.png?raw=true)
 
