@@ -23,6 +23,8 @@ dependencies:
   - regex
   - scipy
   - bitarray
+  - six
+  - joblib
   - pip:
       - anybadge
       - pylint-exit
