@@ -1,3 +1,3 @@
 """TagMaps version"""
 
-__version__ = '0.17.7'
+__version__ = '0.18.0'
