@@ -12,11 +12,13 @@ import csv
 import logging
 import os
 import sys
+import warnings
 from pathlib import Path
 
 import fiona
 import pyproj
 from shapely.geometry import shape
+
 from tagmaps import __version__
 
 
@@ -413,8 +415,19 @@ class BaseConfig:
             f"sourcemapping_{self.data_source.lower()}.cfg"
         )
         if not os.path.exists(mapping_config_path):
-            exit("Source mapping does not exist: "
-                 f"sourcemapping_{self.data_source.lower()}.cfg")
+            orig_path = (
+                self.config_folder /
+                f'sourcemapping_fromlbsn.cfg'
+            )
+            if os.path.exists(orig_path):
+                warnings.warn(
+                    "Please rename resources/sourcemapping_fromlbsn.cfg "
+                    "to sourcemapping_lbsn.cfg. The former name will be "
+                    "deprecated in the future.", DeprecationWarning)
+                mapping_config_path = orig_path
+            else:
+                exit("Source mapping does not exist: "
+                     f"sourcemapping_{self.data_source.lower()}.cfg")
         source_config = configparser.ConfigParser()
         source_config.read(mapping_config_path)
         source_config_py = ConfigMap(source_config)
