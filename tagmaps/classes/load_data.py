@@ -166,7 +166,7 @@ class LoadData():
         """Process single post and attach to common structure"""
         # skip duplicates and erroneous entries
         post_guid = post.get(self.cfg.source_map.post_guid_col)
-        if post_guid in self.guid_hash or len(post) < 15:
+        if post_guid in self.guid_hash:
             self.stats.skipped_count += 1
             return None
         self.guid_hash.add(post_guid)
