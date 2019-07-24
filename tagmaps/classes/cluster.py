@@ -36,11 +36,13 @@ try:
 except ImportError:
     pass
 
-
-with warnings.catch_warnings():
-    # filter sklearn\externals\joblib\parallel.py:268:
-    # DeprecationWarning: check_pickle is deprecated
-    warnings.simplefilter("ignore", category=DeprecationWarning)
+try:
+    # filter DeprecationWarning
+    # by catching outdated hdbscan imports from sklearn.externals
+    sys.modules['sklearn.externals.six'] = __import__('six')
+    sys.modules['sklearn.externals.joblib'] = __import__('joblib')
+    import hdbscan
+except ImportError:
     import hdbscan
 
 POOL = ThreadPool(processes=1)
@@ -941,8 +943,6 @@ class ClusterGen():
             auto_select_clusters=self.autoselect_clusters,
             cls_type=self.cls_type)
         return fig
-
-
 
     @CGDec.input_topic_format
     def get_clustershapes_preview(self, item):
