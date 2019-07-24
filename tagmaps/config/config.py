@@ -17,6 +17,7 @@ from pathlib import Path
 import fiona
 import pyproj
 from shapely.geometry import shape
+from tagmaps import __version__
 
 
 class BaseConfig:
@@ -89,6 +90,9 @@ class BaseConfig:
 
         """
         parser = argparse.ArgumentParser()
+        parser.add_argument('--version',
+                            action='version',
+                            version=f'tagmaps {__version__}')
         parser.add_argument("-s",
                             "--source",
                             default="fromLBSN",
