@@ -1,5 +1,5 @@
 {% set name = "tagmaps" %}
-{% set version = "0.17.7" %}
+{% set version = "0.18.0" %}
 
 package:
   name: "{{ name|lower }}"
@@ -7,7 +7,7 @@ package:
 
 source:
   url: https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
-  sha256: c65ed1c7bcc5e1fa132b7656cf54d4f2e5ffd4b5d5d56ada26ee43ff93b362f5
+  sha256: 5560dd9a21c603e661172b612d8deea5edd3eb9e86b84bcdd270305770d5e1f4
 
 build:
   noarch: python
@@ -37,6 +37,8 @@ requirements:
     - descartes
     - regex
     - scipy
+    - six
+    - joblib
 
 test:
   imports:
