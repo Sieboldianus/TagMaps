@@ -670,8 +670,8 @@ class ClusterGen():
             lng_proj, lat_proj = self.proj_transformer.transform(
                 lng, lat)
         else:
-            pyproj.transform(self.crs_wgs, self.crs_proj,
-                             lng, lat)
+            lng_proj, lat_proj = pyproj.transform(self.crs_wgs, self.crs_proj,
+                                                  lng, lat)
         return lng_proj, lat_proj
 
     def get_cluster_centroids(
