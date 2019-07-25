@@ -93,6 +93,7 @@ Some future goals:
 - include topic modeling
 - improve automatic detection of general vs specific tags for an area
 - include mapping/visualization step (replace ArcGIS)
+- improve unit testing (pytest) for tagmaps package
 
 ## Built With
 
