@@ -118,12 +118,12 @@ class ClusterGen():
         self.crs_proj, __ = Utils.get_best_utmzone(
             self.bound_points_shapely)
         # define projection function ahead, if available
-        try:
+        if 'pyproj.transformer' in sys.modules:
             self.proj_transformer = Transformer.from_proj(
                 self.crs_wgs, self.crs_proj)
             self.proj_transformer_back = Transformer.from_proj(
                 self.crs_proj, self.crs_wgs)
-        except ValueError:
+        else:
             self.proj_transformer = None
             self.proj_transformer_back = None
         # partial used for geometry projection
