@@ -19,12 +19,15 @@ test:
     - anybadge -l pipeline --value=passing --file=pipeline.svg passing=green failing=red
     - pypi_version=$(pip search tagmaps | cut -d "(" -f2 | cut -d ")" -f1 | sed -r "s/[latest]+//g")
     - echo "Pypi version was $pypi_version"
+    - conda_version=$(conda search tagmaps -c conda-forge | tail -1 | awk  '{print $2}')
     - anybadge -l pypi --value="$pypi_version" --file=pypi.svg --color=green
+    - anybadge -l conda-forge --value="$conda_version" --file=conda-forge.svg --color=orange
   artifacts:
     paths:
       - pylint.svg
       - pypi.svg
       - pipeline.svg
+      - conda-forge.svg
   only:
   - master
 
@@ -37,6 +40,7 @@ pages:
     - cp pylint.svg .public
     - cp pipeline.svg .public
     - cp pypi.svg .public
+    - cp conda-forge.svg .public
     - mv .public public
   artifacts:
     paths:
