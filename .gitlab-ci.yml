@@ -33,6 +33,11 @@ test:
 
 pages:
   stage: deploy
+  image: python:alpine
+  before_script:
+      - pip install mkdocs
+      # Add your custom theme if not inside a theme_dir
+      # (https://github.com/mkdocs/mkdocs/wiki/MkDocs-Themes)
   script:
     - mkdir .public
     - cp resources/img6.png .public
@@ -42,7 +47,12 @@ pages:
     - cp pypi.svg .public
     - cp conda-forge.svg .public
     - mv .public public
+    # build docs
+    - mkdocs build
+    - mv site public
+    - mv public/site public/docs
   artifacts:
+    name: pages
     paths:
     - public
   only:
