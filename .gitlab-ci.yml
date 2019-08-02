@@ -22,12 +22,14 @@ test:
     - conda_version=$(conda search tagmaps -c conda-forge | tail -1 | awk  '{print $2}')
     - anybadge -l pypi --value="$pypi_version" --file=pypi.svg --color=green
     - anybadge -l conda-forge --value="$conda_version" --file=conda-forge.svg --color=orange
+    - anybadge -l pypi --value="Documentation" --file=documentation.svg --color=green
   artifacts:
     paths:
       - pylint.svg
       - pypi.svg
       - pipeline.svg
       - conda-forge.svg
+      - documentation.svg
   only:
   - master
 
@@ -46,6 +48,7 @@ pages:
     - cp pipeline.svg .public
     - cp pypi.svg .public
     - cp conda-forge.svg .public
+    - cp documentation.svg .public
     - mv .public public
     # build docs
     - mkdocs build

@@ -1,4 +1,4 @@
-![PyPI version](https://ad.vgiscience.org/tagmaps/pypi.svg) ![pylint](https://ad.vgiscience.org/tagmaps/pylint.svg) ![pipeline](https://ad.vgiscience.org/tagmaps/pipeline.svg) ![Conda Version](https://ad.vgiscience.org/tagmaps/conda-forge.svg) ![Conda Pipeline](https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/tagmaps-feedstock?branchName=master)
+[![PyPI version](https://ad.vgiscience.org/tagmaps/pypi.svg)](https://pypi.org/project/tagmaps/) ![pylint](https://ad.vgiscience.org/tagmaps/pylint.svg) ![pipeline](https://ad.vgiscience.org/tagmaps/pipeline.svg) [![Conda Version](https://ad.vgiscience.org/tagmaps/conda-forge.svg)](https://anaconda.org/conda-forge/tagmaps) ![Conda Pipeline](https://dev.azure.com/conda-forge/feedstock-builds/_apis/build/status/tagmaps-feedstock?branchName=master) [![Conda Version](https://ad.vgiscience.org/tagmaps/documentation.svg)](https://ad.vgiscience.org/tagmaps/docs/)
 
 # Tag Maps
 
