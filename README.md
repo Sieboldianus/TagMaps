@@ -33,6 +33,10 @@ Overview of processing steps (Toronto High Park example):
 
 See the [Documentation](https://ad.vgiscience.org/tagmaps/docs/user-guide/installation/) for a complete guide to setup tagmaps package in Windows 10.
 
+## Documentation
+
+See the [tagmaps documentation](https://ad.vgiscience.org/tagmaps/docs/) for additional information, guides and tutorials.
+
 ## Quickstart
 
 1. Place geotagged data in `/01_Input` subfolder
@@ -67,10 +71,6 @@ There're two ways to feed input data:
    Since this will remove all terms/tags/emoji that do not appear in the top 1000 (e.g.) occurring global list of terms,
    this will produce a highly pseudo-anonymized set of information, with only collectively relevant terms remaining.
    The default value (1000) can be adjusted using `max_items` arg, e.g. the smaller max_items, the higher is the effect of anonymization/generalization.
-
-## Documentation
-
-See the [tagmaps documentation](https://ad.vgiscience.org/tagmaps/docs/) for additional information, guides and tutorials.
 
 ## Code
 
