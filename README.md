@@ -70,7 +70,7 @@ There're two ways to feed input data:
 
 ## Documentation
 
-See the [tagmaps documentation](https://ad.vgiscience.org/tagmaps/docs/user-guide/installation/) for additional information, guides and tutorials.
+See the [tagmaps documentation](https://ad.vgiscience.org/tagmaps/docs/) for additional information, guides and tutorials.
 
 ## Code
 
