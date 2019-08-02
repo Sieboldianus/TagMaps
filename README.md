@@ -31,7 +31,7 @@ Overview of processing steps (Toronto High Park example):
 2. The recommended way to install the package is with `conda install tagmaps`. Before, make sure that **conda-forge** is added as a channel: `conda config --add channels conda-forge`
 3. If you need to install with pip, it is recommended to install all dependencies first (e.g. Windows users: use [Gohlke wheels](<https://www.lfd.uci.edu/~gohlke/pythonlibs/>) if available) and then run `pip install tagmaps`
 
-See the [Wiki](https://github.com/Sieboldianus/TagMaps/wiki) for a complete guide to setup tagmaps package in Windows 10.
+See the [Documentation](https://ad.vgiscience.org/tagmaps/docs/user-guide/installation/) for a complete guide to setup tagmaps package in Windows 10.
 
 ## Quickstart
 
@@ -68,10 +68,9 @@ There're two ways to feed input data:
    this will produce a highly pseudo-anonymized set of information, with only collectively relevant terms remaining.
    The default value (1000) can be adjusted using `max_items` arg, e.g. the smaller max_items, the higher is the effect of anonymization/generalization.
 
-## Tutorial
+## Documentation
 
-There's a tutorial available [here](https://ad.vgiscience.org/tagmaps_tutorial) that guides though the process of generating Tag Maps.
-Please bring your own data or use a sample from the [YFCC100M Flickr Commons Dataset](https://multimediacommons.wordpress.com/yfcc100m-core-dataset/).
+See the [tagmaps documentation](https://ad.vgiscience.org/tagmaps/docs/user-guide/installation/) for additional information, guides and tutorials.
 
 ## Code
 

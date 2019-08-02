@@ -30,7 +30,8 @@ If this header is detected, tagmaps will apply some basic filtering and cleanup 
 
 It is also possible to provide a custom source mapping in `00_Config` folder (e.g. `sourcemapping_myspecialdatatype.cfg`), but this is beyond the scope of this guide.
 
-Currently, tagmaps checks the length of rows before processing data - if you have less than 15 columns in a row, no data will be parsed. Before this is fixed, simply use empty cells where data is not available:
+!!! Note
+You can use the standard header even if you don't have data for all columns. Simply use empty fields where data is not available:
 
 ```python
 origin_id,post_guid,latitude,longitude,user_guid,post_create_date,post_publish_date,post_thumbnail_url,post_views_count,post_like_count,post_url,tags,emoji,post_title,post_body,post_geoaccuracy,post_comment_count,post_type,post_filter,place_guid,place_name,place_post_count,city_guid,country_guid

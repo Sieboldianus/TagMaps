@@ -1,13 +1,15 @@
+Tagmaps package can be imported to Jupyter notebook or Jupyter lab with `from tagmaps import TagMaps`. In Jupyter, it is currently not possible to visualize final word clouds. However, several intermediate functions are available and can be used to filter and preview data. The clustered data available from tagmaps can be used to develop own visualization techniques in Jupyter.
+
 # Extracting common areas of interest for given topics from LBSM
 
-The task in this notebook is to extract and visualize common areas or regions of interest for a given topic from Location Based Social Media data (LBSM). On Social Media, people react to many things, and a significant share of these reactions can be seen as forms of valuation or attribution of meaning to to the physical environment. However, for visualizing such values for whole cities, there are several challenges involved:
+The task in the notebook presented here is to extract and visualize common areas or regions of interest for a given topic from Location Based Social Media (LBSM) data. On Social Media, people react to many things, and a significant share of these reactions can be seen as forms of valuation or attribution of meaning to to the physical environment. However, for visualizing such values for whole cities, there are several challenges involved:
 
-* Identify reactions that are related to a given topic: Topics can be considered at different levels of granularity and equal terms may convey different meanings in different contexts.
-* Social Media data is distributed very irregularly. Data peaks in urban areas and highly frequented tourist hotspots, while some less frequented areas do not have any data at all. When visualizing spatial reactions to topics, this inequal distribution must be taking into account, otherwise maps would always be biased towards areas with higher density of information. For this reason, normalizing results is crucial. The usual approach for normalization in such cases is that local distribution is evaluated against the global (e.g. spatial) distribution data.
+* Identify reactions that are related to a given topic: Topics can be considered at different levels of granularity and equal terms may convey different meanings in different contexts
+* Social Media data is distributed very irregularly with lots of noise. Data peaks in urban areas and highly frequented tourist hotspots, while some less frequented areas do not feature any data at all. When visualizing spatial reactions to topics, this inequal distribution must be taken into account, otherwise maps will be biased towards areas with higher density of information. For this reason, normalizing results is crucial. The usual approach for normalization in such cases is that local distribution is evaluated against the global (e.g. spatial) distribution data
 
-For development purposes only: enable auto reload of develop dependencies,
-this will auto reload packages if code changes
+Start jupyter lab (`jupyter lab` or `jupyter notebook`) and create an empty jupyter notebook. Copy code cells below into the notebook to follow this guide.
 
+For development purposes only, it is possible to enable auto reload of develop dependencies with:
 
 ```python
 %load_ext autoreload
@@ -15,8 +17,9 @@ this will auto reload packages if code changes
 #%autoreload tagmaps
 ```
 
-Load the TagMaps package, which will serve as a base for filtering, cleaning and processing noisy social media data
+This is only necessary if you installed tagmaps with `python setup.py develop --no-deps` (e.g.)
 
+Load the TagMaps package, which will serve as a base for filtering, cleaning and processing noisy social media data:
 
 ```python
 from tagmaps import TagMaps
@@ -212,7 +215,6 @@ fig = tm.clusterer[TOPICS].get_cluster_centroid_preview(["elbe","fluss","river"]
 ```
 
     (1 of 1000) Found 4599 posts (UPL) for Topic 'elbe-fluss-river' (found in 7% of DLC in area) --> 28 cluster.
-
 
 
 ![png](../img/cluster-centroids-map.png)

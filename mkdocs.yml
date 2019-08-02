@@ -9,13 +9,19 @@ repo_url: https://github.com/Sieboldianus/TagMaps/
 theme:
   name: 'readthedocs'
 
+markdown_extensions:
+  - admonition
+  
 nav:
     - Introduction: index.md
     - Contents: contents.md
     - Quick Installation: quick-guide.md
+    - Theory: theory/introduction.md
     - User Guide:
-        - Detailled installation guide: user-guide/installation.md
+        - Detailed installation guide: user-guide/installation.md
         - Use your own data: user-guide/use-your-own-data.md
+        - Tutorial: user-guide/tutorial.md
         - Jupyter lab examples: user-guide/jupyter-examples.md
         - Troubleshooting: user-guide/troubleshooting.md
+    - Additional resources: resources.md
     - About: about.md
