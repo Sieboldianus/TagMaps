@@ -370,30 +370,32 @@ class BaseConfig:
         return store_dict
 
     def load_shapefile(self):
-        """Imports single polygon shapefile for intersecting points"""
+        """Imports single or multi polygon shapefile for intersecting points"""
         if self.shapefile_intersect is False:
             return
         if self.shapefile_path == "":
             sys.exit(f"No Shapefile-Path specified. Exiting..")
             return
         poly_shape = fiona.open(self.shapefile_path)
-        first = poly_shape.next()
+        vertices_count = 0
+        self.shp_geom = []
+        if len(poly_shape) == 1:
+            # simple polygon
+            geom = poly_shape.next()
+            vertices_count = len(geom["geometry"]["coordinates"][0])
+            self.shp_geom.append(shape(geom["geometry"]))
+        else:
+            # multipolygon
+            for pol in poly_shape:
+                for part in pol["geometry"]["coordinates"]:
+                    vertices_count += len(part)
+                self.shp_geom.append(shape(pol['geometry']))
         print(
             f'Loaded Shapefile with '
-            f'{str(len(first["geometry"]["coordinates"][0]))}'
-            f' Vertices.'
+            f'{len(self.shp_geom)} polygons '
+            f'and '
+            f'{vertices_count}  Vertices.'
         )
-        self.shp_geom = shape(first["geometry"])
-        # For Multi-Polygon:
-        # - not yet implemented
-        ###
-        # vcount = PShape.next()['geometry']['coordinates']
-        # #needed for count of vertices
-        # geom = MultiPolygon([shape(pol['geometry']) for pol
-        # in PShape])
-        # shp_geom = geom
-        # print("Loaded Shapefile with Vertices ",
-        # sum([len(poly[0]) for poly in vcount])) # (GeoJSON format)
 
     def load_custom_crs(self, override_crs):
         """Optionally, create custom crs for projecting

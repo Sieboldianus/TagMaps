@@ -182,6 +182,20 @@ class Utils():
             return False
 
     @staticmethod
+    def check_intersect_polylist(latlng_point, polylist):
+        """Checks intersection of Point(lat, lng) against
+        list of polygons.
+
+        Arguments:
+            latlng_point {Fiona Point} -- coordinate
+            polylist {list} -- list of polys
+        """
+        for poly in polylist:
+            if latlng_point.within(poly):
+                return True
+        return False
+
+    @staticmethod
     def init_main():
         """Initializing main procedure
         if package is executed directly

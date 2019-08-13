@@ -336,7 +336,8 @@ class LoadData():
             return True
         if post.loc_id not in self.shape_included_locid_hash:
             lng_lat_point = Point(post.longitude, post.latitude)
-            if not lng_lat_point.within(self.cfg.shp_geom):
+            if not Utils.check_intersect_polylist(
+                    lng_lat_point, self.cfg.shp_geom):
                 self.stats.skipped_count += 1
                 self.shape_exclude_locid_hash.add(post.loc_id)
                 return True
