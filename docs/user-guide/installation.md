@@ -1,4 +1,4 @@
-This detailled installation guide is for users who are not familiar with python package managers. The guide demonstrates installing tagmaps in Windows 10 and Miniconda3. Miniconda3 is available for Linux and macOS, too - in this case, substitute initial steps.
+This detailed installation guide is for users who are not familiar with python package managers. The guide demonstrates installing tagmaps in Windows 10 and Miniconda3. Miniconda3 is available for Linux and macOS, too - in this case, substitute initial steps.
 
 ## Install Chocolatey
 
