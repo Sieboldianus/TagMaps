@@ -131,8 +131,11 @@ class PrepareData():
                 |= lbsn_post.emoji
         if isinstance(lbsn_post, PostStructure):
             # get cleaned wordlist
-            cleaned_terms = set(self._get_cleaned_wordlist(
+            cleaned_terms_body = set(self._get_cleaned_wordlist(
                 lbsn_post.post_body))
+            cleaned_terms_title = set(self._get_cleaned_wordlist(
+                lbsn_post.post_title))
+            cleaned_terms = cleaned_terms_body.union(cleaned_terms_title)
         else:
             # words already cleaned
             cleaned_terms = lbsn_post.post_body

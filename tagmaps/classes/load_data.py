@@ -227,8 +227,18 @@ class LoadData():
         if self.cfg.cluster_tags or \
                 self.cfg.cluster_emoji or \
                 self.cfg.topic_modeling:
-            lbsn_post.post_body = post.get(self.cfg.source_map.post_body_col)
+            post_body = post.get(self.cfg.source_map.post_body_col)
+            post_title = post.get(self.cfg.source_map.post_title_col)
+            if self.cfg.ignore_stoplists:
+                lbsn_post.post_body = post_body
+                lbsn_post.post_title = post_title
+            else:
+                lbsn_post.post_body = Utils.remove_stopwords(
+                    post_body, self.cfg.sort_out_always_set)
+                lbsn_post.post_title = Utils.remove_stopwords(
+                    post_title, self.cfg.sort_out_always_set)
         else:
+            lbsn_post.post_title = ""
             lbsn_post.post_body = ""
         lbsn_post.post_like_count = self._get_count_frompost(
             post.get(self.cfg.source_map.post_like_count_col))

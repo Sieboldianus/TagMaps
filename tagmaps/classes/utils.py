@@ -140,10 +140,37 @@ class Utils():
     @staticmethod
     def remove_special_chars(text_s):
         """Removes a list of special chars from string"""
-        special_chars = "?.!/;:,[]()'-&#"
+        special_chars = "?.!/;:,[]()'-&#|<>=\""
         s_cleaned = text_s.translate(
             {ord(c): " " for c in special_chars})
         return s_cleaned
+
+    @staticmethod
+    def remove_stopwords(text_s, stopwords):
+        """Removes a list of words from string,
+        including hyperlinks (<a></a>) and
+        integer numbers (e.g. 2012)
+        """
+        # first remove hyperlinks
+        text_s = Utils.remove_hyperlinks(text_s)
+        # split string by space character into list
+        querywords = text_s.split()
+        # clean list by matching against stopwords
+        resultwords = [word for word in querywords if word.lower()
+                       not in stopwords and not word.isdigit()]
+        s_cleaned = ' '.join(resultwords)
+        return s_cleaned
+
+    @staticmethod
+    def remove_hyperlinks(text_s):
+        """Regex to remove any hyperlinks from string
+
+        Note:
+        - anything between <a>xxx</a> will be kept
+        """
+        pattern = r'<(a|/a).*?>'
+        result = re.sub(pattern, "", text_s)
+        return result
 
     @staticmethod
     def _is_number(number_s):
