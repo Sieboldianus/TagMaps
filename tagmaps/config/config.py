@@ -381,7 +381,7 @@ class BaseConfig:
         self.shp_geom = []
         if len(poly_shape) == 1:
             # simple polygon
-            geom = poly_shape.next()
+            geom = next(iter(poly_shape))
             vertices_count = len(geom["geometry"]["coordinates"][0])
             self.shp_geom.append(shape(geom["geometry"]))
         else:
