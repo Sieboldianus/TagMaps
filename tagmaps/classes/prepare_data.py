@@ -625,7 +625,6 @@ class PrepareData():
         except ValueError:
             lat = None
             lng = None
-            pass
         cleaned_post = CleanedPost(
             origin_id=first_post.origin_id,
             lat=lat,

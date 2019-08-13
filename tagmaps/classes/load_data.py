@@ -222,7 +222,7 @@ class LoadData():
         lbsn_post.loc_name = post.get(self.cfg.source_map.place_name_col)
         # exclude posts outside boundary
         if self.cfg.shapefile_intersect and \
-                self._is_outside_shapebounds(post):
+                self._is_outside_shapebounds(lbsn_post):
             return None
         if self.cfg.cluster_tags or \
                 self.cfg.cluster_emoji or \
@@ -334,7 +334,7 @@ class LoadData():
         if post.loc_id in self.shape_exclude_locid_hash:
             self.stats.skipped_count += 1
             return True
-        if post.loc_id not in self.cfg.shape_included_locid_hash:
+        if post.loc_id not in self.shape_included_locid_hash:
             lng_lat_point = Point(post.longitude, post.latitude)
             if not lng_lat_point.within(self.cfg.shp_geom):
                 self.stats.skipped_count += 1
