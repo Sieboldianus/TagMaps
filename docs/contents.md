@@ -1,7 +1,7 @@
 * [Introduction](index.md)
 * [Contents](contents.md)
 * [Quick Installation](quick-guide.md)
-* [Theory](theory/introduction.md)
+* [Concept](theory/introduction.md)
 * [User Guide]():
     * [Detailed installation guide](user-guide/installation.md)
     * [Use your own data](user-guide/use-your-own-data.md)
