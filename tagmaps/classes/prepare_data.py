@@ -693,7 +693,7 @@ class PrepareData():
             guid=upl.guid,
             user_guid=upl.user_guid,
             post_body=PrepareData._filter_private_terms(
-                upl.emoji, panon_set[TAGS]),
+                upl.post_body, panon_set[TAGS]),
             post_create_date=PrepareData._agg_date(upl.post_create_date),
             post_publish_date=PrepareData._agg_date(upl.post_publish_date),
             post_views_count=upl.post_views_count,
