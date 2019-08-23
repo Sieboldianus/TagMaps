@@ -160,7 +160,6 @@ class BaseConfig:
                             )
         parser.add_argument("-f",
                             "--shapefile_path",
-                            default="",
                             help="Provide a (full) path to a shapefile "
                             "to clip data prior to clustering.")
         parser.add_argument("-n",
@@ -204,7 +203,6 @@ class BaseConfig:
         parser.add_argument("-fO",
                             "--filter_origin",
                             type=str,
-                            default=None,
                             help="If provided, will filter input data "
                             "based on origin_id column.",
                             )
@@ -216,21 +214,20 @@ class BaseConfig:
                             default=1000,
                             type=int)
         parser.add_argument("-q", "--output_folder",
-                            help="Complete path for output folder",
-                            default="",
+                            help="Path to output folder",
+                            default="02_Output",
                             type=str)
         parser.add_argument("-j", "--input_folder",
-                            help="Complete path for input folder",
-                            default="",
+                            help="Path to input folder",
+                            default="01_Input",
                             type=str)
         parser.add_argument("-k", "--config_folder",
-                            help="Complete path for config folder",
-                            default="",
+                            help="Path to config folder",
+                            default="00_Config",
                             type=str)
         parser.add_argument("-u", "--load_intermediate",
                             help="Load from intermediate (cleaned) data "
                             "from path",
-                            default="",
                             type=str)
 
         args = parser.parse_args()
