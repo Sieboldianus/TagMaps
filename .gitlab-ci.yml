@@ -1,9 +1,15 @@
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+
 test:
   image: continuumio/miniconda3:4.6.14
   before_script:
       - conda config --add channels conda-forge 
       - conda env create -f environment_ci.yml
       - source activate tagmaps
+      # install argdown from submodule
+      - cd docs/argparse/argdown/
+      - python setup.py
   stage: test
   script:
     # test dev install
@@ -11,6 +17,9 @@ test:
     # run main test
     - cleaned_data_file=resources/01_Input/flickr_dresden_cc-by-licenses.csv
     - python tests/test_all.py --max_items 50 --auto_mode --load_intermediate=$cleaned_data_file
+    # argparse to markdown conversion for mkdocs
+    - python docs/argparse/argparse_doc.py
+    - argdown parse_args.py > docs/argparse/args.md
     # create badges
     - pylint --output-format=text tagmaps | tee pylint.txt || pylint-exit $?
     - score=$(sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p' pylint.txt)
@@ -31,6 +40,7 @@ test:
       - pipeline.svg
       - conda-forge.svg
       - documentation.svg
+      - docs/argparse/args.md
   only:
   - master
 
