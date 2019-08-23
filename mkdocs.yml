@@ -23,5 +23,7 @@ nav:
         - Tutorial: user-guide/tutorial.md
         - Jupyter lab examples: user-guide/jupyter-examples.md
         - Troubleshooting: user-guide/troubleshooting.md
+    - Command Line Args and Usage: argparse/args.md
+    - API Reference: apidoc/apidoc.md
     - Additional resources: resources.md
     - About: about.md
