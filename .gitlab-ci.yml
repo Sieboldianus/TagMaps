@@ -4,12 +4,9 @@ variables:
 test:
   image: continuumio/miniconda3:4.6.14
   before_script:
-      - conda config --add channels conda-forge 
+      - conda config --add channels conda-forge
       - conda env create -f environment_ci.yml
       - source activate tagmaps
-      # install argdown from submodule
-      - cd docs/argparse/argdown/
-      - python setup.py
   stage: test
   script:
     # test dev install
@@ -18,8 +15,15 @@ test:
     - cleaned_data_file=resources/01_Input/flickr_dresden_cc-by-licenses.csv
     - python tests/test_all.py --max_items 50 --auto_mode --load_intermediate=$cleaned_data_file
     # argparse to markdown conversion for mkdocs
+    # install argdown from submodule
+    - cd docs/argparse/argdown/
+    - pip install -e .
+    - cd ../../../
     - python docs/argparse/argparse_doc.py
     - argdown parse_args.py > docs/argparse/args.md
+    # install pdoc3 for api ref
+    - pip install pdoc3
+    - pdoc --html --output-dir docs/api/ tagmaps
     # create badges
     - pylint --output-format=text tagmaps | tee pylint.txt || pylint-exit $?
     - score=$(sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p' pylint.txt)
@@ -41,6 +45,7 @@ test:
       - conda-forge.svg
       - documentation.svg
       - docs/argparse/args.md
+      - docs/api/
   only:
   - master
 
@@ -64,6 +69,8 @@ pages:
     # build docs
     - mkdocs build
     - mv site public
+    # copy pdoc3 compiled API ref
+    - mv docs/api/tagmaps/* public/site/api/
     - mv public/site public/docs
   artifacts:
     name: pages
