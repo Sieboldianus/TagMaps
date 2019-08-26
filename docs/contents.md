@@ -9,6 +9,6 @@
     * [Jupyter Lab examples](user-guide/jupyter-examples.md)
     * [Troubleshooting](user-guide/troubleshooting.md)
 * [Command Line Interface](argparse/args.md)
-* [API Reference (external)](api/tagmaps_.html)
+* [API Reference (external)](../api/tagmaps_.html)
 * [Additional resources](resources.md)
 * [About](about.md)
