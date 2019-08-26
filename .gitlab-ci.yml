@@ -7,6 +7,7 @@ test:
       - conda config --add channels conda-forge
       - conda env create -f environment_ci.yml
       - source activate tagmaps
+      - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.vgiscience.de/ad/argdown.git
   stage: test
   script:
     # test dev install
@@ -14,14 +15,11 @@ test:
     # run main test
     - cleaned_data_file=resources/01_Input/flickr_dresden_cc-by-licenses.csv
     - python tests/test_all.py --max_items 50 --auto_mode --load_intermediate=$cleaned_data_file
-    # argparse to markdown conversion for mkdocs
-    # install argdown from submodule
-    - cd docs/argparse/argdown/
-    - pip install -e .
-    - cd ../../../
+    # argparse to markdown conversion
+    # for mkdocs args page
     - python docs/argparse/argparse_doc.py
     - argdown parse_args.py > docs/argparse/args.md
-    # install pdoc3 for api ref
+    # install pdoc3 for additional api ref
     - pip install pdoc3
     - pdoc --html --output-dir docs/api/ tagmaps
     # create badges
@@ -47,7 +45,8 @@ test:
       - docs/argparse/args.md
       - docs/api/
   only:
-  - master, ci-test
+  - master
+  - ci-test
 
 pages:
   stage: deploy
@@ -77,5 +76,6 @@ pages:
     paths:
     - public
   only:
-  - master, ci-test
+  - master
+  - ci-test
 
