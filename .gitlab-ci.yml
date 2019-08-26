@@ -47,7 +47,7 @@ test:
       - docs/argparse/args.md
       - docs/api/
   only:
-  - master
+  - master, ci-test
 
 pages:
   stage: deploy
@@ -77,5 +77,5 @@ pages:
     paths:
     - public
   only:
-  - master
+  - master, ci-test
 
