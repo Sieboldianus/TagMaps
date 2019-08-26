@@ -7,6 +7,7 @@ from __future__ import absolute_import
 
 import logging
 from typing import Dict
+from functools import wraps
 
 from .classes.cluster import ClusterGen
 from .classes.compile_output import Compile
@@ -83,12 +84,12 @@ class TagMaps():
         parameter to take effect.
     """
 
-    class _TMDec():
+    class TMDec():
         """Decorators for checking states in TagMaps class"""
         @staticmethod
         def init_data_check(func):
             """Check if lbsn_data has been initialized"""
-
+            @wraps(func)
             def _wrapper(self, *args, **kwargs):
                 # init lbsn data
                 if self.lbsn_data is None:
@@ -99,7 +100,7 @@ class TagMaps():
         @staticmethod
         def prepare_clustering_check(func):
             """Check if clusters have been initialized"""
-
+            @wraps(func)
             def _wrapper(self, *args, **kwargs):
                 # add clusterer
                 if not self.clusterer:
@@ -110,7 +111,7 @@ class TagMaps():
         @staticmethod
         def data_added_check(func):
             """Check if (any) data has been added"""
-
+            @wraps(func)
             def _wrapper(self, *args, **kwargs):
                 if kwargs and "input_path" in kwargs:
                     input_path = kwargs['input_path']
@@ -131,7 +132,7 @@ class TagMaps():
         @staticmethod
         def prepare_data_check(func):
             """Check if data has been prepared"""
-
+            @wraps(func)
             def _wrapper(self):
                 # prepare stats
                 if self.cleaned_stats is None:
@@ -182,7 +183,7 @@ class TagMaps():
         self.itemized_cluster_shapes = list()
         self.global_cluster_centroids = list()
 
-    @_TMDec.init_data_check
+    @TMDec.init_data_check
     def add_record(self, record: PostStructure):
         """Adds record to input data
 
@@ -207,17 +208,18 @@ class TagMaps():
             limit_bottom_user_count=self.limit_bottom_user_count,
             topic_modeling=self.topic_modeling)
 
-    @_TMDec.data_added_check
+    @TMDec.data_added_check
     def global_stats_report(self, cleaned=None):
         """Report global stats after data has been read"""
         if cleaned is None:
             cleaned = False
         self.lbsn_data.global_stats_report(cleaned=cleaned)
 
-    @_TMDec.data_added_check
-    @_TMDec.init_data_check
+    @TMDec.data_added_check
+    @TMDec.init_data_check
     def prepare_data(self, input_path=None):
         """Prepare data and metrics for use in clustering.
+
         Optional: provide input_path to cleaned data will load
         preprocessed data
         """
@@ -232,14 +234,14 @@ class TagMaps():
         # get prepared data for statistics and clustering
         self.cleaned_stats = self.lbsn_data.get_item_stats()
 
-    @_TMDec.init_data_check
+    @TMDec.init_data_check
     def load_intermediate(self, input_path):
         """Load data from intermediate (already filtered) data"""
         self.cleaned_post_dict = self.lbsn_data.get_cleaned_post_dict(
             input_path)
 
-    @_TMDec.prepare_data_check
-    @_TMDec.data_added_check
+    @TMDec.prepare_data_check
+    @TMDec.data_added_check
     def item_stats_report(self):
         """Stats reporting for tags, emoji (and locations)"""
         location_name_count = len(
@@ -270,8 +272,8 @@ class TagMaps():
         self.log.info(
             self.lbsn_data.bounds.get_bound_report())
 
-    @_TMDec.prepare_data_check
-    @_TMDec.data_added_check
+    @TMDec.prepare_data_check
+    @TMDec.data_added_check
     def init_cluster(self):
         """Initialize clusterers after base data
         has been loaded"""
@@ -286,9 +288,10 @@ class TagMaps():
             )
             self.clusterer[cls_type] = clusterer
 
-    @_TMDec.prepare_clustering_check
+    @TMDec.prepare_clustering_check
     def user_interface(self):
         """Opens interface for optional user input to:
+
         - remove tags, emoji or locations from processing list
         - adjust cluster distances
 
@@ -318,7 +321,7 @@ class TagMaps():
         """Calculate overall location clusters"""
         self._cluster(LOCATIONS, itemized=False)
 
-    @_TMDec.prepare_clustering_check
+    @TMDec.prepare_clustering_check
     def _cluster(self, cluster_type: ClusterType,
                  itemized=True):
         """Run clusterer based on type and output
@@ -385,31 +388,31 @@ class TagMaps():
             output_folder=self.output_folder
         )
 
-    @_TMDec.prepare_clustering_check
+    @TMDec.prepare_clustering_check
     def get_selection_map(self, cls_type: ClusterType, item):
         """Return plt.figure for item selection."""
         fig = self.clusterer[cls_type].get_sel_preview(item)
         return fig
 
-    @_TMDec.prepare_clustering_check
+    @TMDec.prepare_clustering_check
     def get_cluster_map(self, cls_type: ClusterType, item):
         """Return plt.figure for item clusters."""
         fig = self.clusterer[cls_type].get_cluster_preview(item)
         return fig
 
-    @_TMDec.prepare_clustering_check
+    @TMDec.prepare_clustering_check
     def get_cluster_shapes_map(self, cls_type: ClusterType, item):
         """Return plt.figure for item cluster shapes."""
         fig = self.clusterer[cls_type].get_clustershapes_preview(item)
         return fig
 
-    @_TMDec.prepare_clustering_check
+    @TMDec.prepare_clustering_check
     def get_singlelinkagetree_preview(self, cls_type: ClusterType, item):
         """Return plt.figure for item cluster shapes."""
         fig = self.clusterer[cls_type].get_singlelinkagetree_preview(item)
         return fig
 
-    @_TMDec.init_data_check
+    @TMDec.init_data_check
     def write_toplists(self):
         """Write toplists for items to output"""
         self.lbsn_data.write_toplists()
@@ -418,12 +421,12 @@ class TagMaps():
         """Write cleaned data to file for intermediate results store"""
         self.lbsn_data.write_cleaned_data(self.cleaned_post_dict)
 
-    @_TMDec.prepare_data_check
+    @TMDec.prepare_data_check
     def write_topics(self):
         """Write topics to file (e.g. for advanced topic modeling)"""
         self.lbsn_data.write_topic_models()
 
-    @_TMDec.init_data_check
+    @TMDec.init_data_check
     def get_pseudo_anonymized_data(self):
         """Returns dict of cleaned posts with removed
         personal information.

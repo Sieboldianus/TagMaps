@@ -7,12 +7,13 @@ test:
       - conda config --add channels conda-forge
       - conda env create -f environment_ci.yml
       - source activate tagmaps
+      # install (fixed) argdown from local repo
       - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.vgiscience.de/ad/argdown.git
   stage: test
   script:
     # test dev install
     - pip install -e . --no-dependencies
-    # run main test
+    # run main integration test
     - cleaned_data_file=resources/01_Input/flickr_dresden_cc-by-licenses.csv
     - python tests/test_all.py --max_items 50 --auto_mode --load_intermediate=$cleaned_data_file
     # argparse to markdown conversion
@@ -21,6 +22,8 @@ test:
     - argdown parse_args.py > docs/argparse/args.md
     # install pdoc3 for additional api ref
     - pip install pdoc3
+    # enable all warnings during ci doc generation
+    - export PYTHONWARNINGS='error::UserWarning'
     - pdoc --html --output-dir docs/api/ tagmaps
     # create badges
     - pylint --output-format=text tagmaps | tee pylint.txt || pylint-exit $?
