@@ -213,11 +213,11 @@ class BaseConfig:
                             default=1000,
                             type=int)
         parser.add_argument("-q", "--output_folder",
-                            help="Path to output folder",
+                            help="Relative path to output folder",
                             default="02_Output",
                             type=str)
         parser.add_argument("-j", "--input_folder",
-                            help="Path to input folder",
+                            help="Relative path to input folder",
                             default="01_Input",
                             type=str)
         parser.add_argument("-k", "--config_folder",
