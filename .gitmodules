@@ -1,3 +1,0 @@
-[submodule "docs/argparse/argdown"]
-	path = docs/argparse/argdown
-	url = git@gitlab.vgiscience.de:ad/argdown.git

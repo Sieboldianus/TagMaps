@@ -7,6 +7,7 @@ from __future__ import absolute_import
 
 import logging
 from typing import Dict
+from functools import wraps
 
 from .classes.cluster import ClusterGen
 from .classes.compile_output import Compile
@@ -88,7 +89,7 @@ class TagMaps():
         @staticmethod
         def init_data_check(func):
             """Check if lbsn_data has been initialized"""
-
+            @wraps(func)
             def _wrapper(self, *args, **kwargs):
                 # init lbsn data
                 if self.lbsn_data is None:
@@ -99,7 +100,7 @@ class TagMaps():
         @staticmethod
         def prepare_clustering_check(func):
             """Check if clusters have been initialized"""
-
+            @wraps(func)
             def _wrapper(self, *args, **kwargs):
                 # add clusterer
                 if not self.clusterer:
@@ -110,7 +111,7 @@ class TagMaps():
         @staticmethod
         def data_added_check(func):
             """Check if (any) data has been added"""
-
+            @wraps(func)
             def _wrapper(self, *args, **kwargs):
                 if kwargs and "input_path" in kwargs:
                     input_path = kwargs['input_path']
@@ -131,7 +132,7 @@ class TagMaps():
         @staticmethod
         def prepare_data_check(func):
             """Check if data has been prepared"""
-
+            @wraps(func)
             def _wrapper(self):
                 # prepare stats
                 if self.cleaned_stats is None:
@@ -218,6 +219,7 @@ class TagMaps():
     @TMDec.init_data_check
     def prepare_data(self, input_path=None):
         """Prepare data and metrics for use in clustering.
+
         Optional: provide input_path to cleaned data will load
         preprocessed data
         """
@@ -289,6 +291,7 @@ class TagMaps():
     @TMDec.prepare_clustering_check
     def user_interface(self):
         """Opens interface for optional user input to:
+
         - remove tags, emoji or locations from processing list
         - adjust cluster distances
 

@@ -46,11 +46,12 @@ class Compile():
         # data always in lat/lng WGS1984
         __, epsg_code = Utils.get_best_utmzone(
             bound_points_shapely)
-        cls._compile_merge_shapes(shapes_and_meta_list, epsg_code)
+        cls._compile_merge_shapes(
+            shapes_and_meta_list, epsg_code, output_folder)
 
     @classmethod
     def _compile_merge_shapes(cls, shapes_and_meta_list,
-                              epsg_code):
+                              epsg_code, output_folder):
         all_itemized_shapes = list()
         all_non_itemized_shapes = list()
         contains_emoji_output = False
@@ -75,11 +76,11 @@ class Compile():
         if all_itemized_shapes:
             cls._write_all(
                 all_itemized_shapes, True,
-                contains_emoji_output, epsg_code)
+                contains_emoji_output, epsg_code, output_folder)
         if all_non_itemized_shapes:
             cls._write_all(
                 all_non_itemized_shapes, False,
-                contains_emoji_output, epsg_code)
+                contains_emoji_output, epsg_code, output_folder)
 
     @staticmethod
     def _get_shape_schema(itemized):
@@ -141,7 +142,7 @@ class Compile():
 
     @classmethod
     def _write_all(cls, shapes, itemized,
-                   contains_emoji_output, epsg_code):
+                   contains_emoji_output, epsg_code, output_folder):
         schema = cls._get_shape_schema(itemized)
         # update for emoji only run
         if itemized:
@@ -156,27 +157,27 @@ class Compile():
             # first as small points, overlayed by larger ones
             shapes.sort(key=itemgetter(2))
         with fiona.open(
-                f'02_Output/{shapefile_name}.shp', mode='w',
+                output_folder / f'{shapefile_name}.shp', mode='w',
                 encoding='UTF-8', driver='ESRI Shapefile',
                 schema=schema, crs=from_epsg(epsg_code)) as shapefile:
             cls._attach_emojitable_handler(
                 shapefile,
                 shapes,
                 contains_emoji_output,
-                itemized)
+                itemized, output_folder)
 
     @classmethod
     def _attach_emojitable_handler(cls, shapefile,
                                    shapes,
                                    contains_emoji_output,
-                                   itemized):
+                                   itemized, output_folder):
         """If Emoji Output present, open csv for writing
         Note: refactor as optional property!
         """
         if contains_emoji_output:
             # If newline is '', no translation takes place on write
             # that means: \n (LF) is written, not CRLF
-            with open("02_Output/emojiTable.csv",
+            with open(output_folder / f'emojiTable.csv',
                       "w", newline='', encoding='utf-8') as emoji_table:
                 emoji_table.write("FID,Emoji\n")
                 if itemized:

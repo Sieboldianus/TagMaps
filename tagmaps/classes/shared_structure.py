@@ -23,7 +23,7 @@ ClusterType: Tuple[Tuple[str, int]] = (
 )
 
 CleanedPost_ = namedtuple(  # pylint: disable=C0103
-    'CleanedPost',
+    'CleanedPostTuple',
     'origin_id lat lng guid user_guid '
     'post_create_date post_publish_date '
     'post_body hashtags emoji '

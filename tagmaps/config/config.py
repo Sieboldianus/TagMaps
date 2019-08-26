@@ -70,9 +70,6 @@ class BaseConfig:
             self.resource_path = Path(resource_path)
         else:
             self.resource_path = self.pathname
-        self.config_folder = self.resource_path / "00_Config"
-        self.input_folder = self.resource_path / "01_Input"
-        self.output_folder = Path.cwd() / "02_Output"
         self.load_from_intermediate = None
         self.parse_args()
 
@@ -90,6 +87,8 @@ class BaseConfig:
     def parse_args(self):
         """Parse init args and set default values
 
+        Note: All paths are relative. If you wish to use another path entirely,
+        set TAGMAPS_RESOURCES environment variable to the absolute path to use
         """
         parser = argparse.ArgumentParser()
         parser.add_argument('--version',
@@ -222,7 +221,7 @@ class BaseConfig:
                             default="01_Input",
                             type=str)
         parser.add_argument("-k", "--config_folder",
-                            help="Path to config folder",
+                            help="Relative path to config folder",
                             default="00_Config",
                             type=str)
         parser.add_argument("-u", "--load_intermediate",
@@ -274,11 +273,11 @@ class BaseConfig:
         if args.max_items:
             self.max_items = args.max_items
         if args.output_folder:
-            self.output_folder = args.output_folder
+            self.output_folder = self.resource_path / args.output_folder
         if args.input_folder:
-            self.input_folder = args.input_folder
+            self.input_folder = self.resource_path / args.input_folder
         if args.config_folder:
-            self.config_folder = args.config_folder
+            self.config_folder = self.resource_path / args.config_folder
         if args.load_intermediate:
             self.load_from_intermediate = args.load_intermediate
 

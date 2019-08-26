@@ -10,7 +10,7 @@ import logging
 import sys
 import warnings
 from collections import defaultdict, namedtuple
-from functools import partial
+from functools import partial, wraps
 from multiprocessing.pool import ThreadPool
 from typing import Any, Dict, List, NamedTuple, Set, Tuple
 
@@ -53,13 +53,14 @@ sns.set_style('white')
 class ClusterGen():
     """Cluster methods for tags, emoji and post locations
 
-    Note: There are three different projections used here
-          1) Input: Original Data in Decimal Degrees (WGS1984)
-          2) Working: Radians data converted from Decimal Degrees with
-          np.radians(points) for use in HDBSCAN clustering
-          3) Output: Projected coordinates based on auto-selected UTM Zone,
-          for calculating Alpha Shapes and writing results to
-          shapefile
+    Note that there are three different projections used here:
+
+    1. Input: Original Data in Decimal Degrees (WGS1984)
+    2. Intermediate: Radians data converted from Decimal Degrees with
+    np.radians(points) for use in HDBSCAN clustering
+    3. Output: Projected coordinates based on auto-selected UTM Zone,
+    for calculating Alpha Shapes and writing results to
+    shapefile
     """
     class CGDec():
         """Decorators for class CG methods"""
@@ -67,7 +68,7 @@ class ClusterGen():
         def input_topic_format(func):
             """Check if cluster type is topic and if,
                 concat item list to string."""
-
+            @wraps(func)
             def _wrapper(self, item, **kwargs):
                 if self.cls_type == TOPICS:
                     if isinstance(item, list):
@@ -871,7 +872,7 @@ class ClusterGen():
                                         otherwise, centroids are returned
                                         in decimal degrees (WGS1984),
                                         defaults to False
-            single_clusters:            Return single item cluster centroids,
+            single_clusters: Return single item cluster centroids,
                                         defaults to True
 
         Returns:
