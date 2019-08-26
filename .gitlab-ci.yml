@@ -62,11 +62,7 @@ pages:
     - mkdir .public
     - cp resources/img6.png .public
     - cp resources/tagmaps_steps.png .public
-    - cp pylint.svg .public
-    - cp pipeline.svg .public
-    - cp pypi.svg .public
-    - cp conda-forge.svg .public
-    - cp documentation.svg .public
+    - cp *.svg .public
     - mv .public public
     # build docs
     - mkdocs build
