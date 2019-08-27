@@ -45,7 +45,7 @@ See the [tagmaps documentation](https://ad.vgiscience.org/tagmaps/docs/) for add
 3. Run `tagmaps` within folder `resources`. Output files will be saved to `/02_Output`  
    - 2 shapefiles in auto-selected UTM projection, one containing all tag cluster and one with the overall location clusters
 3. Visualize shapefiles, e.g. using ESRI ArcGIS
-   - download `BasemapLayout_World.mxd` from [resources folder](/resources/BasemapLayout_World.mxd) and replace missing links with 2 resulting Shapefiles in `/02_Output`
+   - download `BasemapLayout_World.mxd` from [resources folder](/resources/) and replace missing links with 2 resulting Shapefiles in `/02_Output`
    - adjust minimum and maximum font sizes, weighting formula or other metrics to your needs.
 
 **Some background**:
@@ -54,8 +54,8 @@ Tag Maps Package can be used with any tagged & spatially referenced data, but it
 There're two ways to load input data:
 
 1. Unfiltered raw data
-   - Use `tagmaps.add_record(record)` where record is of type `PostStructure` (see [shared_structure.py](/classes/shared_structure.py))
-   - How you clean up data totally depends on the type, have a look at LoadData class in [load_data.py](/classes/load_data.py) for Twitter and Flickr cleanup
+   - Use `tagmaps.add_record(record)` where record is of type `PostStructure` (see [shared_structure.py](/tagmaps/classes/shared_structure.py))
+   - How you clean up data totally depends on the type, have a look at LoadData class in [load_data.py](/tagmaps/classes/load_data.py) for Twitter and Flickr cleanup
 2. Filtered data
    - the result from 1 is a `UserPostLocation` (**UPL**), which is a reference of type 'CleanedPost'. A UPL simply has all posts of a single user at a single coordinate merged,
      e.g. a reduced list of terms, tags and emoji based on global occurrence (i.e. no duplicates).
