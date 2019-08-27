@@ -27,22 +27,24 @@ Overview of processing steps (Toronto High Park example):
 
 ## Installation
 
-1. The easiest way for Windows users is to download the newest pre-compiled build from [releases](../../releases) and run `tagmaps.exe`
-2. The recommended way to install the package is with `conda install tagmaps`. Before, make sure that **conda-forge** is added as a channel: `conda config --add channels conda-forge`
+1. The recommended way to install the package is with `conda install tagmaps -c conda-forge`.
+2. For Windows users, an alternative is to download the newest pre-compiled build from [releases](../../releases) and run `tagmaps.exe`
 3. If you need to install with pip, it is recommended to install all dependencies first (e.g. Windows users: use [Gohlke wheels](<https://www.lfd.uci.edu/~gohlke/pythonlibs/>) if available) and then run `pip install tagmaps`
 
 See the [Documentation](https://ad.vgiscience.org/tagmaps/docs/user-guide/installation/) for a complete guide to setup tagmaps package in Windows 10.
 
 ## Documentation
 
-See the [tagmaps documentation](https://ad.vgiscience.org/tagmaps/docs/) for additional information, guides and tutorials.
+See the [tagmaps documentation](https://ad.vgiscience.org/tagmaps/docs/) for additional information, guides and tutorials. There is also an external [API Reference](https://ad.vgiscience.org/tagmaps/docs/api/tagmaps_.html) available.
 
 ## Quickstart
 
-1. Place geotagged data in `/01_Input` subfolder
-   - example data is available in the pre-compiled build zip-file above
-2. Output files will be saved in `/02_Output` (2 shapefiles in auto-selected UTM projection, one containing all tag cluster and one with the overall location clusters)
-3. Visualize shapefiles, e.g. using ESRI ArcGIS (I haven't tried other GIS Software such as QGIS, but it should theoretically be possible..)
+1. Clone `resources` folder somewhere locally  
+2. Place geotagged data in `/01_Input` subfolder
+   - information on how to structure data is available in the [documentation](https://ad.vgiscience.org/tagmaps/docs/user-guide/use-your-own-data/)
+3. Run `tagmaps` within folder `resources`. Output files will be saved to `/02_Output`  
+   - 2 shapefiles in auto-selected UTM projection, one containing all tag cluster and one with the overall location clusters
+3. Visualize shapefiles, e.g. using ESRI ArcGIS
    - download `BasemapLayout_World.mxd` from [resources folder](/resources/BasemapLayout_World.mxd) and replace missing links with 2 resulting Shapefiles in `/02_Output`
    - adjust minimum and maximum Font Sizes, Weighting Formula or other metrics to your needs.
 
@@ -142,13 +144,17 @@ GNU GPLv3
 
 2018-01-31: [**TagMaps v0.9.2**](https://cloudstore.zih.tu-dresden.de/index.php/s/8EFfeJcpNCStQ9X/download)
 
-- Because Tag Maps can be generated from local to regional to continental scale, finding an algorythm that fits all was not straight forward. The current implementation will produce shapes for all of these scales without any user input.
-- This Final Alpha Shape Implementation is motivated from [Kevin Dwyer/ Sean Gillies](http://blog.thehumangeo.com/2014/05/12/drawing-boundaries-in-python/) great base code
-- Implementation of Auto-Projection from Geographic to Projected Coordinate System. The code will select the most suitable UTM Zone for projecting data.
+- because Tag Maps can be generated from local to regional to continental scale, finding an algorythm that fits all was not straight forward. The current implementation will produce shapes for all of these scales without any user input.
+- this alpha shape implementation is motivated from [Kevin Dwyer/ Sean Gillies](http://blog.thehumangeo.com/2014/05/12/drawing-boundaries-in-python/) great base code
+- auto-projection from geographic to projected Coordinate System: select the most suitable UTM Zone for projecting data.
 
 2018-01-17: **TagMaps v0.9.1**
 
-- First build
-- Initial commit, still lots of unnecessary comments/code parts left in code
+- first build with python
+- initial commit, still lots of unnecessary comments/code parts left in code
+
+2010-03-30: **TagMaps v0.0.1**
+
+- first implementation of tagmaps concept in ArcGIS Model Builder
 
 [//]: # "Readme formatting based on https://gist.github.com/PurpleBooth/109311bb0361f32d87a2"
