@@ -27,15 +27,15 @@ Overview of processing steps (Toronto High Park example):
 
 ## Installation
 
-1. The recommended way to install the package is with `conda install tagmaps -c conda-forge`.
+1. The recommended way to install the package is with `conda install tagmaps -c conda-forge`
 2. For Windows users, an alternative is to download the newest pre-compiled build from [releases](../../releases) and run `tagmaps.exe`
 3. If you need to install with pip, it is recommended to install all dependencies first (e.g. Windows users: use [Gohlke wheels](<https://www.lfd.uci.edu/~gohlke/pythonlibs/>) if available) and then run `pip install tagmaps`
 
-See the [Documentation](https://ad.vgiscience.org/tagmaps/docs/user-guide/installation/) for a complete guide to setup tagmaps package in Windows 10.
+See the [documentation](https://ad.vgiscience.org/tagmaps/docs/user-guide/installation/) for a complete guide to setup tagmaps package in Windows 10.
 
 ## Documentation
 
-See the [tagmaps documentation](https://ad.vgiscience.org/tagmaps/docs/) for additional information, guides and tutorials. There is also an external [API Reference](https://ad.vgiscience.org/tagmaps/docs/api/tagmaps_.html) available.
+See the [tagmaps documentation](https://ad.vgiscience.org/tagmaps/docs/) for additional information, guides and tutorials. There is also an external [API reference](https://ad.vgiscience.org/tagmaps/docs/api/tagmaps_.html) available.
 
 ## Quickstart
 
