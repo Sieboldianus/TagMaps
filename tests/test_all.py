@@ -1,5 +1,7 @@
 """
-Run Integration test for tagMaps
+Run Integration test for TagMaps
+
+
 This will check complete process of main() as if
 evoked with tagmaps --autoMode --maxItems 50
 """
