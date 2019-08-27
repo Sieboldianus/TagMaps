@@ -45,31 +45,31 @@ Even if these steps are carried out separately, they are interrelated in specifi
 !!! Note
     There's a lot of literature available on social media photo sharing and tagging behaviour. Some personal recommendations:  
 
-* Steels, L. (2006). Collaborative tagging as distributed cognition. In: Harnad,
-S. & Dror, I. E., Cognition distributed: How cognitive technology extends our
-minds, Pragmatics & Cognition, 93-98.
-
-* Stvilia, B., & Jörgensen, C. (2010). Member activities and quality of tags in
-a collection of historical photographs in Flickr. Journal of the American Society for
-Information Science and Technology, 61, 12, 2477-2489.
-
-* Thurlow, C., & Jaworski, A. (2011). Banal globalization? Embodied actions
-and mediated practices in tourists’ online photo-sharing. In: Digital Discourse:
-Language in the New Media, Oxford University Press.
-
-* Scott, M. J., & Canter, D. V. (1997). Picture or Place? A Multiple Sorting
-Study Of Landscape. Journal of Environmental Psychology, 17, 4, 263-281
-
-* Garduno, F. C. (2010). Photosharing on Flickr: intangible heritage and
-emergent publics. [Additonal Summary] International Journal of Heritage Studies,
-16, 4-5.
-
-* Golder, S., & Huberman, B. (2006). Usage patterns of collaborative tagging
-systems. Journal of Information Science, 32, 2, 198-208.
-
-* Dakin, S. (2003). There's more to landscape than meets the eye: towards
-inclusive landscape assessment in resource and environmental management. The
-Canadian Geographer, 47, 2, 185-200.
+    * Steels, L. (2006). Collaborative tagging as distributed cognition. In: Harnad,
+    S. & Dror, I. E., Cognition distributed: How cognitive technology extends our
+    minds, Pragmatics & Cognition, 93-98.
+    
+    * Stvilia, B., & Jörgensen, C. (2010). Member activities and quality of tags in
+    a collection of historical photographs in Flickr. Journal of the American Society for
+    Information Science and Technology, 61, 12, 2477-2489.
+    
+    * Thurlow, C., & Jaworski, A. (2011). Banal globalization? Embodied actions
+    and mediated practices in tourists’ online photo-sharing. In: Digital Discourse:
+    Language in the New Media, Oxford University Press.
+    
+    * Scott, M. J., & Canter, D. V. (1997). Picture or Place? A Multiple Sorting
+    Study Of Landscape. Journal of Environmental Psychology, 17, 4, 263-281
+    
+    * Garduno, F. C. (2010). Photosharing on Flickr: intangible heritage and
+    emergent publics. [Additonal Summary] International Journal of Heritage Studies,
+    16, 4-5.
+    
+    * Golder, S., & Huberman, B. (2006). Usage patterns of collaborative tagging
+    systems. Journal of Information Science, 32, 2, 198-208.
+    
+    * Dakin, S. (2003). There's more to landscape than meets the eye: towards
+    inclusive landscape assessment in resource and environmental management. The
+    Canadian Geographer, 47, 2, 185-200.
 
 ---
 
