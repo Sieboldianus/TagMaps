@@ -79,19 +79,20 @@ The conclusions relevant to the visualization algorithm of tagmaps are the follo
 
 Because perceptual patterns manifest differently on different scales, tagmaps are scale dependent. The aggregation of data on different scales results in different patterns emerging on the final map.
 
-![IR](https://wwwpub.zih.tu-dresden.de/~s7398234/tagmaps/docs/img/img_scale_dep.png)
+![IR](https://wwwpub.zih.tu-dresden.de/~s7398234/tagmaps/docs/img/img_scale_dep.png)  
+*Tag Maps generated for different scales: 1) Greater Toronto Area (GTA), 2) Toronto City, 3) High Park*
 
 The following steps demonstrate data processing for the **example area for High Park (Toronto).**
 
-![IR](https://wwwpub.zih.tu-dresden.de/~s7398234/tagmaps/docs/img/03_example_highpark.png)
-
-![IR](https://wwwpub.zih.tu-dresden.de/~s7398234/tagmaps/docs/img/img_single-linkage-tree.png)
+![IR](https://wwwpub.zih.tu-dresden.de/~s7398234/tagmaps/docs/img/03_example_highpark.png)  
+*Location of High Park in Toronto*
 
 ---
 
 ### Raw data
 
-![IR](https://wwwpub.zih.tu-dresden.de/~s7398234/tagmaps/docs/img/03_highpark_orig.png)
+![IR](https://wwwpub.zih.tu-dresden.de/~s7398234/tagmaps/docs/img/03_highpark_orig.png)  
+*Photo locations in High Park: each dot represents a single photo*
 
 * 31,000 Photo Locations and 207,009 Tags
 * 9000 distinct locations and 16,000 distinct tags
@@ -104,8 +105,7 @@ We can look at some of the photos to get some general idea of what is going on i
 
 ### First layer: Photo location clustering
 
-![IR](https://wwwpub.zih.tu-dresden.de/~s7398234/tagmaps/docs/img/03_first_layer.png)
-
+![IR](https://wwwpub.zih.tu-dresden.de/~s7398234/tagmaps/docs/img/03_first_layer.png)  
 *High Park Tag Map, first Layer: Photo Location Clustering*
 
 Circles are scaled based on a formula that takes into account number of users and number of photos. The result can be used to study overall photo attribution and general frequentation patterns, e.g. which areas were collectively considered *memorable* to be photographed.
@@ -140,6 +140,7 @@ This allows combining information from different scales. E.g. reddish areas high
 ### Second layer: Tag Location Clustering
 
 ![IR](https://wwwpub.zih.tu-dresden.de/~s7398234/tagmaps/docs/img/03_highpark_tagcluster.png)  
+* Final Tag Map, combining photo location cluster layer (1) and tag cluster layer (2)*
 
 In a similar fashion, tag location clustering is calculated and added as a separate second layer on top of the location clusters.
 
