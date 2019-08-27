@@ -12,8 +12,8 @@ from __future__ import absolute_import
 
 import csv
 import json
-import logging
 import sys
+import logging
 from decimal import Decimal
 from typing import Dict, Set, TextIO
 
@@ -180,7 +180,12 @@ class LoadData():
         lbsn_post = PostStructure()
         lbsn_post.guid = post_guid  # guid
         lbsn_post.origin_id = origin_id
-        lbsn_post.user_guid = post.get(self.cfg.source_map.user_guid_col)
+        user_guid = post.get(self.cfg.source_map.user_guid_col)
+        if not self.cfg.ignore_stoplists and \
+                self.cfg.sort_out_user_set is not None \
+                and user_guid in self.cfg.sort_out_user_set:
+            return None
+        lbsn_post.user_guid = user_guid
         lbsn_post.post_url = post.get(self.cfg.source_map.post_url_col)
         lbsn_post.post_publish_date = \
             post.get(self.cfg.source_map.post_publish_date_col)
@@ -221,8 +226,8 @@ class LoadData():
         self.distinct_locations_set.add(lbsn_post.loc_id)
         lbsn_post.loc_name = post.get(self.cfg.source_map.place_name_col)
         # exclude posts outside boundary
-        if self.cfg.shapefile_intersect and \
-                self._is_outside_shapebounds(lbsn_post):
+        if (self.cfg.shapefile_intersect or self.cfg.shapefile_exclude) and \
+                self._is_outside_shapebounds(lbsn_post) is True:
             return None
         if self.cfg.cluster_tags or \
                 self.cfg.cluster_emoji or \
@@ -336,8 +341,9 @@ class LoadData():
             return True
         if post.loc_id not in self.shape_included_locid_hash:
             lng_lat_point = Point(post.longitude, post.latitude)
-            if not Utils.check_intersect_polylist(
-                    lng_lat_point, self.cfg.shp_geom):
+            if Utils.check_intersect_polylist(
+                    lng_lat_point, self.cfg.shp_geom,
+                    self.cfg.shp_exclude_geom) is False:
                 self.stats.skipped_count += 1
                 self.shape_exclude_locid_hash.add(post.loc_id)
                 return True

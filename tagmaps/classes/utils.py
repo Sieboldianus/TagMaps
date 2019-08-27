@@ -182,17 +182,32 @@ class Utils():
             return False
 
     @staticmethod
-    def check_intersect_polylist(latlng_point, polylist):
+    def check_intersect_polylist(
+            latlng_point, polylist, poly_exclude_list=None):
         """Checks intersection of Point(lat, lng) against
         list of polygons.
 
         Arguments:
             latlng_point {Fiona Point} -- coordinate
             polylist {list} -- list of polys
+            poly_exclude_list {list} -- list of polys to exclude
         """
-        for poly in polylist:
-            if latlng_point.within(poly):
-                return True
+        include = False
+        if polylist is not None:
+            for poly in polylist:
+                if latlng_point.within(poly):
+                    include = True
+                    break
+            if include is False:
+                return False
+        else:
+            include = True
+        if poly_exclude_list is not None:
+            for poly in poly_exclude_list:
+                if latlng_point.within(poly):
+                    return False
+        if include is True:
+            return True
         return False
 
     @staticmethod
@@ -221,6 +236,10 @@ class Utils():
         reload(logging)
         # Create or get logger with specific name
         log = logging.getLogger("tagmaps")
+        if not log:
+            # no logging handler found for tagmaps
+            # indicates package import mode
+            return
         if log.handlers:
             # only add log handlers once
             return log
@@ -253,7 +272,7 @@ class Utils():
                 level=logging_level, datefmt=None)
             # log.stream = sys.stdout
         # flush once to clear console
-        sys.stdout.flush()
+        # sys.stdout.flush()
         return log
 
     @staticmethod

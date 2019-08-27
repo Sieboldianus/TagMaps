@@ -11,15 +11,16 @@ import configparser
 import csv
 import logging
 import os
-import sys
 import warnings
 from pathlib import Path
+from typing import List
 
 import fiona
 import pyproj
 from shapely.geometry import shape
 
 from tagmaps import __version__
+from tagmaps.classes.utils import Utils
 
 
 class BaseConfig:
@@ -38,9 +39,12 @@ class BaseConfig:
         self.write_cleaned_data = True
         self.local_saturation_check = False
         self.tokenize_japanese = False  # currently not implemented
-        self.shapefile_intersect = False
-        self.shapefile_path = ""
+        self.shapefile_intersect = None
+        self.shapefile_exclude = None
         self.ignore_stoplists = False
+        self.stoplist_tags = None
+        self.stoplist_user = None
+        self.stoplist_places = None
         self.ignore_place_corrections = False
         self.statistics_only = False
         self.limit_bottom_user_count = 5
@@ -49,6 +53,10 @@ class BaseConfig:
         self.max_items = 1000
         self.filter_origin = None
         self.logging_level = logging.INFO
+        self.input_folder = None
+        self.output_folder = None
+        self.config_folder = None
+        self.cluster_cut_distance = None
 
         # additional auto settings
         self.sort_out_always_set = set()
@@ -57,10 +65,12 @@ class BaseConfig:
         self.crs_proj = None
         self.epsg_code = ""
         self.sort_out_places_set = set()
+        self.sort_out_user_set = None
         self.sort_out_places = False
         self.correct_places = False
         self.correct_place_latlng_dict = dict()
         self.shp_geom = None
+        self.shp_exclude_geom = None
 
         # initialization
         resource_path = os.environ.get("TAGMAPS_RESOURCES")
@@ -73,6 +83,9 @@ class BaseConfig:
         self.load_from_intermediate = None
         self.parse_args()
 
+        # set logger
+        self.log = Utils.set_logger(self.output_folder, self.logging_level)
+
         if not self.load_from_intermediate and not self.input_folder.exists():
             raise ValueError(f"Folder {self.input_folder} not found.")
         if not self.config_folder.exists():
@@ -80,7 +93,9 @@ class BaseConfig:
 
         self.load_filterlists()
         if self.shapefile_intersect:
-            self.load_shapefile()
+            self.shp_geom = self.load_shapefile(self.shapefile_intersect)
+        if self.shapefile_exclude:
+            self.shp_exclude_geom = self.load_shapefile(self.shapefile_exclude)
         self.source_map = self.load_sourcemapping()
         self.set_glob_options()
 
@@ -152,20 +167,38 @@ class BaseConfig:
                             )
         parser.add_argument("-i",
                             "--shapefile_intersect",
-                            action="store_true",
-                            help="If set, clip "
-                            "data to shapefile (specify path "
-                            "with --shapefilePath)"
-                            )
-        parser.add_argument("-f",
-                            "--shapefile_path",
-                            help="Provide a (full) path to a shapefile "
+                            type=Path,
+                            help="Provide a relative path to a shapefile "
                             "to clip data prior to clustering.")
+        parser.add_argument("--shapefile_exclude",
+                            type=Path,
+                            help="Provide a relative path to a shapefile "
+                            "to exclude data prior to clustering. If "
+                            "--shapefile_intersect is used, the exclusion "
+                            "here applies after inclusion.")
         parser.add_argument("-n",
                             "--ignore_stoplists",
                             action="store_true",
-                            help="If stoplist is available "
-                            "ignore it."
+                            help="Ignore any stoplists, even if available"
+                            )
+        parser.add_argument("--stoplist_tags",
+                            type=Path,
+                            help="Supply a relative path to a text file "
+                            "containing terms to ignore during tag clustering. "
+                            "This list is supplemental to "
+                            "00_Config/SortOutAlways.txt, if such file exists."
+                            )
+        parser.add_argument("--stoplist_user",
+                            type=Path,
+                            help="Supply a relative path to a text file "
+                            "containing user (guids) to ignore during tag clustering."
+                            )
+        parser.add_argument("--stoplist_places",
+                            type=Path,
+                            help="Supply a relative path to a text file "
+                            "containing places (guids) to ignore during tag clustering. "
+                            "This list is supplemental to "
+                            "00_Config/SortOutPlaces.txt, if such file exists."
                             )
         parser.add_argument("-b",
                             "--ignore_place_corrections",
@@ -173,18 +206,23 @@ class BaseConfig:
                             help="If place corrections are available, "
                             "ignore them."
                             )
-        parser.add_argument("-d",
-                            "--statistics_only",
+        parser.add_argument("--statistics_only",
                             action="store_true",
                             help="Do not cluster, only read input data"
-                            " and calculate statistics."
+                            " and output statistics."
                             )
+        parser.add_argument("-d", "--cluster_cut_distance",
+                            help="Provide a cluster cut distance (in meters) "
+                            "where the clustering will be stopped. This "
+                            "will override the auto detection "
+                            "of cluster distance.",
+                            type=float)
         parser.add_argument("-l",
                             "--limit_bottom_usercount",
                             type=int,
                             default=5,
                             help="Remove all tags that are used by "
-                            "less than x photographers. Defaults to 5.")
+                            "less than x photographers.")
         parser.add_argument("-g",
                             "--disable_write_gis_comp_line",
                             action="store_true",
@@ -199,7 +237,7 @@ class BaseConfig:
                             help="If set, no user input will "
                             "be requested during processing.",
                             )
-        parser.add_argument("-fO",
+        parser.add_argument("-f",
                             "--filter_origin",
                             type=str,
                             help="If provided, will filter input data "
@@ -215,19 +253,19 @@ class BaseConfig:
         parser.add_argument("-q", "--output_folder",
                             help="Relative path to output folder",
                             default="02_Output",
-                            type=str)
+                            type=Path)
         parser.add_argument("-j", "--input_folder",
                             help="Relative path to input folder",
                             default="01_Input",
-                            type=str)
+                            type=Path)
         parser.add_argument("-k", "--config_folder",
                             help="Relative path to config folder",
                             default="00_Config",
-                            type=str)
+                            type=Path)
         parser.add_argument("-u", "--load_intermediate",
-                            help="Load from intermediate (cleaned) data "
-                            "from path",
-                            type=str)
+                            help="A (relative) path to load from "
+                            "intermediate (cleaned) data",
+                            type=Path)
 
         args = parser.parse_args()
         if args.verbose:
@@ -253,17 +291,25 @@ class BaseConfig:
         if args.local_saturation_check:
             self.local_saturation_check = True
         if args.shapefile_intersect:
-            self.shapefile_intersect = True
-        if args.shapefile_path:
-            self.shapefile_path = args.shapefile_path
+            self.shapefile_intersect = \
+                self.resource_path / args.shapefile_intersect
+        if args.shapefile_exclude:
+            self.shapefile_exclude = \
+                self.resource_path / args.shapefile_exclude
         if args.ignore_stoplists:
             self.ignore_stoplists = True
+        if args.stoplist_tags:
+            self.stoplist_tags = self.resource_path / args.stoplist_tags
+        if args.stoplist_user:
+            self.stoplist_user = self.resource_path / args.stoplist_user
+        if args.stoplist_places:
+            self.stoplist_places = self.resource_path / args.stoplist_places
         if args.ignore_place_corrections:
             self.ignore_place_corrections = True
         if args.statistics_only:
             self.statistics_only = True
         if args.limit_bottom_usercount:
-            self.limit_bottom_user_count = int(args.limit_bottom_usercount)
+            self.limit_bottom_user_count = args.limit_bottom_usercount
         if args.disable_write_gis_comp_line:
             self.write_gis_comp_line = False
         if args.auto_mode:
@@ -279,7 +325,9 @@ class BaseConfig:
         if args.config_folder:
             self.config_folder = self.resource_path / args.config_folder
         if args.load_intermediate:
-            self.load_from_intermediate = args.load_intermediate
+            self.load_from_intermediate = self.resource_path / args.load_intermediate
+        if args.cluster_cut_distance:
+            self.cluster_cut_distance = args.cluster_cut_distance
 
     def load_filterlists(self):
         """Load filterlists for filtering terms (instring and full match)
@@ -296,25 +344,47 @@ class BaseConfig:
             self.config_folder / "CorrectPlaceLatLng.txt")
         # load lists
         self.sort_out_always_set = self.load_stoplists(sort_out_always_file)
+        if self.stoplist_tags:
+            self.sort_out_always_set.update(
+                self.load_stoplists(self.stoplist_tags)
+            )
         self.sort_out_always_instr_set = self.load_stoplists(
             sort_out_always_instr_file)
         self.sort_out_places_set = self.load_place_stoplist(
             sort_out_places_file)
+        if self.stoplist_places:
+            self.sort_out_places_set.update(
+                self.load_stoplists(self.stoplist_places)
+            )
+        if self.stoplist_user:
+            self.sort_out_user_set = self.load_stoplists(
+                self.stoplist_user)
         self.correct_place_latlng_dict = self.load_place_corrections(
             correct_place_latlng_file
         )
         # print results, ignore empty
-        try:
-            print(f"Loaded {len(self.sort_out_always_set)} "
+        def value_count(x): return 0 if x is None else len(x)
+        stoplist_tags = value_count(self.sort_out_always_set)
+        if stoplist_tags > 0:
+            print(f"Loaded {stoplist_tags} "
                   f"stoplist items.")
-            print(f"Loaded {len(self.sort_out_always_instr_set)} "
+        stoplist_tags_instr = value_count(self.sort_out_always_instr_set)
+        if stoplist_tags_instr > 0:
+            print(f"Loaded {stoplist_tags_instr} "
                   f"inStr stoplist items.")
-            print(f"Loaded {len(self.sort_out_places_set)} stoplist places.")
-            print(f"Loaded {len(self.correct_place_latlng_dict)} "
+        stoplist_places = value_count(self.sort_out_places_set)
+        if stoplist_places > 0:
+            print(f"Loaded {stoplist_places} stoplist places.")
+        latlng_place_corrections = value_count(self.correct_place_latlng_dict)
+        if latlng_place_corrections > 0:
+            print(f"Loaded {latlng_place_corrections} "
                   f"place lat/lng corrections."
                   )
-        except TypeError:
-            pass
+        stoplist_user = value_count(self.sort_out_user_set)
+        if stoplist_user > 0:
+            print(f"Loaded {stoplist_user} "
+                  f"user stoplist items."
+                  )
 
     def load_stoplists(self, file):
         """Loads stoplist terms from file and stores in set"""
@@ -365,33 +435,33 @@ class BaseConfig:
         self.correct_places = True
         return store_dict
 
-    def load_shapefile(self):
+    def load_shapefile(self, shapefile_path: Path) -> List[shape]:
         """Imports single or multi polygon shapefile for intersecting points"""
-        if self.shapefile_intersect is False:
-            return
-        if self.shapefile_path == "":
-            sys.exit(f"No Shapefile-Path specified. Exiting..")
-            return
-        poly_shape = fiona.open(self.shapefile_path)
+        poly_shape = fiona.open(shapefile_path)
         vertices_count = 0
-        self.shp_geom = []
+        shp_geom = []
         if len(poly_shape) == 1:
             # simple polygon
             geom = next(iter(poly_shape))
             vertices_count = len(geom["geometry"]["coordinates"][0])
-            self.shp_geom.append(shape(geom["geometry"]))
+            shp_geom.append(shape(geom["geometry"]))
         else:
             # multipolygon
             for pol in poly_shape:
                 for part in pol["geometry"]["coordinates"]:
                     vertices_count += len(part)
-                self.shp_geom.append(shape(pol['geometry']))
+                shp_geom.append(shape(pol['geometry']))
+        poly_count = len(shp_geom)
+        poly_s = ""
+        if poly_count > 1:
+            poly_s = "s"
         print(
-            f'Loaded Shapefile with '
-            f'{len(self.shp_geom)} polygons '
+            f'Loaded shapefile with '
+            f'{poly_count} polygon{poly_s} '
             f'and '
-            f'{vertices_count}  Vertices.'
+            f'{vertices_count} vertices.'
         )
+        return shp_geom
 
     def load_custom_crs(self, override_crs):
         """Optionally, create custom crs for projecting

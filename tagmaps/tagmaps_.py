@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import logging
 from typing import Dict
 from functools import wraps
+from pathlib import Path
 
 from .classes.cluster import ClusterGen
 from .classes.compile_output import Compile
@@ -82,6 +83,11 @@ class TagMaps():
     max_items : int (default=1000)
         Top x items to cluster. Remove_long_tail must be True for this
         parameter to take effect.
+
+    cluster_cut_distance : float (default=None)
+        Provide a cluster cut distance (in meters) where the clustering
+        will be stopped. This will override the auto detection of cluster
+        distance.
     """
 
     class TMDec():
@@ -141,12 +147,13 @@ class TagMaps():
             return _wrapper
 
     def __init__(
-            self, tag_cluster=True, emoji_cluster=True,
-            location_cluster=True,
-            output_folder=None, remove_long_tail=True,
-            limit_bottom_user_count=5, topic_modeling=False,
-            local_saturation_check=False, max_items=None,
-            logging_level=None, topic_cluster=None):
+            self, tag_cluster: bool = True, emoji_cluster: bool = True,
+            location_cluster: bool = True,
+            output_folder: Path = None, remove_long_tail: bool = True,
+            limit_bottom_user_count: int = 5, topic_modeling: bool = False,
+            local_saturation_check: bool = False, max_items: int = None,
+            logging_level=None, topic_cluster: bool = None,
+            cluster_cut_distance: float = None):
         """Init settings for Tag Maps Clustering"""
         self.output_folder = output_folder
         self.remove_long_tail = remove_long_tail
@@ -180,6 +187,7 @@ class TagMaps():
         self.cleaned_post_list = None
         self.cleaned_stats = None
         self.clusterer: Dict[ClusterType, ClusterGen] = dict()
+        self.cluster_cut_distance = cluster_cut_distance
         self.itemized_cluster_shapes = list()
         self.global_cluster_centroids = list()
 
@@ -287,6 +295,9 @@ class TagMaps():
                 local_saturation_check=self.local_saturation_check
             )
             self.clusterer[cls_type] = clusterer
+        # on manual cluster cut distance override
+        if self.cluster_cut_distance:
+            self.set_cluster_distance(self.cluster_cut_distance)
 
     @TMDec.prepare_clustering_check
     def user_interface(self):
@@ -308,6 +319,11 @@ class TagMaps():
         if user_intf.abort is True:
             return False
         return True
+
+    def set_cluster_distance(self, cluster_distance: float):
+        """Set cluster distance for all clusters manually"""
+        for clusterer in self.clusterer:
+            clusterer.cluster_cut_distance = cluster_distance
 
     def cluster_tags(self):
         """Calculate all tag clusters"""

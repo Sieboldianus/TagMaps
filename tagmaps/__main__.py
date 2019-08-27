@@ -40,16 +40,16 @@ def main():
         6. Compile Output: normalize results, add statistics, shapefile
         7. Write results: Write Shapefile to file  - /02_Output/
     """
-
-    # initialize config from args
-    cfg = BaseConfig()
     # init main procedure settings
     Utils.init_main()
 
+    # initialize config from args
+    cfg = BaseConfig()
     print('\n')
-    # set logger with file pointer
 
-    log = Utils.set_logger(cfg.output_folder, cfg.logging_level)
+    # get logger from config
+    log = cfg.log
+
     log.info(
         "########## "
         "STEP 1 of 6: Data Cleanup "
@@ -106,7 +106,8 @@ def main():
     if cfg.write_cleaned_data and not cfg.load_from_intermediate:
         # write intermediate results
         tagmaps.write_cleaned_data()
-        # tagmaps.write_toplists()
+        # write toplists (emoji, location, tags)
+        tagmaps.write_toplists()
         if cfg.topic_modeling:
             tagmaps.write_topics()
 
@@ -124,6 +125,13 @@ def main():
         if not cfg.auto_mode:
             # open user interface for optional user input
             continue_proc = tagmaps.user_interface()
+        else:
+            # if auto mode and cluster cut distance
+            # provided via args, set for all clusterer
+            if cfg.cluster_cut_distance:
+                tagmaps.set_cluster_distance(
+                    cfg.cluster_cut_distance
+                )
 
         if continue_proc is True:
             tagmaps.cluster_tags()
