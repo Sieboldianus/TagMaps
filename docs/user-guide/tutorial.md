@@ -3,7 +3,7 @@
 We'll create a Tag Map for **Dresden** from about 500.000 spatially referenced publicly available Social Media Photos (and emoji).
 
 !!! Note
-This tutorial is part of a workshop & lecture series and is also available as [Jekyll reveal slides](https://ad.vgiscience.org/tagmaps_tutorial/).
+    This tutorial is part of a workshop & lecture series and is also available as [Jekyll reveal slides](https://ad.vgiscience.org/tagmaps_tutorial/).
 
 ---
 
@@ -27,7 +27,7 @@ For Tag Maps, the general idea is that tags & emoji are
 * scaled based on the overall number of people using respective tags/emojis.
 
 !!! Note
-This means that Tag Maps are scale dependent. In other words, data must be clustered again each time a new scale or area is explored.
+    This means that Tag Maps are scale dependent. In other words, data must be clustered again each time a new scale or area is explored.
 
 ---
 
@@ -81,7 +81,7 @@ Usually, the first few tags refer to general aspects for the area and provide li
 Check "Map Tags" and select a tag. A preview map will be generated showing the general distribution of the current tag.
 
 !!! Note
-Most emoji are referenced with their *Unicode_Name*, not the actual symbol.
+    Most emoji are referenced with their *Unicode_Name*, not the actual symbol.
 
 ### Adjust cluster granularity
 
@@ -105,7 +105,7 @@ Click on proceed to cluster data..
 The tool will process each unique tag separately. The clustering is implemented using the single-linkage tree that is available from [HDBSCAN](http://hdbscan.readthedocs.io/en/latest/). In short, all cluster trees (Dendrograms) for tags will be *cut* at the same distance, so that their patterns can be compared for the given scale. 
 
 !!! Note
-HDBSCAN is a fast single-linkage clustering technique that is designed in a *bottom-up* manner, meaning that patterns mostly emerge from underlying data (and not the researcher's definition of input criteria). For tagmaps, this is important because it allows processing data automatically and equally, without the need for additional input criteria from the researcher.
+    HDBSCAN is a fast single-linkage clustering technique that is designed in a *bottom-up* manner, meaning that patterns mostly emerge from underlying data (and not the researcher's definition of input criteria). For tagmaps, this is important because it allows processing data automatically and equally, without the need for additional input criteria from the researcher.
 
 ## Results
 
@@ -142,7 +142,7 @@ For mapping Emoji, make sure you have a suitable font installed prior to opening
 the mxd and is available [here](https://github.com/eosrei/twemoji-color-font/releases).
 
 !!! Note
-This is not necessary for Windows 10, since it has native Emoji support
+    This is not necessary for Windows 10, since it has native Emoji support
 
 ## Optional: fix broken links
 
@@ -151,7 +151,7 @@ Depending on your folder structure, you may see red "!", which means that links 
 ![IR](https://wwwpub.zih.tu-dresden.de/~s7398234/tagmaps/docs/img/09_fixlinks.gif)
 
 !!! Note
-Do not use `Data > Repair Data source`, since this will remove any visualization rules contained in data layers. Fixing links by `Properties > Source > Set Data Source` will leave any special layer settings untouched and simply repair the reference to underlying shape data.
+    Do not use `Data > Repair Data source`, since this will remove any visualization rules contained in data layers. Fixing links by `Properties > Source > Set Data Source` will leave any special layer settings untouched and simply repair the reference to underlying shape data.
 
 ## Zoom to data extent
 
@@ -160,7 +160,7 @@ Do not use `Data > Repair Data source`, since this will remove any visualization
 Zoom to area under investigation, based on the extent of our clustered shapefile.
 
 !!! Note
-The use of ArcMap **Layout View** (instead of **Data View**) is by intent: Tag Maps are scale dependend. Therefore, the extent for which data has been clustered is **fixed**. If you wish to zoom in or out, you need to clip data prior to clustering and cluster again given the new extent. Using the layout view in ArcMap prevents accidentally zooming in or out.
+    The use of ArcMap **Layout View** (instead of **Data View**) is by intent: Tag Maps are scale dependend. Therefore, the extent for which data has been clustered is **fixed**. If you wish to zoom in or out, you need to clip data prior to clustering and cluster again given the new extent. Using the layout view in ArcMap prevents accidentally zooming in or out.
 
 ---
 
@@ -181,7 +181,7 @@ Set Data Frame Projection to the projection of clustered *allTagCluster.shp*
 Original data is stored in WGS1984 Projection (Decimal Degrees, EPSG:4326). TagMapsPy will automatically select a suitable UTM Coordinate System and project data upon shapefile export.  
 
 !!! Note
-Matching both the *Data Frame* and the *allTagCluster.shp* Projections speeds up ArcGIS significantly.
+    Matching both the *Data Frame* and the *allTagCluster.shp* Projections speeds up ArcGIS significantly.
 
 ---
 
@@ -321,7 +321,7 @@ Export map to pdf or png.
 If exporting to PDF, make sure to check "Convert Marker Symbols to Polygons"
 
 !!! Note
-There's a bug in ArcMap PDF Export that will result in Arcreader to render broken circle symbols. Selecting Conversion to polygon solves this issue.
+    There's a bug in ArcMap PDF Export that will result in Arcreader to render broken circle symbols. Selecting Conversion to polygon solves this issue.
 
 # Final map
 

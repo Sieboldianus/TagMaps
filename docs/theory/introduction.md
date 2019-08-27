@@ -9,7 +9,7 @@ This section contains excerpts from the papers:
 > Dunkel, A., Andrienko, G., Andrienko, N., Burghardt, D., Hauthal, E., & Purves, R. (2019). A conceptual framework for studying collective reactions to events in location-based social media. International Journal of Geographical Information Science, 33, 4, 780-804. [DOI](https://doi.org/10.1080/13658816.2018.1546390) / [PDF](https://www.tandfonline.com/doi/pdf/10.1080/13658816.2018.1546390)
 
 !!! Note
-The theoretic background presented here is part of a workshop & lecture series and is also available as [Jekyll reveal slides](https://ad.vgiscience.org/tagmaps_intro/).
+    The theoretic background presented here is part of a workshop & lecture series and is also available as [Jekyll reveal slides](https://ad.vgiscience.org/tagmaps_intro/).
 
 # Tag Maps Focus
 
@@ -43,7 +43,7 @@ Even if these steps are carried out separately, they are interrelated in specifi
 **Second**, the subsequent, optional act of tagging photos is used by photographers to describe the important aspects of a picture for purposes of self-organization and communication. Tags do not only encompass physically visual elements but also conceptualized information of the environment. Tagging involves several mental processes. Contrary to direct perception, tags are assigned at a later time, based on the photo itself and the photographer’s memory of the scene. Even if tags relate to potentially visible elements, they may also describe associated aspects that are not visible in the photo. This means, there is no right or wrong in tagging photos; even uncommon words or unique descriptors may, from the user’s perspective, relate to (personally) relevant aspects of the photo and the memorized scene. Specifically because of this undirected nature, tags can function as artifacts of the user’s personal conceptualization and abstraction of the world.
 
 !!! Note
-There's a lot of literature available on social media photo sharing and tagging behaviour. Some personal recommendations:  
+    There's a lot of literature available on social media photo sharing and tagging behaviour. Some personal recommendations:  
 
 * Steels, L. (2006). Collaborative tagging as distributed cognition. In: Harnad,
 S. & Dror, I. E., Cognition distributed: How cognitive technology extends our
@@ -179,7 +179,7 @@ It is obvious that the cluster distance significantly affects results. Therefore
 ![IR](https://wwwpub.zih.tu-dresden.de/~s7398234/tagmaps/docs/img/03_best_cluster.png)  
 
 !!! Note
-Importantly, the same cluster distance is applied to all tags, as a means to ensure comparability of results.
+    Importantly, the same cluster distance is applied to all tags, as a means to ensure comparability of results.
 
 Have a look at the following clusters detected for the same clustering distance but for different tags:
 

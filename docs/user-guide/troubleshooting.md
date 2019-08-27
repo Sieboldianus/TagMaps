@@ -49,4 +49,4 @@ You have a couple of options:
 * run tagmaps in Windows (or OSx, Linux Gui)
 
 !!! Note
-The Tkinter python interace will be replaced with a native browser based solution in the future. This will allow accessing tagmaps running in (e.g.) Windows Subsystem for Linux through `localhost`
+    The Tkinter python interace will be replaced with a native browser based solution in the future. This will allow accessing tagmaps running in (e.g.) Windows Subsystem for Linux through `localhost`
