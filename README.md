@@ -46,12 +46,12 @@ See the [tagmaps documentation](https://ad.vgiscience.org/tagmaps/docs/) for add
    - 2 shapefiles in auto-selected UTM projection, one containing all tag cluster and one with the overall location clusters
 3. Visualize shapefiles, e.g. using ESRI ArcGIS
    - download `BasemapLayout_World.mxd` from [resources folder](/resources/BasemapLayout_World.mxd) and replace missing links with 2 resulting Shapefiles in `/02_Output`
-   - adjust minimum and maximum Font Sizes, Weighting Formula or other metrics to your needs.
+   - adjust minimum and maximum font sizes, weighting formula or other metrics to your needs.
 
 **Some background**:
 
 Tag Maps Package can be used with any tagged & spatially referenced data, but it has been specifically deveoped with Social Media data in mind (Flickr, Twitter etc.).
-There're two ways to feed input data:
+There're two ways to load input data:
 
 1. Unfiltered raw data
    - Use `tagmaps.add_record(record)` where record is of type `PostStructure` (see [shared_structure.py](/classes/shared_structure.py))
