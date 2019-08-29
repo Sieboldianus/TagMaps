@@ -89,7 +89,8 @@ Check "Map Tags" and select a tag. A preview map will be generated showing the g
 
 **Cluster granularity** affects how *detailed* or *clustered* a Tag Map appears. The default distance is calculated from the current scale, but can be adjusted to personal needs.  
   
-Cluster granularity significantly affects the resulting map. For small datasets (<30.000 photos) larger distances are recommended, otherwise only few clusters will be found. For large datasets (>100.000) leave as is or reduce cluster granularity.
+!!! Note
+    Cluster granularity significantly affects the resulting map. For small datasets (<30.000 photos) larger distances are recommended, otherwise only few clusters will be found. For large datasets (>100.000) leave as is or reduce cluster granularity.
 
 ---
 
