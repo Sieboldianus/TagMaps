@@ -18,7 +18,7 @@ from datetime import timedelta
 from importlib import reload
 import math
 from math import asin, cos, radians, sin, sqrt
-from typing import Dict, Iterable, List, Set, Tuple
+from typing import Dict, List, Set, Tuple, Union
 from collections import namedtuple
 from pathlib import Path
 
@@ -36,6 +36,22 @@ class Utils():
 
     Primarily @classmethods and @staticmethods
     """
+
+    @staticmethod
+    def _count_none(str_list: Union[Dict[str, str], List[str]]) -> int:
+        """Return count of list, returns zero for None"""
+        if str_list is None:
+            return 0
+        else:
+            return len(str_list)
+
+    @staticmethod
+    def report_listload(list_ref, str_text):
+        """Report only if list_ref contains at least 1 entry."""
+        entry_count = Utils._count_none(list_ref)
+        if entry_count > 0:
+            logging.getLogger("tagmaps").info(
+                f"Loaded {entry_count} {str_text}.")
 
     @staticmethod
     def concat_topic(term_list):

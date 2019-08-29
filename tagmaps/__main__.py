@@ -134,19 +134,20 @@ def main():
                 )
 
         if continue_proc is True:
-            tagmaps.cluster_tags()
-            tagmaps.cluster_emoji()
-            log.info(
-                "########## "
-                "STEP 4 of 6: Generating Alpha Shapes "
-                "##########")
-            tagmaps.gen_tagcluster_shapes()
-            tagmaps.gen_emojicluster_shapes()
-            log.info(
-                "########## "
-                "STEP 5 of 6: Writing Results to Shapefile "
-                "##########")
-            tagmaps.write_tagemoji_shapes()
+            if cfg.cluster_tags or cfg.cluster_emoji:
+                tagmaps.cluster_tags()
+                tagmaps.cluster_emoji()
+                log.info(
+                    "########## "
+                    "STEP 4 of 6: Generating Alpha Shapes "
+                    "##########")
+                tagmaps.gen_tagcluster_shapes()
+                tagmaps.gen_emojicluster_shapes()
+                log.info(
+                    "########## "
+                    "STEP 5 of 6: Writing Results to Shapefile "
+                    "##########")
+                tagmaps.write_tagemoji_shapes()
         else:
             print(f'\nUser abort.')
     if cfg.cluster_locations and continue_proc is True:

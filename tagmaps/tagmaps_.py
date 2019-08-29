@@ -166,15 +166,15 @@ class TagMaps():
         self.max_items = max_items
         self.local_saturation_check = local_saturation_check
         # initialize list of types to cluster
-        self.cluster_types = list()
+        self.cluster_types = set()
         if tag_cluster:
-            self.cluster_types.append(TAGS)
+            self.cluster_types.add(TAGS)
         if emoji_cluster:
-            self.cluster_types.append(EMOJI)
+            self.cluster_types.add(EMOJI)
         if location_cluster:
-            self.cluster_types.append(LOCATIONS)
+            self.cluster_types.add(LOCATIONS)
         if topic_cluster:
-            self.cluster_types.append(TOPICS)
+            self.cluster_types.add(TOPICS)
         # create output dir if not exists
         Utils.init_output_dir(self.output_folder)
         # init logger (logging to console and file log.txt)
@@ -347,6 +347,8 @@ class TagMaps():
                    locations.
         """
         clusterer = self.clusterer.get(cluster_type)
+        if not clusterer:
+            return
         self.log.info(f'{cluster_type.rstrip("s")} clustering: ')
         if itemized:
             clusterer.get_itemized_clusters()
@@ -369,6 +371,8 @@ class TagMaps():
     def _alpha_shapes(self, cluster_type):
         """Calculates alpha shapes for clustered data"""
         clusterer = self.clusterer.get(cluster_type)
+        if not clusterer:
+            return
         cluster_shapes = clusterer.get_cluster_shapes()
         # store results for tags and emoji in one list
         self.itemized_cluster_shapes.append(cluster_shapes)

@@ -35,12 +35,15 @@ class PrepareData():
     """
 
     def __init__(
-            self, cluster_types, max_items,
-            output_folder, remove_long_tail, limit_bottom_user_count,
-            topic_modeling):
+            self, cluster_types: Set[str], max_items: int,
+            output_folder: Path, remove_long_tail: bool,
+            limit_bottom_user_count: int, topic_modeling: bool):
         """Initializes Prepare Data structure"""
         # global settings
         self.cluster_types = cluster_types
+        # make sure statistics for locations are always calculated
+        # because these needed for the cluster process
+        self.cluster_types.add(LOCATIONS)
         self.max_items = max_items
         self.output_folder = output_folder
         self.remove_long_tail = remove_long_tail
@@ -56,7 +59,7 @@ class PrepareData():
         self.total_item_counter: Dict[ClusterType, CDict] = dict()
         for cls_type in self.cluster_types:
             self.total_item_counter[cls_type] = collections.Counter()
-
+        # cleaned stats dict for each ClusterType
         self.cleaned_stats: Dict[ClusterType, NamedTuple] = dict()
         # Hashsets:
         self.items_per_userloc: Dict[
@@ -237,8 +240,8 @@ class PrepareData():
         return self.cleaned_stats
 
     def _init_item_stats(self):
-        """Init stats for selected cls_types"""
-        for cls_type in self.cluster_types:
+        """Init stats for all cls_types"""
+        for cls_type, __ in ClusterType:
             self.cleaned_stats[cls_type] = self._prepare_item_stats(
                 cls_type)
 
@@ -246,12 +249,16 @@ class PrepareData():
         """Calculate overall tag and emoji statistics
 
         - write results (optionally) to file
+        - stats for user excluded types are initialized empty
         """
         # init named tuple
         PreparedStats = namedtuple(
             'PreparedStats',
             'top_items_list total_unique_items total_item_count '
             'max_items')
+        if not cls_type in self.cluster_types:
+            # return empty stats if excluded by user
+            return PreparedStats(0, 0, 0, 0)
         # top lists and unique
         item_stats = self._get_top_list(cls_type)
         top_items_list = item_stats.top_items
@@ -295,8 +302,8 @@ class PrepareData():
         # locations
         if lbsn_post.loc_id:
             # update single item
-            self.useritem_counts_global[LOCATIONS][
-                lbsn_post.user_guid].add(lbsn_post.loc_id)
+            self.useritem_counts_global[LOCATIONS][lbsn_post.user_guid].add(
+                lbsn_post.loc_id)
             self.total_item_counter[LOCATIONS][lbsn_post.loc_id] += 1
 
     @staticmethod
@@ -693,15 +700,15 @@ class PrepareData():
             guid=upl.guid,
             user_guid=upl.user_guid,
             post_body=PrepareData._filter_private_terms(
-                upl.post_body, panon_set[TAGS]),
+                upl.post_body, panon_set.get(TAGS)),
             post_create_date=PrepareData._agg_date(upl.post_create_date),
             post_publish_date=PrepareData._agg_date(upl.post_publish_date),
             post_views_count=upl.post_views_count,
             post_like_count=upl.post_like_count,
             emoji=PrepareData._filter_private_terms(
-                upl.emoji, panon_set[EMOJI]),
+                upl.emoji, panon_set.get(EMOJI)),
             hashtags=PrepareData._filter_private_terms(
-                upl.hashtags, panon_set[TAGS]),
+                upl.hashtags, panon_set.get(TAGS)),
             loc_id=upl.loc_id,
             loc_name=upl.loc_name
         )
@@ -722,9 +729,13 @@ class PrepareData():
 
     @staticmethod
     def _filter_private_terms(
-            str_list: Set[str], top_terms_set: Set[str]) -> Set[str]:
-        filtered_set = {term for term in str_list if term in top_terms_set}
-        return filtered_set
+            str_list: Set[str], top_terms_set: Set[str] = None) -> Set[str]:
+        if top_terms_set:
+            filtered_set = {term for term in str_list if term in top_terms_set}
+            return filtered_set
+        else:
+            # if none or empty, return empty set
+            return set()
 
     @staticmethod
     def _cleaned_ploc_tolist(cleaned_post_location: CleanedPost) -> List[str]:
