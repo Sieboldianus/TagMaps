@@ -407,10 +407,8 @@ class ClusterGen():
     def get_np_points(self, item: str = None, silent: bool = None
                       ) -> np.ndarray:
         """Wrapper that only returns points for _get_np_points_guids"""
-        if item is None:
-            sel_all = True
-        else:
-            sel_all = False
+        # decide if select all or specific item
+        sel_all = bool(item is None)
         sel_items = self.get_np_points_guids(item, silent, sel_all)
         if sel_items.points.size:
             return sel_items.points

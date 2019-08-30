@@ -42,8 +42,7 @@ class Utils():
         """Return count of list, returns zero for None"""
         if str_list is None:
             return 0
-        else:
-            return len(str_list)
+        return len(str_list)
 
     @staticmethod
     def report_listload(list_ref, str_text):
@@ -184,9 +183,8 @@ class Utils():
         if selection_emoji_set is None:
             # no filter on empty selection list
             return input_emoji_set
-        filtered_emoji_set = set(
-            [emoji for emoji in input_emoji_set
-             if emoji in selection_emoji_set])
+        filtered_emoji_set = {
+            emoji for emoji in input_emoji_set if emoji in selection_emoji_set}
         return filtered_emoji_set
 
     @staticmethod
@@ -355,9 +353,8 @@ class Utils():
                 return valid[default]
             elif choice in valid:
                 return valid[choice]
-            else:
-                sys.stdout.write("'yes' or 'no' "
-                                 "(or 'y' or 'n').\n")
+            sys.stdout.write(
+                "'yes' or 'no' (or 'y' or 'n').\n")
 
     @staticmethod
     def daterange(start_date, end_date):
@@ -486,8 +483,7 @@ class Utils():
                  "ZERO WIDTH")
             ):
                 return False
-            else:
-                return True
+            return True
         except ValueError:
             print(char_unicode)
             return True
@@ -607,9 +603,8 @@ class Utils():
         elif str_text.lower() in (
                 'no', 'false', 'f', 'n', '0'):
             return False
-        else:
-            raise argparse.ArgumentTypeError(
-                'Boolean value expected.')
+        raise argparse.ArgumentTypeError(
+            'Boolean value expected.')
 
     @staticmethod
     def get_rectangle_bounds(points):

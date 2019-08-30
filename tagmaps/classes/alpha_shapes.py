@@ -76,7 +76,7 @@ class AlphaShapes():
                      for x in post_guids]
             post_count = len(post_guids)
             unique_user_count = len(
-                set([post.user_guid for post in posts]))
+                {post.user_guid for post in posts})
             sum_views = sum(
                 [post.post_views_count for post in posts])
             # needs to be moved to CompileOutput:
@@ -185,8 +185,7 @@ class AlphaShapes():
         # if not poly_shape.is_empty:
         # print("Success")
         # check type comparison here
-        if (isinstance(poly_shape, geometry.multipolygon.MultiPolygon)
-                or isinstance(poly_shape, bool)):
+        if isinstance(poly_shape, (bool, geometry.multipolygon.MultiPolygon)):
             for i in range(1, 6):
                 # try decreasing alpha
                 # ** means cube
@@ -200,8 +199,8 @@ class AlphaShapes():
                     shapetype = "Multipolygon Alpha Shape /" + \
                         str(alpha)
                     break
-            if (isinstance(poly_shape, geometry.multipolygon.MultiPolygon)
-                    or isinstance(poly_shape, bool)):
+            if (isinstance(
+                    poly_shape, (bool, geometry.multipolygon.MultiPolygon))):
                 # try increasing alpha
                 for i in range(1, 6):
                     # try decreasing alpha

@@ -100,8 +100,7 @@ class LoadData():
                 self.log.info(
                     "Intermediate data detected.. skipping filtering step.\n")
                 return True
-            else:
-                return False
+            return False
 
     def _process_inputfile(self, file_handle):
         """File parse for CSV or JSON from open file handle
@@ -285,8 +284,7 @@ class LoadData():
                 f'No input files *.'
                 f'{config.source_map.file_extension} '
                 f'in ./{input_path.name}/ found.')
-        else:
-            return filelist
+        return filelist
 
     @staticmethod
     def _get_count_frompost(count_string: str) -> int:
@@ -358,8 +356,7 @@ class LoadData():
                 self.stats.skipped_count += 1
                 self.shape_exclude_locid_hash.add(post.loc_id)
                 return True
-            else:
-                self.shape_included_locid_hash.add(post.loc_id)
+            self.shape_included_locid_hash.add(post.loc_id)
         return False
 
     def _is_empty_latlng(self, post):
@@ -392,8 +389,7 @@ class LoadData():
                     or inputtext == "" \
                     or not inputtext.isdigit():
                 return
-            else:
-                self.cfg.max_items = int(inputtext)
+            self.cfg.max_items = int(inputtext)
 
     def input_stats_report(self):
         """Return input stats"""

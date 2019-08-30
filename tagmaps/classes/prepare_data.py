@@ -733,9 +733,8 @@ class PrepareData():
         if top_terms_set:
             filtered_set = {term for term in str_list if term in top_terms_set}
             return filtered_set
-        else:
-            # if none or empty, return empty set
-            return set()
+        # if none or empty, return empty set
+        return set()
 
     @staticmethod
     def _cleaned_ploc_tolist(cleaned_post_location: CleanedPost) -> List[str]:

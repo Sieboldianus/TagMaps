@@ -545,10 +545,7 @@ class UserInterface():
         """Ask a question with Yes No options"""
         result = tkinter.messagebox.askquestion(
             title_text, question_text, icon='question')
-        if result == 'yes':
-            return True
-        else:
-            return False
+        return bool(result == 'yes')
 
 
 class App(tk.Tk):

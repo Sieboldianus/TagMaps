@@ -198,10 +198,7 @@ class Compile():
             if itemized:
                 # check if colum 10 is set to 1
                 # == emoji record
-                if shape[10] == 1:
-                    is_emoji_record = True
-                else:
-                    is_emoji_record = False
+                is_emoji_record = bool(shape[10] == 1)
                 cls._write_itemized_shape(
                     shapefile, shape, is_emoji_record)
                 if emoji_table:

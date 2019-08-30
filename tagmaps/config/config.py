@@ -450,8 +450,7 @@ class BaseConfig:
             return
         store_set = set()
         with open(file, newline="", encoding="utf8") as f_handle:
-            store_set = set(
-                [line.lower().rstrip("\r\n") for line in f_handle])
+            store_set = {line.lower().rstrip("\r\n") for line in f_handle}
         return store_set
 
     def load_place_stoplist(self, file):
@@ -462,10 +461,9 @@ class BaseConfig:
         with open(file, newline="", encoding="utf8") as f_handle:
             f_handle.readline()
             # Get placeid
-            store_set = set(
-                [line.rstrip("\r\n").split(",")[0]
-                 for line in f_handle if len(line) > 0]
-            )
+            store_set = {
+                line.rstrip("\r\n").split(",")[0]
+                for line in f_handle if len(line) > 0}
         self.sort_out_places = True
         return store_set
 
