@@ -27,6 +27,7 @@ def extract_argscode():
     # write argdown and argparse imports first
     source_file.write('import argparse\n')
     source_file.write('import argdown\n')
+    source_file.write('from pathlib import Path\n')
     # fix argparse name
     parse_args_source = parse_args_source.replace(
         'ArgumentParser()', 'ArgumentParser(prog="tagmaps")')
