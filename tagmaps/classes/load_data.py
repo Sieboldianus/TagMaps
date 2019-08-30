@@ -15,7 +15,7 @@ import json
 import sys
 import logging
 from decimal import Decimal
-from typing import Dict, Set, TextIO
+from typing import Dict, Set, TextIO, Tuple
 
 from shapely.geometry import Point
 
@@ -238,10 +238,18 @@ class LoadData():
                 lbsn_post.post_body = post_body
                 lbsn_post.post_title = post_title
             else:
-                lbsn_post.post_body = Utils.remove_stopwords(
-                    post_body, self.cfg.sort_out_always_set)
-                lbsn_post.post_title = Utils.remove_stopwords(
-                    post_title, self.cfg.sort_out_always_set)
+                if self.cfg.select_tags_set is not None:
+                    # if positive filterlist available
+                    lbsn_post.post_body = Utils.select_words(
+                        post_body, self.cfg.select_tags_set)
+                    lbsn_post.post_title = Utils.select_words(
+                        post_title, self.cfg.select_tags_set)
+                else:
+                    # check against stoplists
+                    lbsn_post.post_body = Utils.remove_stopwords(
+                        post_body, self.cfg.sort_out_always_set)
+                    lbsn_post.post_title = Utils.remove_stopwords(
+                        post_title, self.cfg.sort_out_always_set)
         else:
             lbsn_post.post_title = ""
             lbsn_post.post_body = ""
@@ -290,15 +298,16 @@ class LoadData():
                 pass
         return 0
 
-    def _get_emoji(self, post_body):
-        emoji_filtered = set(Utils.extract_emoji(post_body))
+    def _get_emoji(self, post_body: str) -> Set[str]:
+        # extract emoji, use selection list if available
+        emoji_filtered = Utils.select_emoji(
+            Utils.extract_emoji(post_body), self.cfg.select_emoji_set)
         if emoji_filtered:
             self.stats.count_emojis_global += len(emoji_filtered)
-            # self.total_emoji_counter.update(emoji_filtered)
         return emoji_filtered
 
     def _get_tags(self, tags_string: str) -> Set[str]:
-        # [1:-1] removes curly brackets, second [1:-1] removes quotes
+        # base str conversion to set
         tags = set(filter(None, tags_string.lower().split(";")))
         # Filter tags based on two stoplists
         if self.cfg.ignore_stoplists:
@@ -309,13 +318,15 @@ class LoadData():
                 Utils.filter_tags(
                     tags,
                     self.cfg.sort_out_always_set,
-                    self.cfg.sort_out_always_instr_set
+                    self.cfg.sort_out_always_instr_set,
+                    self.cfg.select_tags_set
                 )
         self.stats.count_tags_global += count_tags
         self.stats.count_tags_skipped += count_skipped
         return tags
 
-    def _correct_placelatlng(self, place_guid_string, lat, lng):
+    def _correct_placelatlng(
+            self, place_guid_string: str, lat, lng) -> Tuple[Decimal, Decimal]:
         """If place corrections available, update lat/lng coordinates
         Needs test: not place_guid_string
         """

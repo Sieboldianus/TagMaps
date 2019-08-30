@@ -162,7 +162,35 @@ class Utils():
         return s_cleaned
 
     @staticmethod
-    def remove_stopwords(text_s, stopwords):
+    def select_words(text_s, selection_list: List[str]) -> str:
+        """Filters a string based on a provided
+        positive filter list of terms
+        """
+        # first remove hyperlinks
+        text_s = Utils.remove_hyperlinks(text_s)
+        # split string by space character into list
+        querywords = text_s.split()
+        resultwords = [word for word in querywords if word.lower()
+                       in selection_list]
+        s_cleaned = ' '.join(resultwords)
+        return s_cleaned
+
+    @staticmethod
+    def select_emoji(
+            input_emoji_set: Set[str],
+            selection_emoji_set: Set[str] = None) -> Set[str]:
+        """Filters a set of emoji based on another set
+        """
+        if selection_emoji_set is None:
+            # no filter on empty selection list
+            return input_emoji_set
+        filtered_emoji_set = set(
+            [emoji for emoji in input_emoji_set
+             if emoji in selection_emoji_set])
+        return filtered_emoji_set
+
+    @staticmethod
+    def remove_stopwords(text_s, stopwords: List[str]) -> str:
         """Removes a list of words from string,
         including hyperlinks (<a></a>) and
         integer numbers (e.g. 2012)
@@ -596,18 +624,22 @@ class Utils():
         return RectangleBounds(lim_y_min, lim_y_max, lim_x_min, lim_x_max)
 
     @staticmethod
-    def filter_tags(taglist: Iterable[str],
+    def filter_tags(taglist: Set[str],
                     sort_out_always_set: Set[str],
-                    sort_out_always_instr_set: Set[str]
+                    sort_out_always_instr_set: Set[str],
+                    select_tags_set: Set[str] = None
                     ) -> Tuple[Set[str], int, int]:
         """Filter list of tags based on two stoplists
 
-        Also removes numeric items and duplicates
+        - also removes numeric items and duplicates
+        - extracts only tags with len(s) > 1
+        - optionally filters list according to positive selection list
 
         Args:
             taglist (Iterable[str]): List/Set of input tags to filter
             sort_out_always_set (Set[str]): Filter complete match
             sort_out_always_instr_set (Set[str]): Filter partial match
+            select_tags_set (Set[str]): Positive filter list
 
         Returns:
             Tuple[Set[str], int, int]: Filtered list,
@@ -618,23 +650,33 @@ class Utils():
         count_tags = 0
         count_skipped = 0
 
-        photo_tags_filtered = set()
+        tags_filtered = set()
         for tag in taglist:
             count_tags += 1
-            # exclude numbers and those tags that are in sort_out_always_set
-            # or sort_out_always_instr_set
-            if (len(tag) == 1 or tag == '""'
-                    or tag.isdigit()
-                    or tag in sort_out_always_set):
-                count_skipped += 1
-                continue
-            for in_str_partial in sort_out_always_instr_set:
-                if in_str_partial in tag:
+            if select_tags_set is not None:
+                # positive list available,
+                # return only selected items
+                if tag in select_tags_set:
+                    tags_filtered.add(tag)
+                else:
                     count_skipped += 1
-                    break
             else:
-                photo_tags_filtered.add(tag)
-        return (photo_tags_filtered,
+                # exclude numbers and those tags
+                # that are in sort_out_always_set
+                # or sort_out_always_instr_set
+                if (len(tag) == 1 or tag == '""'
+                        or tag.isdigit()
+                        or tag in sort_out_always_set):
+                    count_skipped += 1
+                    continue
+                for in_str_partial in sort_out_always_instr_set:
+                    if in_str_partial in tag:
+                        count_skipped += 1
+                        break
+                else:
+                    # final else Clause on loop statement
+                    tags_filtered.add(tag)
+        return (tags_filtered,
                 count_tags, count_skipped)
 
     @staticmethod

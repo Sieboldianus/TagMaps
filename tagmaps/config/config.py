@@ -13,7 +13,7 @@ import logging
 import os
 import warnings
 from pathlib import Path
-from typing import List
+from typing import List, Set, Dict, Tuple
 
 import fiona
 import pyproj
@@ -42,6 +42,9 @@ class BaseConfig:
         self.shapefile_intersect = None
         self.shapefile_exclude = None
         self.ignore_stoplists = False
+        self.selectionlist_emoji = None
+        self.selectionlist_tags = None
+        self.stoplist_emoji = None
         self.stoplist_tags = None
         self.stoplist_user = None
         self.stoplist_places = None
@@ -67,6 +70,9 @@ class BaseConfig:
         self.sort_out_places_set = set()
         self.sort_out_user_set = None
         self.sort_out_places = False
+        self.sort_out_emoji_set = None
+        self.select_emoji_set = None
+        self.select_tags_set = None
         self.correct_places = False
         self.correct_place_latlng_dict = dict()
         self.shp_geom = None
@@ -174,42 +180,68 @@ class BaseConfig:
                             type=Path,
                             help="Provide a relative path to a shapefile "
                             "to exclude data prior to clustering. If "
-                            "--shapefile_intersect is used, the exclusion "
+                            "--shapefile_intersect is also used, the exclusion "
                             "here applies after inclusion.")
         parser.add_argument("-n",
                             "--ignore_stoplists",
                             action="store_true",
-                            help="Ignore any stoplists, even if available"
+                            help="Set this flag to ignore any stoplists, "
+                            "even if available/supplied."
+                            )
+        parser.add_argument("--stoplist_emoji",
+                            type=Path,
+                            help="Supply a relative path to a text file "
+                            "containing emoji to ignore "
+                            "during emoji clustering. "
+                            "Format: one entry per line."
                             )
         parser.add_argument("--stoplist_tags",
                             type=Path,
                             help="Supply a relative path to a text file "
                             "containing terms to ignore during tag clustering. "
                             "This list is supplemental to "
-                            "00_Config/SortOutAlways.txt, if such file exists."
+                            "00_Config/SortOutAlways.txt, if such file exists. "
+                            "Format: one entry per line."
                             )
         parser.add_argument("--stoplist_user",
                             type=Path,
                             help="Supply a relative path to a text file "
-                            "containing user (guids) to ignore during tag clustering."
+                            "containing user (guids) to ignore during "
+                            "tag clustering. Format: one entry per line."
                             )
         parser.add_argument("--stoplist_places",
                             type=Path,
                             help="Supply a relative path to a text file "
                             "containing places (guids) to ignore during tag clustering. "
                             "This list is supplemental to "
-                            "00_Config/SortOutPlaces.txt, if such file exists."
+                            "00_Config/SortOutPlaces.txt, if such file exists. "
+                            "Format: one entry per line."
+                            )
+        parser.add_argument("--selectionlist_emoji",
+                            type=Path,
+                            help="Supply a relative path to a text file "
+                            "containing emoji, as a positive filter list "
+                            "for selecting a subset of emoji to focus on. "
+                            "Format: one entry per line."
+                            )
+        parser.add_argument("--selectionlist_tags",
+                            type=Path,
+                            help="Supply a relative path to a text file "
+                            "containing tags, as a positive filter list "
+                            "for selecting a subset of tags to focus on. "
+                            "Format: one entry per line."
                             )
         parser.add_argument("-b",
                             "--ignore_place_corrections",
                             action="store_true",
-                            help="If place corrections are available, "
-                            "ignore them."
+                            help="Set this flag to ignore place corrections, "
+                            "even if available, supplied."
                             )
         parser.add_argument("--statistics_only",
                             action="store_true",
                             help="Do not cluster, only read input data"
-                            " and output statistics."
+                            " and output statistics. Suitable to get an "
+                            "overview of input data."
                             )
         parser.add_argument("-d", "--cluster_cut_distance",
                             help="Provide a cluster cut distance (in meters) "
@@ -229,19 +261,27 @@ class BaseConfig:
                             default=True,
                             help="Disables writing placeholder "
                             "entry after headerline "
-                            "for avoiding GIS import format issues",
+                            "for avoiding GIS import format issues. "
+                            "Some GIS programs will decide format of "
+                            "columns based on the first data line in a CSV. "
+                            "This setting makes sure there're no empty fields "
+                            "in the first line.",
                             )
         parser.add_argument("-a",
                             "--auto_mode",
                             action="store_true",
                             help="If set, no user input will "
-                            "be requested during processing.",
+                            "be requested during processing. "
+                            "This flag is suitable if you're running in a "
+                            "command line only environment (WSL) that "
+                            "cannot use the tKinter GUI.",
                             )
         parser.add_argument("-f",
                             "--filter_origin",
                             type=str,
                             help="If provided, will filter input data "
-                            "based on origin_id column.",
+                            "based on origin_id column and the value "
+                            "provided.",
                             )
         parser.add_argument("-v", "--verbose",
                             help="Increase output verbosity",
@@ -298,6 +338,14 @@ class BaseConfig:
                 self.resource_path / args.shapefile_exclude
         if args.ignore_stoplists:
             self.ignore_stoplists = True
+        if args.selectionlist_emoji:
+            self.selectionlist_emoji = \
+                self.resource_path / args.selectionlist_emoji
+        if args.selectionlist_tags:
+            self.selectionlist_tags = \
+                self.resource_path / args.selectionlist_tags
+        if args.stoplist_emoji:
+            self.stoplist_emoji = self.resource_path / args.stoplist_emoji
         if args.stoplist_tags:
             self.stoplist_tags = self.resource_path / args.stoplist_tags
         if args.stoplist_user:
@@ -330,7 +378,7 @@ class BaseConfig:
             self.cluster_cut_distance = args.cluster_cut_distance
 
     def load_filterlists(self):
-        """Load filterlists for filtering terms (instring and full match)
+        """Load filterlists for filtering terms (in-string and full match)
         and places, including place lat/lng corrections.
         """
         # locations for files
@@ -343,55 +391,62 @@ class BaseConfig:
         correct_place_latlng_file = (
             self.config_folder / "CorrectPlaceLatLng.txt")
         # load lists
-        self.sort_out_always_set = self.load_stoplists(sort_out_always_file)
+        self.sort_out_always_set = self.load_filterlist(sort_out_always_file)
         if self.stoplist_tags:
             self.sort_out_always_set.update(
-                self.load_stoplists(self.stoplist_tags)
+                self.load_filterlist(self.stoplist_tags)
             )
-        self.sort_out_always_instr_set = self.load_stoplists(
+        self.sort_out_always_instr_set = self.load_filterlist(
             sort_out_always_instr_file)
         self.sort_out_places_set = self.load_place_stoplist(
             sort_out_places_file)
         if self.stoplist_places:
             self.sort_out_places_set.update(
-                self.load_stoplists(self.stoplist_places)
+                self.load_filterlist(self.stoplist_places)
             )
         if self.stoplist_user:
-            self.sort_out_user_set = self.load_stoplists(
+            self.sort_out_user_set = self.load_filterlist(
                 self.stoplist_user)
+        if self.stoplist_emoji:
+            self.sort_out_emoji_set = self.load_filterlist(
+                self.stoplist_emoji)
+        if self.selectionlist_emoji:
+            self.select_emoji_set = self.load_filterlist(
+                self.selectionlist_emoji)
+        if self.selectionlist_tags:
+            self.select_tags_set = self.load_filterlist(
+                self.selectionlist_tags)
         self.correct_place_latlng_dict = self.load_place_corrections(
             correct_place_latlng_file
         )
-        # print results, ignore empty
-        def value_count(x): return 0 if x is None else len(x)
-        stoplist_tags = value_count(self.sort_out_always_set)
-        if stoplist_tags > 0:
-            print(f"Loaded {stoplist_tags} "
-                  f"stoplist items.")
-        stoplist_tags_instr = value_count(self.sort_out_always_instr_set)
-        if stoplist_tags_instr > 0:
-            print(f"Loaded {stoplist_tags_instr} "
-                  f"inStr stoplist items.")
-        stoplist_places = value_count(self.sort_out_places_set)
-        if stoplist_places > 0:
-            print(f"Loaded {stoplist_places} stoplist places.")
-        latlng_place_corrections = value_count(self.correct_place_latlng_dict)
-        if latlng_place_corrections > 0:
-            print(f"Loaded {latlng_place_corrections} "
-                  f"place lat/lng corrections."
-                  )
-        stoplist_user = value_count(self.sort_out_user_set)
-        if stoplist_user > 0:
-            print(f"Loaded {stoplist_user} "
-                  f"user stoplist items."
-                  )
+        # log results
+        self._report_loaded_lists()
 
-    def load_stoplists(self, file):
-        """Loads stoplist terms from file and stores in set"""
+    def _report_loaded_lists(self):
+        """Report stats of loaded stop & selection lists"""
+        Utils.report_listload(
+            self.sort_out_always_set, "stoplist items")
+        Utils.report_listload(
+            self.sort_out_always_instr_set, "inStr stoplist items")
+        Utils.report_listload(
+            self.sort_out_places_set, "stoplist places")
+        Utils.report_listload(
+            self.stoplist_places, "stoplist places")
+        Utils.report_listload(
+            self.correct_place_latlng_dict, "place lat/lng corrections")
+        Utils.report_listload(
+            self.sort_out_user_set, "user stoplist items")
+        Utils.report_listload(
+            self.select_emoji_set, "emoji selection items")
+        Utils.report_listload(
+            self.select_tags_set, "tags selection items")
+
+    def load_filterlist(self, file: Path) -> Set[str]:
+        """Loads filterlist of terms from file returns set"""
         if self.ignore_stoplists is True:
             return
         if not os.path.isfile(file):
-            print(f"{file} not found.")
+            self.log.warning(f"{file} not found.")
             return
         store_set = set()
         with open(file, newline="", encoding="utf8") as f_handle:
@@ -414,7 +469,8 @@ class BaseConfig:
         self.sort_out_places = True
         return store_set
 
-    def load_place_corrections(self, file):
+    def load_place_corrections(
+            self, file: Path) -> Dict[str, Tuple[float, float]]:
         """Fills dictionary with list of corrected lat/lng entries
         e.g.: Dictionary: placeid = lat, lng
 
