@@ -124,7 +124,7 @@ class BaseConfig:
         parser.add_argument("-r",
                             "--disable_remove_longtail",
                             action="store_true",
-                            help="This will disable exclusion"
+                            help="This will disable exclusion "
                             "of tags that are used by only a "
                             "small number of users")
         parser.add_argument("-e",
