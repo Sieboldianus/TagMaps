@@ -166,15 +166,15 @@ class TagMaps():
         self.max_items = max_items
         self.local_saturation_check = local_saturation_check
         # initialize list of types to cluster
-        self.cluster_types = set()
+        self.cluster_types = list()
         if tag_cluster:
-            self.cluster_types.add(TAGS)
+            self.cluster_types.append(TAGS)
         if emoji_cluster:
-            self.cluster_types.add(EMOJI)
+            self.cluster_types.append(EMOJI)
         if location_cluster:
-            self.cluster_types.add(LOCATIONS)
+            self.cluster_types.append(LOCATIONS)
         if topic_cluster:
-            self.cluster_types.add(TOPICS)
+            self.cluster_types.append(TOPICS)
         # create output dir if not exists
         Utils.init_output_dir(self.output_folder)
         # init logger (logging to console and file log.txt)

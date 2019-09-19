@@ -35,7 +35,7 @@ class PrepareData():
     """
 
     def __init__(
-            self, cluster_types: Set[str], max_items: int,
+            self, cluster_types: List[str], max_items: int,
             output_folder: Path, remove_long_tail: bool,
             limit_bottom_user_count: int, topic_modeling: bool):
         """Initializes Prepare Data structure"""
@@ -43,7 +43,8 @@ class PrepareData():
         self.cluster_types = cluster_types
         # make sure statistics for locations are always calculated
         # because these needed for the cluster process
-        self.cluster_types.add(LOCATIONS)
+        if LOCATIONS not in self.cluster_types:
+            self.cluster_types.add(LOCATIONS)
         self.max_items = max_items
         self.output_folder = output_folder
         self.remove_long_tail = remove_long_tail
