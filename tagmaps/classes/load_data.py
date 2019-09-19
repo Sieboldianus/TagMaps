@@ -15,7 +15,7 @@ import json
 import sys
 import logging
 from decimal import Decimal
-from typing import Dict, Set, TextIO, Tuple
+from typing import Dict, Set, TextIO, Tuple, Iterable
 
 from shapely.geometry import Point
 
@@ -70,7 +70,7 @@ class LoadData():
         """
         post_pipeline = self._parse_postlist(
             self._process_inputfile(
-                self._parse_input_files()))
+                self._parse_input_files(count=True)))
         return post_pipeline
 
     def __exit__(self, c_type, value, traceback):
@@ -81,17 +81,16 @@ class LoadData():
         """Loops input input filelist and
         returns opened file handles
         """
-
         for file_name in self.filelist:
             if count:
                 self.stats.partcount += 1
-            return open(file_name, 'r', newline='', encoding='utf8')
+            yield open(file_name, 'r', newline='', encoding='utf8')
 
     def is_intermediate(self):
         """Auto test if intermediate data is present"""
-        post_reader = self._process_inputfile(
+        post_reader = next(self._process_inputfile(
             self._parse_input_files(
-                count=True))
+                count=False)))
         for post in post_reader:
             pguid = post.get(self.cfg.source_map.post_guid_col)
             if pguid is None and post.get("guid") is not None:
@@ -102,43 +101,45 @@ class LoadData():
                 return True
             return False
 
-    def _process_inputfile(self, file_handle):
+    def _process_inputfile(self, file_handles):
         """File parse for CSV or JSON from open file handle
 
         Output: produces a list of post that can be parsed
         """
-        if self.cfg.source_map.file_extension == "csv":
-            post_reader = csv.DictReader(
-                file_handle,
-                delimiter=self.cfg.source_map.delimiter,
-                quotechar=self.cfg.source_map.quote_char,
-                quoting=self.cfg.source_map.quoting)
-            # next(post_list, None)  # skip headerline
-        elif self.cfg.source_map.file_extension == "json":
-            post_reader = post_reader + json.loads(
-                file_handle.read())
-        return post_reader
+        for file_handle in file_handles:
+            if self.cfg.source_map.file_extension == "csv":
+                post_reader = csv.DictReader(
+                    file_handle,
+                    delimiter=self.cfg.source_map.delimiter,
+                    quotechar=self.cfg.source_map.quote_char,
+                    quoting=self.cfg.source_map.quoting)
+                # next(post_list, None)  # skip headerline
+            elif self.cfg.source_map.file_extension == "json":
+                post_reader = post_reader + json.loads(
+                    file_handle.read())
+            yield post_reader
 
-    def _parse_postlist(self, post_reader: TextIO):
+    def _parse_postlist(self, post_readers: Iterable[TextIO]):
         """Process posts according to specifications
 
         Returns generator for single record
         """
         # row_num = 0
         msg = None
-        for post in post_reader:
-            # row_num += 1
-            lbsn_post = self._parse_post(post)
-            if lbsn_post is None:
-                continue
-            else:
-                self.stats.count_glob += 1
-                msg = self._report_progress()
-                # if (row_num % 10 == 0):
-                # modulo: print only once every 10 iterations
-                if self.console_reporting:
-                    print(msg, end='\r')
-            yield lbsn_post
+        for post_reader in post_readers:
+            for post in post_reader:
+                # row_num += 1
+                lbsn_post = self._parse_post(post)
+                if lbsn_post is None:
+                    continue
+                else:
+                    self.stats.count_glob += 1
+                    msg = self._report_progress()
+                    # if (row_num % 10 == 0):
+                    # modulo: print only once every 10 iterations
+                    if self.console_reporting:
+                        print(msg, end='\r')
+                yield lbsn_post
         # log last message to file, clean stdout
         if msg and self.console_reporting:
             print(" " * len(msg), end='\r')
