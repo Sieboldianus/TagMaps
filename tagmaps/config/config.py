@@ -161,7 +161,11 @@ class BaseConfig:
                             help="This will used topic modeling "
                             "to detect groups of tags (based on "
                             "Latent Dirichlet Allocation). "
-                            "[Not implemented]")
+                            "[Not fully implemented: currently, if this flag "
+                            "is set, tagmaps will output a list of merged "
+                            "terms per user which can be used in topic "
+                            "modeling, e.g. Latent Dirichlet Allocation "
+                            "algorithms]")
         parser.add_argument("-w",
                             "--disable_write_cleaneddata",
                             action="store_true",
@@ -175,18 +179,25 @@ class BaseConfig:
                             "--shapefile_intersect",
                             type=Path,
                             help="Provide a relative path to a shapefile "
-                            "to clip data prior to clustering.")
+                            "to clip data prior to clustering. The shapefile "
+                            "must be projected to WGS1984 (4326) Projection. "
+                            "Multipart shapefiles are supported, but be "
+                            "careful with polygon holes: it is recommended to "
+                            "exclude polygon holes with a separate shapefile "
+                            "using the --shapefile_exclude flag.")
         parser.add_argument("--shapefile_exclude",
                             type=Path,
                             help="Provide a relative path to a shapefile "
-                            "to exclude data prior to clustering. If "
+                            "to exclude data prior to clustering. In case "
                             "--shapefile_intersect is also used, the exclusion "
                             "here applies after inclusion.")
         parser.add_argument("-n",
                             "--ignore_stoplists",
                             action="store_true",
                             help="Set this flag to ignore any stoplists, "
-                            "even if available/supplied."
+                            "even if available/supplied. This is useful "
+                            "if files that are places in 00_Config folder "
+                            "must be temporarily ignored."
                             )
         parser.add_argument("--stoplist_emoji",
                             type=Path,
