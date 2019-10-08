@@ -180,7 +180,11 @@ class TagMaps():
         # init logger (logging to console and file log.txt)
         if logging_level is None:
             logging_level = logging.INFO
-        self.log = Utils.set_logger(self.output_folder, logging_level)
+        tm_logger = logging.getLogger("tagmaps")
+        if tm_logger is None:
+            self.log = Utils.set_logger(self.output_folder, logging_level)
+        else:
+            self.log = tm_logger
         # data structures for clustering
         self.lbsn_data: PrepareData = None
         self.cleaned_post_dict = None
