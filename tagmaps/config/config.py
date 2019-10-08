@@ -431,8 +431,6 @@ class BaseConfig:
         Utils.report_listload(
             self.sort_out_places_set, "stoplist places")
         Utils.report_listload(
-            self.stoplist_places, "stoplist places")
-        Utils.report_listload(
             self.correct_place_latlng_dict, "place lat/lng corrections")
         Utils.report_listload(
             self.sort_out_user_set, "user stoplist items")
