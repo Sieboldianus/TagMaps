@@ -289,12 +289,21 @@ class LoadData():
 
     @staticmethod
     def _get_count_frompost(count_string: str) -> int:
+        """Parse post count field"""
         if count_string and not count_string == "":
             try:
                 photo_likes_int = int(count_string)
                 return photo_likes_int
             except TypeError:
-                pass
+                logging.getLogger("tagmaps").warning(
+                    f'\nPost count parser: Type Error: '
+                    f'{type(count_string)} not a valid number format '
+                    f'Returning 0.')
+            except ValueError:
+                logging.getLogger("tagmaps").warning(
+                    f'\nPost count parser: Value Error: '
+                    f'{count_string} not a valid number. '
+                    f'Returning 0.')
         return 0
 
     def _get_emoji(self, post_body: str) -> Set[str]:
