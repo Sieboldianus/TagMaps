@@ -307,7 +307,7 @@ class LoadData():
         return 0
 
     def _get_emoji(self, post_body: str) -> Set[str]:
-        # extract emoji, use selection list if available
+        """extract emoji, use selection list if available"""
         emoji_filtered = Utils.select_emoji(
             Utils.extract_emoji(post_body), self.cfg.select_emoji_set)
         if emoji_filtered:
@@ -315,6 +315,7 @@ class LoadData():
         return emoji_filtered
 
     def _get_tags(self, tags_string: str) -> Set[str]:
+        """extract tags, apply filter lists if available"""
         # base str conversion to set
         tags = set(filter(None, tags_string.lower().split(";")))
         # Filter tags based on two stoplists
@@ -329,6 +330,7 @@ class LoadData():
                     self.cfg.sort_out_always_instr_set,
                     self.cfg.select_tags_set
                 )
+        # update global stats
         self.stats.count_tags_global += count_tags
         self.stats.count_tags_skipped += count_skipped
         return tags
@@ -379,6 +381,7 @@ class LoadData():
         return False
 
     def _is_sortout_place(self, post):
+        """Returns False if place of post is in ignore list"""
         place_guid = post.get(self.cfg.source_map.place_guid_col)
         if place_guid:
             if place_guid in self.cfg.sort_out_places_set:
