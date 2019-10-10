@@ -295,12 +295,12 @@ class LoadData():
                 photo_likes_int = int(count_string)
                 return photo_likes_int
             except TypeError:
-                logging.getLogger("tagmaps").warning(
+                logging.getLogger("tagmaps").debug(
                     f'\nPost count parser: Type Error: '
                     f'{type(count_string)} not a valid number format '
                     f'Returning 0.')
             except ValueError:
-                logging.getLogger("tagmaps").warning(
+                logging.getLogger("tagmaps").debug(
                     f'\nPost count parser: Value Error: '
                     f'{count_string} not a valid number. '
                     f'Returning 0.')
