@@ -111,6 +111,7 @@ def main():
         if cfg.topic_modeling:
             tagmaps.write_topics()
 
+    continue_proc = False
     if cfg.statistics_only is False:
         # restart time monitoring for
         # actual cluster step
