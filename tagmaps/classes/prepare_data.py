@@ -44,7 +44,7 @@ class PrepareData():
         # make sure statistics for locations are always calculated
         # because these needed for the cluster process
         if LOCATIONS not in self.cluster_types:
-            self.cluster_types.add(LOCATIONS)
+            self.cluster_types.append(LOCATIONS)
         self.max_items = max_items
         self.output_folder = output_folder
         self.remove_long_tail = remove_long_tail
