@@ -6,21 +6,22 @@
 from __future__ import absolute_import
 
 import argparse
+import contextlib
 import hashlib
 import io
 import logging
+import math
 import os
 import platform
 import re
 import sys
 import unicodedata
+from collections import namedtuple
 from datetime import timedelta
 from importlib import reload
-import math
 from math import asin, cos, radians, sin, sqrt
-from typing import Dict, List, Set, Tuple, Union
-from collections import namedtuple
 from pathlib import Path
+from typing import Dict, Iterable, List, Set, Tuple, Union
 
 import emoji
 import numpy as np
@@ -36,6 +37,24 @@ class Utils():
 
     Primarily @classmethods and @staticmethods
     """
+
+    @staticmethod
+    def check_fileheader(
+            fieldnames: Iterable[str], source_map: 'ConfigMap', filename: str):
+        """Checks against existing file columns
+        warns if required keys are missing
+        """
+        header_req = [
+            source_map.post_guid_col,
+            source_map.user_guid_col,
+            source_map.latitude_col,
+            source_map.longitude_col,
+            source_map.tags_col]
+        for header in header_req:
+            if header not in fieldnames:
+                raise Warning(
+                    f'File header is missing "{header}"-column, '
+                    f'file: {filename}')
 
     @staticmethod
     def _count_none(str_list: Union[Dict[str, str], List[str]]) -> int:

@@ -50,6 +50,7 @@ class LoadData():
         self.bounds = AnalysisBounds()
         self.distinct_locations_set = set()
         self.ignore_empty_latlng = False
+        self.current_file = None
         # basic statistics collection
         self.stats = DataStats()
         if user_variety_input:
@@ -84,6 +85,7 @@ class LoadData():
         for file_name in self.filelist:
             if count:
                 self.stats.partcount += 1
+            self.current_file = file_name.stem
             yield open(file_name, 'r', newline='', encoding='utf8')
 
     def is_intermediate(self):
@@ -127,6 +129,8 @@ class LoadData():
         # row_num = 0
         msg = None
         for post_reader in post_readers:
+            Utils.check_fileheader(
+                post_reader.fieldnames, self.cfg.source_map, self.current_file)
             for post in post_reader:
                 # row_num += 1
                 lbsn_post = self._parse_post(post)
