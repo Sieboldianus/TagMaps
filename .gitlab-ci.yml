@@ -21,7 +21,7 @@ test:
     - pip install pdoc3
     # enable all warnings during ci doc generation
     # - export PYTHONWARNINGS='error::UserWarning'
-    - pdoc --template-dir docs/apidoc/ --html --output-dir docs/api/ tagmaps
+    - pdoc --config show_type_annotations=True --template-dir docs/apidoc/ --html --output-dir docs/api/ tagmaps
     # create badges
     - pylint --output-format=text tagmaps | tee pylint.txt || pylint-exit $?
     - score=$(sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p' pylint.txt)
