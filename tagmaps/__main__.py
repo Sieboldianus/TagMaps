@@ -111,6 +111,7 @@ def main():
         if cfg.topic_modeling:
             tagmaps.write_topics()
 
+    continue_proc = True
     if cfg.statistics_only is False:
         # restart time monitoring for
         # actual cluster step
@@ -121,7 +122,6 @@ def main():
             "Location Clustering "
             "##########")
         # get user input for cluster distances
-        continue_proc = True
         if not cfg.auto_mode:
             # open user interface for optional user input
             continue_proc = tagmaps.user_interface()
