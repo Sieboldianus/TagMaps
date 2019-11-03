@@ -20,7 +20,7 @@ Overview of processing steps (Toronto High Park example):
 
 * **a)** individual photo locations (raw data)
 * **b)** photo locations combined to clusters
-* **c)** tag location clustering (HDBSCAN) and Alpha-Shape generation
+* **c)** tag location clustering (HDBSCAN) and alpha-shape generation
 * **d)** soft placement of all relevant tag clusters using alpha shapes
 
 ![Tag Map Example](https://ad.vgiscience.org/tagmaps/tagmaps_steps.png?raw=true)
@@ -46,12 +46,12 @@ See the [tagmaps documentation](https://ad.vgiscience.org/tagmaps/docs/) for add
 3. Run `tagmaps` within folder `resources`. Output files will be saved to `/02_Output`  
    - 2 shapefiles in auto-selected UTM projection, one containing all tag cluster and one with the overall location clusters
 3. Visualize shapefiles, e.g. using ESRI ArcGIS
-   - download `BasemapLayout_World.mxd` from [resources folder](/resources/) and replace missing links with 2 resulting Shapefiles in `/02_Output`
+   - download `BasemapLayout_World.mxd` from [resources folder](/resources/) and replace missing links with 2 resulting shapefiles in `/02_Output`
    - adjust minimum and maximum font sizes, weighting formula or other metrics to your needs.
 
 **Some background**:
 
-Tag Maps Package can be used with any tagged & spatially referenced data, but it has been specifically deveoped with Social Media data in mind (Flickr, Twitter etc.).
+Tag Maps package can be used with any tagged & spatially referenced data, but it has been specifically developed with Social Media data in mind (Flickr, Twitter etc.).
 There're two ways to load input data:
 
 1. Unfiltered raw data
