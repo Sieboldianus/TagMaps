@@ -39,7 +39,8 @@ See the [tagmaps documentation](https://ad.vgiscience.org/tagmaps/docs/) for add
 
 ## Quickstart
 
-1. Clone `resources` folder somewhere locally  
+1. Clone `resources` folder somewhere locally
+   - `git clone https://github.com/Sieboldianus/TagMaps.git && cd TagMaps && git filter-branch --subdirectory-filter resources`
 2. Place geotagged data in `/01_Input` subfolder
    - information on how to structure data is available in the [documentation](https://ad.vgiscience.org/tagmaps/docs/user-guide/use-your-own-data/)
 3. Run `tagmaps` within folder `resources`. Output files will be saved to `/02_Output`  
