@@ -225,7 +225,7 @@ class LoadData():
         else:
             # Note: loc_id not loaded from file
             # create loc_id from lat/lng
-            lbsn_post.loc_id = str(lat) + ':' + str(lng)
+            lbsn_post.loc_id = f'{lat}:{lng}'
         # counting of distinct loc ids
         self.distinct_locations_set.add(lbsn_post.loc_id)
         lbsn_post.loc_name = post.get(self.cfg.source_map.place_name_col)
