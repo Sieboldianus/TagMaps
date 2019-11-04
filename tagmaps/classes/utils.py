@@ -183,13 +183,15 @@ class Utils():
     def select_words(text_s, selection_list: List[str]) -> str:
         """Filters a string based on a provided
         positive filter list of terms
+
+        - removes duplicate terms
         """
         # first remove hyperlinks
         text_s = Utils.remove_hyperlinks(text_s)
         # split string by space character into list
         querywords = text_s.split()
-        resultwords = [word for word in querywords if word.lower()
-                       in selection_list]
+        resultwords = {word for word in querywords if word.lower()
+                       in selection_list}
         s_cleaned = ' '.join(resultwords)
         return s_cleaned
 
