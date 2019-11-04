@@ -1,7 +1,7 @@
 site_name: Tag Maps Documentation
 site_url: https://ad.gitlab.vgiscience.de/tagmaps/docs
 site_author: Alexander Dunkel
-copyright: © Copyright 2019, Alexander Dunkel
+copyright: CC BY-SA 4.0, Alexander Dunkel
 site_dir: site
 
 repo_url: https://github.com/Sieboldianus/TagMaps/

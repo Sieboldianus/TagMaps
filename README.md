@@ -5,8 +5,8 @@
 Spatio-Temporal Tag and Photo Location Clustering for generating Tag Maps
 
 **Tag Maps** are similar to Tag Clouds, but Tag Maps use the spatial information that is attached to geotagged photographs, in addition to tag frequency, to visualize tags on a map.
-This Library uses the single-linkage tree that is available from [HDBSCAN](https://github.com/scikit-learn-contrib/hdbscan) to cut trees at a specific user-defined distance for all available tags in the given dataset.
-Afterwards, Alpha Shapes are generated as a means to allow 'soft' placement of tags on a map, according to their area of use. Two Shapefiles are generated that can be used to visualize results, for example, in ESRI ArcGIS.
+This library uses the single-linkage tree that is available from [HDBSCAN](https://github.com/scikit-learn-contrib/hdbscan) to cut trees at a specific user-defined distance for all available tags in the given dataset.
+Afterwards, alpha shapes are generated as a means to allow 'soft' placement of tags on a map, according to their area of use. Two shapefiles are generated that can be used to visualize results, for example, in ESRI ArcGIS.
 
 ![Tag Map Example](https://ad.vgiscience.org/tagmaps/img6.png?raw=true)
 
@@ -20,7 +20,7 @@ Overview of processing steps (Toronto High Park example):
 
 * **a)** individual photo locations (raw data)
 * **b)** photo locations combined to clusters
-* **c)** tag location clustering (HDBSCAN) and Alpha-Shape generation
+* **c)** tag location clustering (HDBSCAN) and alpha-shape generation
 * **d)** soft placement of all relevant tag clusters using alpha shapes
 
 ![Tag Map Example](https://ad.vgiscience.org/tagmaps/tagmaps_steps.png?raw=true)
@@ -39,18 +39,19 @@ See the [tagmaps documentation](https://ad.vgiscience.org/tagmaps/docs/) for add
 
 ## Quickstart
 
-1. Clone `resources` folder somewhere locally  
+1. Clone `resources` folder somewhere locally
+   - `git clone https://github.com/Sieboldianus/TagMaps.git && cd TagMaps && git filter-branch --subdirectory-filter resources`
 2. Place geotagged data in `/01_Input` subfolder
    - information on how to structure data is available in the [documentation](https://ad.vgiscience.org/tagmaps/docs/user-guide/use-your-own-data/)
 3. Run `tagmaps` within folder `resources`. Output files will be saved to `/02_Output`  
    - 2 shapefiles in auto-selected UTM projection, one containing all tag cluster and one with the overall location clusters
 3. Visualize shapefiles, e.g. using ESRI ArcGIS
-   - download `BasemapLayout_World.mxd` from [resources folder](/resources/) and replace missing links with 2 resulting Shapefiles in `/02_Output`
+   - download `BasemapLayout_World.mxd` from [resources folder](/resources/) and replace missing links with 2 resulting shapefiles in `/02_Output`
    - adjust minimum and maximum font sizes, weighting formula or other metrics to your needs.
 
 **Some background**:
 
-Tag Maps Package can be used with any tagged & spatially referenced data, but it has been specifically deveoped with Social Media data in mind (Flickr, Twitter etc.).
+Tag Maps package can be used with any tagged & spatially referenced data, but it has been specifically developed with Social Media data in mind (Flickr, Twitter etc.).
 There're two ways to load input data:
 
 1. Unfiltered raw data
