@@ -2,11 +2,9 @@ name: tagmaps
 channels:
   - conda-forge
   - defaults
-  - travis
 dependencies:
   - python>=3.5
   - pip
-  - pylint
   - fiona
   - shapely
   - pandas>=0.24.2
@@ -22,9 +20,5 @@ dependencies:
   - descartes
   - regex
   - scipy
-  - bitarray
   - six
   - joblib
-  - pip:
-      - anybadge
-      - pylint-exit
