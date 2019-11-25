@@ -1,8 +1,21 @@
 test:
   image: registry.gitlab.vgiscience.org/tud_ifk/miniconda-cidefault
   before_script:
-      - conda env create -f environment_ci.yml
-      - source activate tagmaps
+      # initialize conda shell
+      - conda init bash
+      - source ~/.bashrc
+      # activate default ci_env from registry image
+      # contains pylint, anybadge
+      - conda activate ci_env
+      - conda env create -f environment.yml
+      # activate tagmaps env
+      # with --stack environments
+      - conda activate tagmaps --stack
+      # install additional packages
+      # needed in tagmaps ci job
+      - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.vgiscience.de/ad/argdown.git
+      - conda install pylint bitarray
+      - pip install pdoc3 pylint-exit
   stage: test
   script:
     # test dev install
@@ -16,7 +29,8 @@ test:
     - argdown parse_args.py > docs/argparse/args.md
     # to enable all warnings during ci doc generation
     # - export PYTHONWARNINGS='error::UserWarning'
-    - pdoc --config show_type_annotations=True --template-dir docs/apidoc/ --html --output-dir docs/api/ tagmaps
+    # To enable annotaions: --config show_type_annotations=True
+    - pdoc --template-dir docs/apidoc/ --html --output-dir docs/api/ tagmaps
     # create badges
     - pylint --output-format=text tagmaps | tee pylint.txt || pylint-exit $?
     - score=$(sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p' pylint.txt)
@@ -32,11 +46,9 @@ test:
     - anybadge -l mkdocs --value="Documentation" --file=documentation.svg --color=green
   artifacts:
     paths:
-      - pylint.svg
-      - pypi.svg
-      - pipeline.svg
-      - conda-forge.svg
-      - documentation.svg
+      # quote because * is a
+      # special character in YAML
+      - '*.svg'
       - docs/argparse/args.md
       - docs/api/
   only:
