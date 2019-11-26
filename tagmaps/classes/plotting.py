@@ -8,8 +8,8 @@ from __future__ import absolute_import
 from typing import Tuple
 
 import matplotlib.pyplot as plt
-from matplotlib.ticker import FuncFormatter
 from descartes import PolygonPatch
+from matplotlib.ticker import FuncFormatter
 
 from tagmaps.classes.shared_structure import (EMOJI, LOCATIONS, TAGS,
                                               AnalysisBounds)
@@ -96,7 +96,7 @@ class TPLT():
     def get_cluster_preview(
             points, sel_colors, item_text, bounds, mask_noisy,
             cluster_distance, number_of_clusters, auto_select_clusters=None,
-            shapes=None, fig=None, cls_type=None):
+            shapes=None, fig=None, cls_type=None) -> plt.figure:
         """Get cluster preview figure
 
         Args:

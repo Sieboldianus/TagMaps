@@ -5,10 +5,12 @@ Module for compiling TagMaps results and writing output
 """
 
 from __future__ import absolute_import
+# delay evaluation of annotations at runtime (PEP 563)
+from __future__ import annotations
 
 from operator import itemgetter
 from pathlib import Path
-from typing import Dict, List, TextIO, Tuple
+from typing import Dict, List, Tuple, Union, Optional, IO
 from math import sqrt
 
 import shapely.geometry as geometry
@@ -17,7 +19,7 @@ from fiona.crs import from_epsg
 
 from tagmaps.classes.shared_structure import (EMOJI,
                                               AnalysisBounds)
-from tagmaps.classes.utils import Utils
+import tagmaps.classes
 
 
 class Compile():
@@ -41,10 +43,10 @@ class Compile():
         """
         if output_folder:
             print("")
-        bound_points_shapely = Utils.get_shapely_bounds(
+        bound_points_shapely = tagmaps.classes.utils.Utils.get_shapely_bounds(
             bounds)
         # data always in lat/lng WGS1984
-        __, epsg_code = Utils.get_best_utmzone(
+        __, epsg_code = tagmaps.classes.utils.Utils.get_best_utmzone(
             bound_points_shapely)
         cls._compile_merge_shapes(
             shapes_and_meta_list, epsg_code, output_folder)
@@ -62,7 +64,8 @@ class Compile():
                 if cls_type == EMOJI:
                     contains_emoji_output = True
                 # normalize types separately (e.g. emoji/tags)
-                global_weights = cls._get_weights(shapes, [6, 7, 8])
+                global_weights = cls._get_weights(
+                    shapes, ["weightsv1", "weightsv2", "weightsv3"])
                 itemized_shapes = cls._getcompile_itemized_shapes(
                     shapes, cls_type, global_weights)
                 # print(f'type itemized_shapes: {type(itemized_shapes)}\n')
@@ -191,7 +194,7 @@ class Compile():
 
     @classmethod
     def _write_all_shapes(cls, shapefile, shapes,
-                          emoji_table: TextIO,
+                          emoji_table: Optional[IO[str]],
                           itemized: bool):
         fid = 0
         for shape in shapes:
@@ -275,11 +278,12 @@ class Compile():
         new item begins
         """
         if ((idx == 0
-             or shapes[idx][4] != shapes[idx-1][4])
-                and not shapes[idx][2] == 1):
+             or shapes[idx].item_name != shapes[idx-1].item_name)
+                and not shapes[idx].user_count == 1):
             # if item is different to
             # previous item and
             # user count is not 1
+            # TODO: check - prviously and not shapes[idx][2]
             h_imp = 1
         else:
             h_imp = 0
@@ -308,13 +312,13 @@ class Compile():
 
         # emoName = unicode_name(alphaShapeAndMeta[4])
         # Calculate Normalized Weights Values based on precalc Step
-        value_weight1 = alphashape_and_meta[6]
+        value_weight1 = alphashape_and_meta.weightsv1
         weight1_normalized = cls._get_normalize_value(
             value_weight1, weights.get(1))
-        value_weight2 = alphashape_and_meta[7]
+        value_weight2 = alphashape_and_meta.weightsv2
         weight2_normalized = cls._get_normalize_value(
             value_weight2, weights.get(2))
-        value_weight3 = alphashape_and_meta[8]
+        value_weight3 = alphashape_and_meta.weightsv3
         weight3_normalized = cls._get_normalize_value(
             value_weight3, weights.get(3))
         # project data
@@ -331,12 +335,12 @@ class Compile():
             emoji = 0
             # imp_tag_text = f'{alphashape_and_meta[4]}'
         item_shape = (
-            alphashape_and_meta[0],
-            alphashape_and_meta[1],
-            alphashape_and_meta[2],
-            alphashape_and_meta[3],
-            alphashape_and_meta[4],
-            alphashape_and_meta[5],
+            alphashape_and_meta.shape,
+            alphashape_and_meta.post_count,
+            alphashape_and_meta.views,
+            alphashape_and_meta.user_count,
+            alphashape_and_meta.item_name,
+            alphashape_and_meta.item_totalcount,
             h_imp,
             weight1_normalized,
             weight2_normalized,
@@ -346,7 +350,7 @@ class Compile():
         return item_shape
 
     @classmethod
-    def _get_weights(cls, shapes, columns: List[int]):
+    def _get_weights(cls, shapes, columns: List[Union[str, int]]):
         """Normalization of Values (1-1000 Range),
         precalc Step (global weights),
         see
@@ -378,8 +382,10 @@ class Compile():
 
     @staticmethod
     def _get_column_min_max(
-            shapes,
-            column: int) -> Tuple[float, float]:
+            shapes: List[Union[
+                tagmaps.classes.alpha_shapes.AlphaShapesAndMeta,
+                Tuple[geometry.Point, int]]],
+            column: Union[str, int]) -> Tuple[float, float]:
         """Get min and max values of specific column
         for normalization"""
         # get the n'th column out for calculating the max/min
@@ -400,7 +406,7 @@ class Compile():
 
     @classmethod
     def _get_normalize_value(cls, local_value,
-                             weights_tuple: Tuple[float, float]):
+                             weights_tuple: Optional[Tuple[float, float]]):
         """Wrapper for Normalization: keep 1,
         otherwise, normalize"""
         if local_value == 1:
@@ -413,7 +419,7 @@ class Compile():
     @staticmethod
     def get_weight(weighting_id: int,
                    post_count: int,
-                   unique_user_count: int):
+                   unique_user_count: int) -> float:
         """Get Weight for input metrics
         user count and post count based on
         three types of weighting formulas (id):
@@ -431,14 +437,13 @@ class Compile():
            and very active users
         """
         if weighting_id == 1:
-            weighted_value = post_count * (
+            return post_count * (
                 sqrt(1/(post_count / (
                     unique_user_count+1))**3))
         elif weighting_id == 2:
-            weighted_value = post_count * (
+            return post_count * (
                 sqrt(1/(post_count / (
                     unique_user_count+1))**2))
-        elif weighting_id == 3:
-            weighted_value = sqrt(
-                (post_count+(2*sqrt(post_count)))*2)
-        return weighted_value
+        # weighting_id == 3:
+        return sqrt(
+            (post_count+(2*sqrt(post_count)))*2)

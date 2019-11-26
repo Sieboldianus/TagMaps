@@ -8,19 +8,19 @@ from __future__ import absolute_import
 
 import argparse
 import configparser
-import csv
 import logging
 import os
 import warnings
 from pathlib import Path
-from typing import List, Set, Dict, Tuple
+from typing import List, Set, Dict, Tuple, Optional
 
 import fiona
 import pyproj
 from shapely.geometry import shape
 
 from tagmaps import __version__
-from tagmaps.classes.utils import Utils
+from ..classes.utils import Utils
+from ..classes.shared_structure import ConfigMap
 
 
 class BaseConfig:
@@ -75,8 +75,6 @@ class BaseConfig:
         self.select_tags_set = None
         self.correct_places = False
         self.correct_place_latlng_dict = dict()
-        self.shp_geom = None
-        self.shp_exclude_geom = None
 
         # initialization
         resource_path = os.environ.get("TAGMAPS_RESOURCES")
@@ -90,18 +88,11 @@ class BaseConfig:
         self.parse_args()
 
         # set logger
-        self.log = Utils.set_logger(self.output_folder, self.logging_level)
-
-        if not self.load_from_intermediate and not self.input_folder.exists():
-            raise ValueError(f"Folder {self.input_folder} not found.")
-        if not self.config_folder.exists():
-            raise ValueError(f"Folder {self.config_folder} not found.")
+        self.log = Utils.set_logger(
+            self.output_folder, self.logging_level)
 
         self.load_filterlists()
-        if self.shapefile_intersect:
-            self.shp_geom = self.load_shapefile(self.shapefile_intersect)
-        if self.shapefile_exclude:
-            self.shp_exclude_geom = self.load_shapefile(self.shapefile_exclude)
+
         self.source_map = self.load_sourcemapping()
         self.set_glob_options()
 
@@ -342,27 +333,33 @@ class BaseConfig:
         if args.local_saturation_check:
             self.local_saturation_check = True
         if args.shapefile_intersect:
-            self.shapefile_intersect = \
-                self.resource_path / args.shapefile_intersect
+            shp_path = Utils.check_folder_file(
+                self.resource_path / args.shapefile_intersect)
+            self.shapefile_intersect = self.load_shapefile(shp_path)
         if args.shapefile_exclude:
-            self.shapefile_exclude = \
-                self.resource_path / args.shapefile_exclude
+            shp_path = Utils.check_folder_file(
+                self.resource_path / args.shapefile_exclude)
+            self.shapefile_exclude = self.load_shapefile(shp_path)
         if args.ignore_stoplists:
             self.ignore_stoplists = True
         if args.selectionlist_emoji:
-            self.selectionlist_emoji = \
-                self.resource_path / args.selectionlist_emoji
+            self.selectionlist_emoji = Utils.check_folder_file(
+                self.resource_path / args.selectionlist_emoji)
         if args.selectionlist_tags:
             self.selectionlist_tags = \
                 self.resource_path / args.selectionlist_tags
         if args.stoplist_emoji:
-            self.stoplist_emoji = self.resource_path / args.stoplist_emoji
+            self.stoplist_emoji = Utils.check_folder_file(
+                self.resource_path / args.stoplist_emoji)
         if args.stoplist_tags:
-            self.stoplist_tags = self.resource_path / args.stoplist_tags
+            self.stoplist_tags = Utils.check_folder_file(
+                self.resource_path / args.stoplist_tags)
         if args.stoplist_user:
-            self.stoplist_user = self.resource_path / args.stoplist_user
+            self.stoplist_user = Utils.check_folder_file(
+                self.resource_path / args.stoplist_user)
         if args.stoplist_places:
-            self.stoplist_places = self.resource_path / args.stoplist_places
+            self.stoplist_places = Utils.check_folder_file(
+                self.resource_path / args.stoplist_places)
         if args.ignore_place_corrections:
             self.ignore_place_corrections = True
         if args.statistics_only:
@@ -378,13 +375,18 @@ class BaseConfig:
         if args.max_items:
             self.max_items = args.max_items
         if args.output_folder:
-            self.output_folder = self.resource_path / args.output_folder
+            # default: 02_Output
+            self.output_folder = Utils.check_folder_file(
+                self.resource_path / args.output_folder, create_folder=True)
         if args.input_folder:
-            self.input_folder = self.resource_path / args.input_folder
+            self.input_folder = Utils.check_folder_file(
+                self.resource_path / args.input_folder)
         if args.config_folder:
-            self.config_folder = self.resource_path / args.config_folder
+            self.config_folder = Utils.check_folder_file(
+                self.resource_path / args.config_folder)
         if args.load_intermediate:
-            self.load_from_intermediate = self.resource_path / args.load_intermediate
+            self.load_from_intermediate = Utils.check_folder_file(
+                self.resource_path / args.load_intermediate)
         if args.cluster_cut_distance:
             self.cluster_cut_distance = args.cluster_cut_distance
 
@@ -393,28 +395,28 @@ class BaseConfig:
         and places, including place lat/lng corrections.
         """
         # locations for files
-        sort_out_always_file = (
+        sort_out_always_file = Path(
             self.config_folder / "SortOutAlways.txt")
-        sort_out_always_instr_file = (
+        sort_out_always_instr_file = Path(
             self.config_folder / "SortOutAlways_inStr.txt")
-        sort_out_places_file = (
+        sort_out_places_file = Path(
             self.config_folder / "SortOutPlaces.txt")
-        correct_place_latlng_file = (
+        correct_place_latlng_file = Path(
             self.config_folder / "CorrectPlaceLatLng.txt")
         # load lists
         self.sort_out_always_set = self.load_filterlist(sort_out_always_file)
         if self.stoplist_tags:
-            self.sort_out_always_set.update(
-                self.load_filterlist(self.stoplist_tags)
-            )
+            stoplist_tags_set = self.load_filterlist(self.stoplist_tags)
+            if stoplist_tags_set:
+                self.sort_out_always_set.update(stoplist_tags_set)
         self.sort_out_always_instr_set = self.load_filterlist(
             sort_out_always_instr_file)
         self.sort_out_places_set = self.load_place_stoplist(
             sort_out_places_file)
         if self.stoplist_places:
-            self.sort_out_places_set.update(
-                self.load_filterlist(self.stoplist_places)
-            )
+            stoplist_places_set = self.load_filterlist(self.stoplist_places)
+            if stoplist_places_set:
+                self.sort_out_places_set.update(stoplist_places_set)
         if self.stoplist_user:
             self.sort_out_user_set = self.load_filterlist(
                 self.stoplist_user)
@@ -427,9 +429,11 @@ class BaseConfig:
         if self.selectionlist_tags:
             self.select_tags_set = self.load_filterlist(
                 self.selectionlist_tags)
-        self.correct_place_latlng_dict = self.load_place_corrections(
-            correct_place_latlng_file
-        )
+        if not self.ignore_place_corrections:
+            self.correct_place_latlng_dict = self.load_place_corrections(
+                correct_place_latlng_file)
+            if self.correct_place_latlng_dict:
+                self.correct_places = True
         # log results
         self._report_loaded_lists()
 
@@ -450,11 +454,11 @@ class BaseConfig:
         Utils.report_listload(
             self.select_tags_set, "tags selection items")
 
-    def load_filterlist(self, file: Path) -> Set[str]:
+    def load_filterlist(self, file: Path) -> Optional[Set[str]]:
         """Loads filterlist of terms from file returns set"""
         if self.ignore_stoplists is True:
             return
-        if not os.path.isfile(file):
+        if not file.is_file():
             self.log.warning(f"{file} not found.")
             return
         store_set = set()
@@ -476,15 +480,16 @@ class BaseConfig:
         self.sort_out_places = True
         return store_set
 
+    @classmethod
     def load_place_corrections(
-            self, file: Path) -> Dict[str, Tuple[float, float]]:
+            cls, file: Path) -> Optional[Dict[str, Tuple[float, float]]]:
         """Fills dictionary with list of corrected lat/lng entries
         e.g.: Dictionary: placeid = lat, lng
 
         - sets self.correct_places to True
         """
         store_dict = dict()
-        if os.path.isfile(file) or self.ignore_place_corrections is True:
+        if not file.is_file():
             return
         with open(file, newline="", encoding="utf8") as f_handle:
             f_handle.readline()
@@ -495,7 +500,6 @@ class BaseConfig:
                 if len(linesplit) == 1:
                     continue
                 store_dict[linesplit[0]] = (linesplit[1], linesplit[2])
-        self.correct_places = True
         return store_dict
 
     def load_shapefile(self, shapefile_path: Path) -> List[shape]:
@@ -569,52 +573,3 @@ class BaseConfig:
         """Includes global options in other packages to be set
         prior execution"""
         # unused
-
-
-class ConfigMap:
-    """Retrieves python object from config.cfg"""
-
-    def __init__(self, source_config):
-        # [Main]
-        self.name = source_config["Main"]["name"]
-        self.file_extension = source_config["Main"]["file_extension"].lower()
-        self.delimiter = source_config["Main"]["delimiter"]
-        self.array_separator = source_config["Main"]["array_separator"]
-        self.quoting = self._quote_selector(
-            source_config["Main"]["quoting"])
-        self.quote_char = source_config["Main"]["quote_char"].strip('\'')
-        self.date_time_format = source_config["Main"]["file_extension"]
-        # [Columns]
-        self.originid_col = source_config["Columns"]["originid_col"]
-        self.post_guid_col = source_config["Columns"]["post_guid_col"]
-        self.latitude_col = source_config["Columns"]["latitude_col"]
-        self.longitude_col = source_config["Columns"]["longitude_col"]
-        self.user_guid_col = source_config["Columns"]["user_guid_col"]
-        self.post_create_date_col = \
-            source_config["Columns"]["post_create_date_col"]
-        self.post_publish_date_col = \
-            source_config["Columns"]["post_publish_date_col"]
-        self.post_views_count_col = \
-            source_config["Columns"]["post_views_count_col"]
-        self.post_like_count_col = \
-            source_config["Columns"]["post_like_count_col"]
-        self.post_url_col = source_config["Columns"]["post_url_col"]
-        self.tags_col = source_config["Columns"]["tags_col"]
-        self.emoji_col = source_config["Columns"]["emoji_col"]
-        self.post_title_col = source_config["Columns"]["post_title_col"]
-        self.post_body_col = source_config["Columns"]["post_body_col"]
-        self.post_geoaccuracy_col = \
-            source_config["Columns"]["post_geoaccuracy_col"]
-        self.place_guid_col = source_config["Columns"]["place_guid_col"]
-        self.place_name_col = source_config["Columns"]["place_name_col"]
-
-    @staticmethod
-    def _quote_selector(quote_string):
-        quote_switch = {
-            "QUOTE_MINIMAL": csv.QUOTE_MINIMAL,
-            "QUOTE_ALL": csv.QUOTE_ALL,
-            "QUOTE_NONNUMERIC": csv.QUOTE_NONNUMERIC,
-            "QUOTE_NONE": csv.QUOTE_NONE,
-        }
-        quoting = quote_switch.get(quote_string)
-        return quoting

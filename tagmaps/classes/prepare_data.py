@@ -10,20 +10,36 @@ Returns:
 
 from __future__ import absolute_import
 
+import collections
 import csv
 import logging
 import math
-import collections
-from collections import defaultdict, namedtuple
+from collections import defaultdict
+from dataclasses import dataclass
 from pathlib import Path
-from typing import (DefaultDict, Dict, List, NamedTuple, Set, TextIO, Tuple,
-                    Union, Counter as CDict)
+from typing import Counter, DefaultDict, Dict, List, Optional, Set, Union
 
 from _csv import QUOTE_MINIMAL
-from tagmaps.classes.shared_structure import (EMOJI, LOCATIONS, TAGS, TOPICS,
-                                              AnalysisBounds, CleanedPost,
-                                              ClusterType, PostStructure)
-from tagmaps.classes.utils import Utils
+
+from .shared_structure import (EMOJI, LOCATIONS, POST_FIELDS, TAGS, TOPICS,
+                               AnalysisBounds, CleanedPost, ClusterTypes,
+                               ItemCounter, PostStructure)
+from .utils import Utils
+
+
+@dataclass
+class ItemStats:
+    top_items: List[ItemCounter]
+    total_unique: int
+    total_without_longtail: Optional[int] = None
+
+
+@dataclass
+class PreparedStats:
+    top_items_list: List[ItemCounter]
+    total_unique_items: int
+    total_item_count: int
+    max_items: int
 
 
 class PrepareData():
@@ -57,14 +73,15 @@ class PrepareData():
         # The following dict stores, per cls_type,
         # the total number of times items appeared
         # these are used to measure total counts
-        self.total_item_counter: Dict[ClusterType, CDict] = dict()
-        for cls_type in self.cluster_types:
-            self.total_item_counter[cls_type] = collections.Counter()
+        self.total_item_counter: Dict[str, Counter[str]] = \
+            dict.fromkeys(self.cluster_types, collections.Counter())
+        # for cls_type in self.cluster_types:
+        #     self.total_item_counter[cls_type] =
         # cleaned stats dict for each ClusterType
-        self.cleaned_stats: Dict[ClusterType, NamedTuple] = dict()
+        self.cleaned_stats: Dict[str, PreparedStats] = {}
         # Hashsets:
         self.items_per_userloc: Dict[
-            ClusterType, DefaultDict[str, Set[str]]] = dict()
+            str, DefaultDict[str, Set[str]]] = {}
         for cls_type in [EMOJI, TAGS]:
             # items per user_location [EMOJI, TAGS, TOPICS]
             self.items_per_userloc[cls_type] = defaultdict(set)
@@ -80,12 +97,13 @@ class PrepareData():
         self.userlocation_terms_dict = defaultdict(set)
         # first item for each UPL, required
         # for some attributes to generate CleanedPost
-        self.userlocations_firstpost_dict = defaultdict(set)
+        self.userlocations_firstpost_dict: \
+            Dict[str, Union[PostStructure, CleanedPost]] = dict()
         # The following dicts store, per cls_type,
         # distinct items on a per user basis, e.g.
         # self.useritem_counts_global[TAGS][USER] = {term1, term2, term3}
         self.useritem_counts_global: Dict[
-            ClusterType, DefaultDict[str, Set[str]]] = dict()
+            str, DefaultDict[str, Set[str]]] = dict()
         for cls_type in self.cluster_types:
             self.useritem_counts_global[cls_type] = defaultdict(set)
 
@@ -106,10 +124,11 @@ class PrepareData():
         self._update_toplists(lbsn_post)
         # create userid_loc_id, this is used as the base
         # for clustering data (metric UPL)
-        post_locid_userid = f'{lbsn_post.loc_id}::{lbsn_post.user_guid}'
+        post_locid_userid: str = f'{lbsn_post.loc_id}::{lbsn_post.user_guid}'
 
-        if (lbsn_post.loc_name and
-                lbsn_post.loc_id not in self.locid_locname_dict):
+        if lbsn_post.loc_id and (
+                lbsn_post.loc_name and lbsn_post.loc_id
+                not in self.locid_locname_dict):
             # add locname to dict
             self.locid_locname_dict[
                 lbsn_post.loc_id] = lbsn_post.loc_name
@@ -148,7 +167,7 @@ class PrepareData():
             post_locid_userid] |= cleaned_terms
 
     def get_cleaned_post_dict(
-            self, input_path=None) -> Dict[str, CleanedPost]:
+            self, input_path=None) -> Optional[Dict[str, CleanedPost]]:
         """Output wrapper
 
         - calls loop user locations method
@@ -172,7 +191,7 @@ class PrepareData():
         return cleaned_post_dict
 
     def write_cleaned_data(
-            self, cleaned_post_dict: Dict[str, CleanedPost] = None,
+            self, cleaned_post_dict: Optional[Dict[str, CleanedPost]] = None,
             panon: bool = None):
         """Write cleaned data to intermediate file"""
         self.log.info(
@@ -189,7 +208,7 @@ class PrepareData():
         with open(self.output_folder / 'Output_cleaned.csv', 'w',
                   encoding='utf8') as csvfile:
             # get headerline from class structure
-            headerline = ','.join(CleanedPost._fields)
+            headerline = ','.join(POST_FIELDS)
             csvfile.write(f'{headerline}\n')
             # values will be written with CSV writer module
             datawriter = csv.writer(
@@ -213,7 +232,8 @@ class PrepareData():
 
     def get_panonymized_posts(
             self,
-            cleaned_post_dict: Dict[str, CleanedPost]) -> Dict[str, CleanedPost]:
+            cleaned_post_dict: Optional[Dict[str, CleanedPost]]
+    ) -> Dict[str, CleanedPost]:
         """Returns a new cleaned post dict with reduced information detail
         based on global information patterns
 
@@ -229,7 +249,7 @@ class PrepareData():
             panon_cleaned_post_dict[upl] = upl_panon
         return panon_cleaned_post_dict
 
-    def get_item_stats(self) -> Dict['ClusterType', NamedTuple]:
+    def get_item_stats(self) -> Dict[str, PreparedStats]:
         """After data is loaded, this collects data and stats
         for distribution of tags, emoji and locations
 
@@ -242,24 +262,19 @@ class PrepareData():
 
     def _init_item_stats(self):
         """Init stats for all cls_types"""
-        for cls_type, __ in ClusterType:
+        for cls_type in ClusterTypes:
             self.cleaned_stats[cls_type] = self._prepare_item_stats(
                 cls_type)
 
-    def _prepare_item_stats(self, cls_type):
+    def _prepare_item_stats(self, cls_type) -> PreparedStats:
         """Calculate overall tag and emoji statistics
 
         - write results (optionally) to file
         - stats for user excluded types are initialized empty
         """
-        # init named tuple
-        PreparedStats = namedtuple(
-            'PreparedStats',
-            'top_items_list total_unique_items total_item_count '
-            'max_items')
         if not cls_type in self.cluster_types:
             # return empty stats if excluded by user
-            return PreparedStats(0, 0, 0, 0)
+            return PreparedStats([], 0, 0, 0)
         # top lists and unique
         item_stats = self._get_top_list(cls_type)
         top_items_list = item_stats.top_items
@@ -340,7 +355,7 @@ class PrepareData():
             top_list = top_list_rf
         else:
             # construct line string
-            top_list = ["%s,%i" % v for v in top_list]
+            top_list = [f'{v.name},{v.ucount}' for v in top_list]
         # overwrite, if exists:
         with open(output_folder / f'Output_top{list_type}.txt',
                   'w', encoding='utf8') as out_file:
@@ -360,7 +375,8 @@ class PrepareData():
                 top_list, cls_type, max_items,
                 self.output_folder, self.locid_locname_dict)
 
-    def _get_top_list(self, cls_type: ClusterType = TAGS) -> NamedTuple:
+    def _get_top_list(
+            self, cls_type: str = TAGS) -> ItemStats:
         """Get Top Tags on a per user basis, i.e.
 
         - the global number of distinct users who used each distinct tag
@@ -371,13 +387,6 @@ class PrepareData():
             - list of top tags up to tmax [1000]
             - count of total unique tags
         """
-        # create named tuple for result for easier referencing
-        item_stats = namedtuple(
-            'item_stats',
-            'top_items total_unique total_without_longtail')
-        # also create a named tuple for item counter object
-        item_counter = collections.namedtuple(
-            'item_counter', 'name ucount')
         overall_usercount_per_item = collections.Counter()
         for item_hash in self.useritem_counts_global[cls_type].values():
             # taghash contains unique values (= strings) for each user,
@@ -394,11 +403,12 @@ class PrepareData():
         top_items_list = overall_usercount_per_item.most_common(max_items)
         # convert list of item counts into list of namedtuple
         top_items_list = [
-            item_counter(*ic_tuple) for ic_tuple in top_items_list]
+            ItemCounter(*ic_tuple) for ic_tuple in top_items_list]
+        total_without_longtail = 0
         if self.remove_long_tail is True:
             total_without_longtail = self._remove_long_tail(
                 top_items_list, cls_type)
-        return item_stats(top_items_list, total_unique, total_without_longtail)
+        return ItemStats(top_items_list, total_unique, total_without_longtail)
 
     @staticmethod
     def _get_total_count(top_list, top_counter):
@@ -410,15 +420,15 @@ class PrepareData():
         """
         total_count = 0
         for item in top_list:
-            count = top_counter.get(item[0])
+            count = top_counter.get(item.name)
             if count:
                 total_count += count
         return total_count
 
     def _remove_long_tail(self,
-                          top_list: List[Tuple[str, int]],
-                          listtype: ClusterType
-                          ) -> int:
+                          top_list: List[ItemCounter],
+                          listtype: str
+                          ) -> Optional[int]:
         """Removes all items from list that are used by less
 
         than x number of users,
@@ -456,16 +466,15 @@ class PrepareData():
             f'{bottomuser_count} users.')
         return len_after
 
-    def _compile_cleaned_data(self):
+    def _compile_cleaned_data(self) -> Optional[Dict[str, CleanedPost]]:
         """Will produce final cleaned list
         of items to be processed by clustering.
 
         - optionally writes entries to file, if handler exists
         """
-        cleaned_post_dict = defaultdict(CleanedPost)
-        for user_guid, locationhash in \
-                self.locations_per_user.items():
-               # loop all distinct user locations
+        cleaned_post_dict: Dict[str, CleanedPost] = dict()
+        for user_guid, locationhash in self.locations_per_user.items():
+            # loop all distinct user locations
             for location in locationhash:
                 locid_userid = f'{location}::{user_guid}'
                 post_latlng = location.split(':')
@@ -477,6 +486,8 @@ class PrepareData():
                 # create tuple with cleaned photo data
                 cleaned_post = self._compile_cleaned_post(
                     first_post, locid_userid, post_latlng, user_guid)
+                if cleaned_post is None:
+                    continue
                 if self.topic_modeling:
                     self._update_topic_models(
                         cleaned_post, user_guid)
@@ -488,7 +499,7 @@ class PrepareData():
 
     def _read_cleaned_data(self, cdata: Path):
         """Create cleaned post dict from intermediate data file store"""
-        cleaned_post_dict = defaultdict(CleanedPost)
+        cleaned_post_dict: Dict[str, CleanedPost] = dict()
         with open(cdata, 'r', newline='', encoding='utf8') as f_handle:
             cpost_reader = csv.DictReader(
                 f_handle,
@@ -578,26 +589,29 @@ class PrepareData():
             if item_str:
                 items = set(item_str.split(";"))
                 split_string_dict[split_col] = items
+        locid = cpost.get("loc_id")
+        if not locid:
+            raise ValueError("Field loc_id empty.")
         cleaned_post = CleanedPost(
-            origin_id=cpost.get("origin_id"),
-            lat=float(cpost.get("lat")),
-            lng=float(cpost.get("lng")),
-            guid=cpost.get("guid"),
-            user_guid=cpost.get("user_guid"),
+            origin_id=int(cpost["origin_id"]),
+            lat=float(cpost["lat"]),
+            lng=float(cpost["lng"]),
+            guid=cpost["guid"],
+            user_guid=cpost["user_guid"],
             post_body=split_string_dict.get("post_body", set()),
             post_create_date=cpost.get("post_create_date"),
             post_publish_date=cpost.get("post_publish_date"),
-            post_views_count=int(cpost.get("post_views_count")),
-            post_like_count=int(cpost.get("post_like_count")),
+            post_views_count=int(cpost.get("post_views_count", 0)),
+            post_like_count=int(cpost.get("post_like_count", 0)),
             emoji=split_string_dict.get("emoji", set()),
             hashtags=split_string_dict.get("hashtags", set()),
-            loc_id=cpost.get("loc_id"),
+            loc_id=locid,
             loc_name=cpost.get("loc_name")
         )
         return cleaned_post
 
     def _compile_cleaned_post(self, first_post, locid_userid,
-                              post_latlng, user_key) -> CleanedPost:
+                              post_latlng, user_key) -> Optional[CleanedPost]:
         """Merge cleaned post from all posts of a certain user
         at a specific location. This is producing the final CleanedPost.
 
@@ -631,8 +645,9 @@ class PrepareData():
             lat = float(post_latlng[0])
             lng = float(post_latlng[1])
         except ValueError:
-            lat = None
-            lng = None
+            # skip posts with no
+            # or malformed lat/lng
+            return
         cleaned_post = CleanedPost(
             origin_id=first_post.origin_id,
             lat=lat,
@@ -661,7 +676,7 @@ class PrepareData():
         value = ref_dict[locid_userid]
         return value
 
-    def _write_location_tocsv(self, datawriter: TextIO,
+    def _write_location_tocsv(self, datawriter,
                               cleaned_post_location: CleanedPost,
                               panon_set=None) -> None:
         """Writes a single record of cleaned posts to CSV list
@@ -690,10 +705,9 @@ class PrepareData():
     @staticmethod
     def _panonymize_cleaned_post(
             upl: CleanedPost,
-            panon_set: Dict['ClusterType', Set[str]]) -> CleanedPost:
+            panon_set: Dict[str, Set[str]]) -> CleanedPost:
         """Returns a new cleaned post with reduced information detail
         based on global information patterns"""
-        # input(f"Before: {upl.hashtags}")
         panon_post = CleanedPost(
             origin_id=upl.origin_id,
             lat=upl.lat,
@@ -713,12 +727,11 @@ class PrepareData():
             loc_id=upl.loc_id,
             loc_name=upl.loc_name
         )
-        # input(f"After: {panon_post.hashtags}")
         return panon_post
 
     @staticmethod
     def _agg_date(
-            str_date: str) -> str:
+            str_date: Optional[str]) -> str:
         """Remove time info from string, e.g.
         2010-05-07 16:00:54
         to 2010-05-07
@@ -730,8 +743,9 @@ class PrepareData():
 
     @staticmethod
     def _filter_private_terms(
-            str_list: Set[str], top_terms_set: Set[str] = None) -> Set[str]:
-        if top_terms_set:
+            str_list: Optional[Set[str]] = None,
+            top_terms_set: Optional[Set[str]] = None) -> Set[str]:
+        if str_list and top_terms_set:
             filtered_set = {term for term in str_list if term in top_terms_set}
             return filtered_set
         # if none or empty, return empty set

@@ -2,9 +2,9 @@ name: tagmaps
 channels:
   - conda-forge
   - defaults
-  - travis
 dependencies:
-  - python>=3.5
+  - python>=3.7
+  - pip
   - fiona
   - shapely
   - pandas>=0.24.2
@@ -15,7 +15,6 @@ dependencies:
   - cython
   - hdbscan>=0.8.20
   - gdal
-  - attrs
   - seaborn
   - descartes
   - regex
