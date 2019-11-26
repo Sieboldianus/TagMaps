@@ -43,7 +43,7 @@ See the [tagmaps documentation](https://ad.vgiscience.org/tagmaps/docs/) for add
    - `git clone https://github.com/Sieboldianus/TagMaps.git && cd TagMaps && git filter-branch --subdirectory-filter resources`
 2. Place geotagged data in `/01_Input` subfolder
    - information on how to structure data is available in the [documentation](https://ad.vgiscience.org/tagmaps/docs/user-guide/use-your-own-data/)
-3. Run `tagmaps` within folder `resources`. Output files will be saved to `/02_Output`  
+3. Run `tagmaps` within folder `resources`. Output files will be saved to `/02_Output`
    - 2 shapefiles in auto-selected UTM projection, one containing all tag cluster and one with the overall location clusters
 3. Visualize shapefiles, e.g. using ESRI ArcGIS
    - download `BasemapLayout_World.mxd` from [resources folder](/resources/) and replace missing links with 2 resulting shapefiles in `/02_Output`
@@ -102,19 +102,19 @@ Some future goals:
 
 This project includes and makes use of several other projects/libraries/frameworks:
 
-> [_Alpha Shapes_](http://blog.thehumangeo.com/2014/05/12/drawing-boundaries-in-python/) Kevin Dwyer/ Sean Gillies  
+> [_Alpha Shapes_](http://blog.thehumangeo.com/2014/05/12/drawing-boundaries-in-python/) Kevin Dwyer/ Sean Gillies
 > Generating Concave Hull for Point Clouds
 
-> [_HDBSCAN_](https://github.com/scikit-learn-contrib/hdbscan) McInnes, J. Healy, S. Astels - BSD licensed  
+> [_HDBSCAN_](https://github.com/scikit-learn-contrib/hdbscan) McInnes, J. Healy, S. Astels - BSD licensed
 > A high performance implementation of HDBSCAN clustering.
 
-> [_Shapely_](https://github.com/Toblerity/Shapely)  
+> [_Shapely_](https://github.com/Toblerity/Shapely)
 > Manipulation and analysis of geometric objects
 
-> [_SciPy and Convex Hull_](https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.ConvexHull.html#scipy.spatial.ConvexHull)  
+> [_SciPy and Convex Hull_](https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.ConvexHull.html#scipy.spatial.ConvexHull)
 > Simple shapes for point clusters are generated using SciPy's excellent Convex Hull functions
 
-> [_Fiona_](https://github.com/Toblerity/Fiona)  
+> [_Fiona_](https://github.com/Toblerity/Fiona)
 > OGR's neat and nimble API for Python programmers.
 
 ## License
@@ -123,7 +123,14 @@ GNU GPLv3
 
 ## Changelog & Download
 
-2019-05-08: [**TagMaps v.0.17.6**](https://cloudstore.zih.tu-dresden.de/index.php/s/ahl8mKQVcXOGo8d/download)
+2019-11-26: **TagMaps v0.20.2**
+
+- mainly improvements of type annotations and code legebility
+- include type hints in [api-docs](https://ad.vgiscience.org/tagmaps/docs/api/tagmaps_.html)
+- migration from namedtuples to (awesome) new dataclass from Python 3.7
+(this is now the minimum requirement from v0.20.2 onwards)
+
+2019-05-08: [**TagMaps v0.17.6**](https://cloudstore.zih.tu-dresden.de/index.php/s/ahl8mKQVcXOGo8d/download)
 
 - as of this version, tagmaps package is available on [conda-forge](<https://anaconda.org/conda-forge/tagmaps>)
 - fixed a bug with newer versions of pyproj (>2.0.0) that would result in very slow projection performance
