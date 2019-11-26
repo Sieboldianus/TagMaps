@@ -12,21 +12,24 @@ import warnings
 from collections import defaultdict, namedtuple
 from functools import partial, wraps
 from multiprocessing.pool import ThreadPool
-from typing import Any, Dict, List, NamedTuple, Set, Tuple
-
+from typing import Any, Dict, List, Optional, Set, Tuple
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pyproj
+from dataclasses import dataclass, astuple
 import seaborn as sns
 import shapely.geometry as geometry
 from pyproj import Proj  # pylint: disable=C0412
 from shapely.ops import transform  # pylint: disable=C0412
 
-from tagmaps.classes.alpha_shapes import AlphaShapes
+from tagmaps.classes.alpha_shapes import (
+    AlphaShapes, AlphaShapesArea, AlphaShapesAndMeta)
 from tagmaps.classes.plotting import TPLT
+from tagmaps.classes.prepare_data import PreparedStats
 from tagmaps.classes.shared_structure import (EMOJI, LOCATIONS, TAGS, TOPICS,
                                               AnalysisBounds, CleanedPost,
-                                              ClusterType)
+                                              ItemCounter, POST_FIELDS)
 from tagmaps.classes.utils import Utils
 
 # transformer only available from pyproj>=2.0.0
@@ -48,6 +51,59 @@ except ImportError:
 POOL = ThreadPool(processes=1)
 sns.set_context('poster')
 sns.set_style('white')
+
+
+@dataclass
+class SelectedItems:
+    guids: List[str]
+    location_count: int
+
+
+@dataclass
+class Guids:
+    clustered: List[str]
+    nonclustered: List[str]
+
+
+@dataclass
+class SelItems:
+    """List of coordinates (points) with related post_guids"""
+    points: List[Optional[np.ndarray]]
+    guids: List[str]
+
+
+@dataclass
+class ClusterResults:
+    """List of post guids and assigned cluster labels (from HDBSCAN)"""
+    clusters: Tuple[np.ndarray, Tuple[int, Optional[int]]]
+    guids: List[str]
+    points: Optional[List[np.ndarray]] = None
+    colors: Optional[List[Tuple[float, float, float]]] = None
+    mask_noisy: Optional[np.ndarray] = None
+    cluster_count: Optional[int] = None
+
+    def __iter__(self):
+        return iter(astuple(self))
+
+
+@dataclass
+class ClusterShapes:
+    """Count of user per cluster centroid
+
+    data: List of Tuples with
+          (1) Point = cluster centroid and
+          (2) int = user count
+    cls_type: cluster type (TAGS, EMOJI, ..)
+    itemized: bool
+              False: Overall Location clusters
+              True: Itemoized clusters (TAGS, EMOJI)
+    """
+    data: List[Tuple[geometry.Point, int]]
+    cls_type: str
+    itemized: bool
+
+    def __iter__(self):
+        return iter(astuple(self))
 
 
 class ClusterGen():
@@ -81,21 +137,22 @@ class ClusterGen():
             return _wrapper
 
     def __init__(self, bounds: AnalysisBounds,
-                 cleaned_post_dict: Dict[str, CleanedPost],
-                 cleaned_post_list: List[CleanedPost],
-                 top_list: List[Tuple[str, int]],
+                 cleaned_post_dict: Optional[Dict[str, CleanedPost]],
+                 cleaned_post_list: Optional[List[CleanedPost]],
+                 top_list: List[ItemCounter],
                  total_distinct_locations: int,
-                 cluster_type: ClusterType = TAGS,
+                 cluster_type: str = TAGS,
                  local_saturation_check: bool = False):
         self.cls_type = cluster_type
         self.bounds = bounds
-        self.cluster_distance = ClusterGen._init_cluster_dist(
+        self.cluster_distance: float = ClusterGen._init_cluster_dist(
             self.bounds, self.cls_type)
         self.cleaned_post_dict = cleaned_post_dict
         self.cleaned_post_list = cleaned_post_list
         self.top_list = top_list
+        self.top_item: Optional[ItemCounter]
         if self.top_list:
-            self.top_item = top_list[0]
+            self.top_item = top_list[0]  # TODO: check 2nd [0]
         else:
             self.top_item = None
         self.total_distinct_locations = total_distinct_locations
@@ -139,11 +196,11 @@ class ClusterGen():
 
     @classmethod
     def new_clusterer(cls,
-                      cls_type: ClusterType,
+                      cls_type: str,
                       bounds: AnalysisBounds,
-                      cleaned_post_dict: Dict[str, CleanedPost],
-                      cleaned_post_list: List[CleanedPost],
-                      cleaned_stats: NamedTuple,
+                      cleaned_post_dict: Optional[Dict[str, CleanedPost]],
+                      cleaned_post_list: Optional[List[CleanedPost]],
+                      cleaned_stats: Optional[Dict[str, PreparedStats]],
                       local_saturation_check: bool):
         """Create new clusterer from type and input data
 
@@ -157,11 +214,14 @@ class ClusterGen():
         Returns:
             clusterer (ClusterGen): A new clusterer of ClusterType
         """
+        cls_cleaned_stats = cleaned_stats.get(cls_type)
+        if not cls_cleaned_stats:
+            raise ValueError("Cleaned_stats not initialized")
         clusterer = cls(
             bounds=bounds,
             cleaned_post_dict=cleaned_post_dict,
             cleaned_post_list=cleaned_post_list,
-            top_list=cleaned_stats[cls_type].top_items_list,
+            top_list=cls_cleaned_stats.top_items_list,
             total_distinct_locations=cleaned_stats[
                 LOCATIONS].total_unique_items,
             cluster_type=cls_type,
@@ -170,7 +230,7 @@ class ClusterGen():
 
     @staticmethod
     def _init_cluster_dist(bounds: AnalysisBounds,
-                           cls_type: ClusterType) -> float:
+                           cls_type: str) -> float:
         """Get initial cluster distance from analysis bounds.
 
         - 7% of research area width/height (max) = optimal
@@ -195,7 +255,8 @@ class ClusterGen():
         """Update analysis rectangle boundary based on
 
         cleaned posts list."""
-        dataframe = pd.DataFrame(self.cleaned_post_list)
+
+        dataframe = pd.DataFrame(self.cleaned_post_list, columns=POST_FIELDS)
         # get columns lng, lat
         # convert to numpy ndarray
         # (List of [lng, lat] lists)
@@ -205,19 +266,16 @@ class ClusterGen():
          self.bounds.lim_lng_min,
          self.bounds.lim_lng_max) = Utils.get_rectangle_bounds(points)
 
-    def _select_postguids(self, item: str) -> Tuple[List[str], int]:
+    def _select_postguids(self, item: Optional[str]) -> SelectedItems:
         """Select all posts that have a specific item
 
         Args:
             item: tag, emoji, location
 
         Returns:
-            Tuple[List[str], int]: list of post_guids and
-                                   number of distinct locations
+            selected_items: list of post_guids and
+                            number of distinct locations
         """
-        SelectedItems = namedtuple(
-            'SelectedItems',
-            'guids location_count')
         distinct_localloc_count = set()
         selected_postguids_list = list()
         for cleaned_post_location in self.cleaned_post_list:
@@ -249,7 +307,7 @@ class ClusterGen():
 
     @staticmethod
     def _filter_tags(
-            item: str,
+            item: Optional[str],
             cleaned_photo_location: CleanedPost,
             selected_postguids_list: List[str],
             distinct_localloc_count: Set[str]):
@@ -262,7 +320,7 @@ class ClusterGen():
 
     @staticmethod
     def _filter_topics(
-            item: str,
+            item: Optional[str],
             cleaned_photo_location: CleanedPost,
             selected_postguids_list: List[str],
             distinct_localloc_count: Set[str]):
@@ -288,7 +346,7 @@ class ClusterGen():
 
     @staticmethod
     def _filter_emoji(
-            item: str,
+            item: Optional[str],
             cleaned_photo_location: CleanedPost,
             selected_postguids_list: List[str],
             distinct_localloc_count: Set[str]):
@@ -300,7 +358,7 @@ class ClusterGen():
 
     @staticmethod
     def _filter_locations(
-            item: str,
+            item: Optional[str],
             cleaned_photo_location: CleanedPost,
             selected_postguids_list: List[str],
             distinct_localloc_count: Set[str]):
@@ -310,7 +368,7 @@ class ClusterGen():
             distinct_localloc_count.add(
                 cleaned_photo_location.loc_id)
 
-    def _getselect_postguids(self, item: str,
+    def _getselect_postguids(self, item: Optional[str],
                              silent: bool = True) -> List[str]:
         """Get list of post guids with specific item
 
@@ -341,11 +399,11 @@ class ClusterGen():
               f"{perc_text}", end=" ")
         return sel_items.guids
 
-    def _get_toplist_index(self, item_text: str) -> int:
+    def _get_toplist_index(self, item_text: Optional[str]) -> int:
         """Get Position of Item in Toplist"""
         try:
-            index_pos = Utils.get_index_of_tup(
-                self.top_list, 0, item_text)
+            index_pos = Utils.get_index_of_item(
+                self.top_list, item_text)
         except ValueError:
             index_pos = 0
         return index_pos
@@ -357,9 +415,9 @@ class ClusterGen():
                                for x in selected_postguids_list]
         return selected_posts_list
 
-    def get_np_points_guids(self, item: str = None,
+    def get_np_points_guids(self, item: Optional[str] = None,
                             silent: bool = None, sel_all: bool = None
-                            ) -> np.ndarray:
+                            ) -> SelItems:
         """Gets numpy array of selected points with latlng containing _item
 
         Args:
@@ -370,9 +428,6 @@ class ClusterGen():
             points: A list of lat/lng points to map
             selected_postguids_list: List of selected post guids
         """
-        SelItems = namedtuple(
-            'SelItems',
-            'points guids')
         # no log reporting for selected points
         if silent is None:
             silent = False
@@ -397,7 +452,7 @@ class ClusterGen():
         # only used for tag clustering,
         # otherwise (photo location clusters),
         # global vars are used (dataframe, points)
-        dataframe = pd.DataFrame(selected_posts_list)
+        dataframe = pd.DataFrame(selected_posts_list, columns=POST_FIELDS)
         # converts pandas data to numpy array
         # (limit by list of column-names)
         points = dataframe.loc[:, ['lng', 'lat']].to_numpy()
@@ -410,7 +465,8 @@ class ClusterGen():
         # decide if select all or specific item
         sel_all = bool(item is None)
         sel_items = self.get_np_points_guids(item, silent, sel_all)
-        if sel_items.points.size:
+        # ndarray.size: Number of elements in the array
+        if len(sel_items.points) > 0 and sel_items.points.size:
             return sel_items.points
 
     def _cluster_points(self, points,
@@ -468,7 +524,9 @@ class ClusterGen():
         # for plotting
         return cluster_labels, sel_colors, mask_noisy, number_of_clusters
 
-    def cluster_item(self, item: str, preview_mode=None):
+    def cluster_item(
+            self, item: Optional[str],
+            preview_mode=None) -> Optional[ClusterResults]:
         """Cluster specific item
 
         Args:
@@ -485,9 +543,6 @@ class ClusterGen():
             mask_noisy: number of clusters that were ambiguous (from HDBSCAN)
             number_of_clusters: number of identified clusters (from HDBSCAN)
         """
-        ClusterResults = namedtuple(
-            'ClusterResults',
-            'labels guids points colors mask_noisy cluster_count')
         if preview_mode is None:
             preview_mode = False
         sel_items = self.get_np_points_guids(
@@ -505,9 +560,6 @@ class ClusterGen():
 
     def _cluster_all_items(self):
         """Cluster all items (e.g. all locations)"""
-        ClusterResults = namedtuple(
-            'ClusterResults',
-            'labels guids')
         sel_items = self.get_np_points_guids(
             silent=False, sel_all=True)
         # min_cluster_size = 2 (LOCATIONS)
@@ -520,11 +572,8 @@ class ClusterGen():
         return ClusterResults(cluster_labels, sel_items.guids)
 
     @staticmethod
-    def _get_cluster_guids(clusters, selected_post_guids):
+    def _get_cluster_guids(clusters, selected_post_guids) -> Guids:
         """Returns two lists: clustered and non clustered guids"""
-        Guids = namedtuple(
-            'Guids',
-            'clustered nonclustered')
         clustered_guids = list()
         np_selected_post_guids = np.asarray(selected_post_guids)
         mask_noisy = (clusters == -1)
@@ -546,7 +595,7 @@ class ClusterGen():
             clustered_guids.sort(key=len, reverse=True)
         return Guids(clustered_guids, none_clustered_guids)
 
-    def _get_update_clusters(self, item: str = None,
+    def _get_update_clusters(self, item: Optional[str] = None,
                              single_items_dict=None,
                              cluster_items_dict=None,
                              itemized: bool = None):
@@ -567,7 +616,7 @@ class ClusterGen():
             print("--> No cluster (all locations removed).")
             return
         # get clustered guids/ non-clustered guids
-        guids = self._get_cluster_guids(cluster.labels, cluster.guids)
+        guids = self._get_cluster_guids(cluster.clusters, cluster.guids)
         if itemized:
             single_items_dict[item] = guids.nonclustered
             if guids.clustered:
@@ -600,7 +649,7 @@ class ClusterGen():
         # get clusters for top item
         if self.local_saturation_check:
             self._get_update_clusters(
-                item=self.top_item)
+                item=self.top_item.name)  # TODO: test .name
         tnum = 0
         # get remaining clusters
         for item in self.top_list:
@@ -619,20 +668,17 @@ class ClusterGen():
         # flush console output once
         sys.stdout.flush()
 
-    def get_all_cluster_centroids(self) -> NamedTuple:
+    def get_all_cluster_centroids(self) -> ClusterShapes:
         """Get all centroids for clustered data
 
         Returns:
-            NamedTuple: Results as named tuple
+            PreparedStats: Results as named tuple
                         data: shapes and meta information
                         cls_type: ClusterGen [EMOJI, TAGS etc.)
                         itemized: bool
         """
 
         itemized = False
-        ClusterShapes = namedtuple(
-            'ClusterShapes',
-            'data cls_type itemized')
         cluster_guids = self.clustered_guids_all
         none_clustered_guids = self.none_clustered_guids
         resultshapes_and_meta = self.get_cluster_centroids(
@@ -674,8 +720,14 @@ class ClusterGen():
         return lng_proj, lat_proj
 
     def get_cluster_centroids(
-            self, clustered_guids, none_clustered_guids=None):
-        """Get centroids for clustered data"""
+            self, clustered_guids,
+            none_clustered_guids=None) -> List[Tuple[geometry.Point, int]]:
+        """Get centroids for clustered data
+
+        This method needs refactor, since it produces as sparse version of
+        AlphaShapesAndMeta (only geometry and user_count) -> create specific
+        dataclass
+        """
         resultshapes_and_meta = list()
         for post_cluster in clustered_guids:
             posts = [self.cleaned_post_dict[x] for x in post_cluster]
@@ -708,15 +760,15 @@ class ClusterGen():
 
     def _get_item_clustershapes(
             self,
-            item: Tuple[str, int],
-            cluster_guids=None) -> Tuple[List[Tuple[Any]], float]:
+            item: ItemCounter,
+            cluster_guids=None) -> AlphaShapesArea:
         """Get Cluster Shapes from a list of coordinates
         for a given item"""
         if cluster_guids is None:
             cluster_guids = self.clustered_items_dict.get(
                 item.name, None)
         if not cluster_guids:
-            return None, 0
+            return AlphaShapesArea(None, 0)
         alphashapes_data = AlphaShapes.get_cluster_shape(
             item, cluster_guids, self.cleaned_post_dict,
             self.cluster_distance,
@@ -725,7 +777,7 @@ class ClusterGen():
 
     def _get_item_clusterarea(
             self,
-            item: Tuple[str, int]) -> float:
+            item: ItemCounter) -> float:
         """Wrapper: only get cluster shape area for item"""
         alphashape_data = self._get_item_clustershapes(item)
         return alphashape_data.item_area
@@ -750,7 +802,9 @@ class ClusterGen():
         else:
             return False
 
-    def _get_item_shapeslist(self, item, topitem_area, tnum):
+    def _get_item_shapeslist(
+            self, item, topitem_area,
+            tnum) -> Optional[List[List[AlphaShapesAndMeta]]]:
         """Get all item shapes for item clusters
 
         Note: A function ref to self._proj_coords is handed
@@ -759,8 +813,8 @@ class ClusterGen():
         """
         resultshapes_and_meta_tmp = list()
         result = self._get_item_clustershapes(item)
-        shapes_tmp = result[0]
-        item_area = result[1]
+        shapes_tmp = result.alphashape
+        item_area = result.item_area
         if (self.local_saturation_check
                 and item_area != 0
                 and tnum != 1):
@@ -769,7 +823,7 @@ class ClusterGen():
                 # next item
                 return None
         # append result
-        if shapes_tmp and shapes_tmp:
+        if shapes_tmp:
             resultshapes_and_meta_tmp.extend(
                 shapes_tmp)
         # get shapes for single items (non-clustered)
@@ -803,7 +857,7 @@ class ClusterGen():
         shapes_and_meta = list()
         tnum = 0
         topitem_area = None
-        if self.local_saturation_check:
+        if self.local_saturation_check and self.top_item:
             # calculate total area of Top1-Tag
             # for 80% saturation check for lower level tags
             topitem_area = self._get_item_clusterarea(
@@ -911,7 +965,8 @@ class ClusterGen():
         return result
 
     @CGDec.input_topic_format
-    def get_cluster_centroid_preview(self, item, single_clusters=None):
+    def get_cluster_centroid_preview(
+            self, item, single_clusters=None) -> plt.figure:
         """Returns plt map for item selection cluster centroids"""
         if single_clusters is None:
             single_clusters = True
@@ -922,7 +977,7 @@ class ClusterGen():
         return fig
 
     @CGDec.input_topic_format
-    def get_cluster_preview(self, item):
+    def get_cluster_preview(self, item) -> plt.figure:
         """Returns plt map for item cluster preview"""
         points = self.get_np_points(
             item=item,
@@ -930,21 +985,23 @@ class ClusterGen():
         self._cluster_points(
             points=points,
             preview_mode=True)
-        (_, _, points, sel_colors,
-         mask_noisy, number_of_clusters) = self.cluster_item(
-             item=item,
-             preview_mode=True)
+
+        clusters = self.cluster_item(
+            item=item,
+            preview_mode=True)
+        if clusters is None:
+            return
         fig = TPLT.get_cluster_preview(
-            points=points, sel_colors=sel_colors, item_text=item,
-            bounds=self.bounds, mask_noisy=mask_noisy,
+            points=clusters.points, sel_colors=clusters.colors, item_text=item,
+            bounds=self.bounds, mask_noisy=clusters.mask_noisy,
             cluster_distance=self.cluster_distance,
-            number_of_clusters=number_of_clusters,
+            number_of_clusters=clusters.cluster_count,
             auto_select_clusters=self.autoselect_clusters,
             cls_type=self.cls_type)
         return fig
 
     @CGDec.input_topic_format
-    def get_clustershapes_preview(self, item):
+    def get_clustershapes_preview(self, item) -> plt.figure:
         """Returns plt map for item cluster preview"""
         # selected post guids: all posts for item
         # points: numpy-points for plotting
@@ -952,26 +1009,21 @@ class ClusterGen():
         result = self.cluster_item(
             item=item,
             preview_mode=True)
-        if not result:
+        if result is None:
             return print("No items found.")
-        clusters = result[0]
-        selected_post_guids = result[1]
-        points = result[2]
-        sel_colors = result[3]
-        mask_noisy = result[4]
-        number_of_clusters = result[5]
         # cluster_guids: those guids that are clustered
-        cluster_guids, _ = self._get_cluster_guids(
-            clusters, selected_post_guids)
-        shapes, _ = self._get_item_clustershapes(item, cluster_guids)
+        cluster_guids = self._get_cluster_guids(
+            result.clusters, result.guids)
+        shapes_and_area = self._get_item_clustershapes(
+            item, cluster_guids.clustered)
         # get only shapely shapes, not usercount and other info
-        shapes = [meta[0] for meta in shapes]
+        shapes = [meta[0] for meta in shapes_and_area.alphashape]
         shapes_wgs = self._project_centroids_back(shapes)
         fig = TPLT.get_cluster_preview(
-            points=points, sel_colors=sel_colors, item_text=item,
-            bounds=self.bounds, mask_noisy=mask_noisy,
+            points=result.points, sel_colors=result.colors, item_text=item,
+            bounds=self.bounds, mask_noisy=result.mask_noisy,
             cluster_distance=self.cluster_distance,
-            number_of_clusters=number_of_clusters,
+            number_of_clusters=result.cluster_count,
             auto_select_clusters=self.autoselect_clusters,
             shapes=shapes_wgs, cls_type=self.cls_type)
         return fig
@@ -996,12 +1048,12 @@ class ClusterGen():
         """Returns figure for single linkage tree from HDBSCAN clustering"""
         if self.cls_type == TOPICS:
             item = Utils.concat_topic(item)
-        (_, _, _, _, _, number_of_clusters) = self.cluster_item(
+        cluster_results = self.cluster_item(
             item=item,
             preview_mode=True)
         axis = self.clusterer.single_linkage_tree_.plot(
             truncate_mode='lastp',
-            p=max(50, min(number_of_clusters*10, 256)))
+            p=max(50, min(cluster_results.cluster_count*10, 256)))
         fig = TPLT.get_single_linkage_tree_preview(
             item, axis.figure, self.cluster_distance,
             self.cls_type)

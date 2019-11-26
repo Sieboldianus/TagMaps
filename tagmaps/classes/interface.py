@@ -14,14 +14,15 @@ import tkinter as tk
 import tkinter.messagebox
 from tkinter import TclError
 from tkinter.messagebox import showerror
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Iterable
 
 import matplotlib.pyplot as plt
 import numpy as np
 
 from tagmaps.classes.cluster import ClusterGen
 from tagmaps.classes.plotting import TPLT
-from tagmaps.classes.shared_structure import CleanedPost, LOCATIONS
+from tagmaps.classes.shared_structure import (
+    LOCATIONS, ItemCounter)
 from tagmaps.classes.utils import Utils
 
 # enable interactive mode for pyplot
@@ -40,7 +41,7 @@ class UserInterface():
     """User interface class for interacting input"""
 
     def __init__(self,
-                 clusterer_list: List[ClusterGen] = None,
+                 clusterer_list: Iterable[ClusterGen] = None,
                  location_names_dict: Dict[str, str] = None
                  ):
         """Prepare user interface and start Tkinter mainloop()
@@ -197,8 +198,8 @@ class UserInterface():
         - only for first 1000 entries: top_list[:1000]
         """
         listbox = self.listbox
-        top_list: List[Tuple[str, int]] = self._clst.top_list
-        loc_name_dict: Dict[str, str] = self.location_names_dict
+        top_list: List[ItemCounter] = self._clst.top_list
+        loc_name_dict: Optional[Dict[str, str]] = self.location_names_dict
         # clear first
         listbox.delete(0, tk.END)
         # tkinter.messagebox.showinfo(f"length of list:", f"{len(top_list)}")
@@ -424,7 +425,7 @@ class UserInterface():
             # generate preview map
             # only if selection box is checked
             # and only if one item is checked
-            sel_item = self._clst.top_list[sel_index][0]
+            sel_item = self._clst.top_list[sel_index].name
             self._intf_selection_preview(
                 sel_item)
             self.current_display_item = sel_item
@@ -437,7 +438,7 @@ class UserInterface():
             self._cluster_preview(self.current_display_item)
         else:
             # use first in list
-            self._cluster_preview(self._clst.top_list[0][0])
+            self._cluster_preview(self._clst.top_list[0].name)
 
     def _scaletest_current_display_item(self):
         """Compute clustering across different scales and output results to txt"""
@@ -449,12 +450,14 @@ class UserInterface():
         if self.current_display_item:
             sel_item = self.current_display_item
         else:
-            sel_item = self._clst.top_list[0][0]
+            sel_item = self._clst.top_list[0].name
         scalecalclist = []
         dmax = int(self._clst.cluster_distance*10)
         dmin = int(self._clst.cluster_distance/10)
         dstep = int(((self._clst.cluster_distance*10) -
                      (self._clst.cluster_distance/10))/100)
+        mask_noisy = None
+        number_of_clusters = 0
         for i in range(dmin, dmax, dstep):
             self._change_cluster_dist(i)
             self.tk_scalebar.set(i)
@@ -484,6 +487,8 @@ class UserInterface():
         if self._clst.autoselect_clusters is False:
             dist_text = f'@ {self._clst.cluster_distance}m'
         plt.title(f'Cluster Preview {dist_text}', fontsize=12, loc='center')
+        if mask_noisy is None:
+            return
         noisy_txt = f'{mask_noisy.sum()}/{len(mask_noisy)}'
         plt.text(self._clst.bounds.lim_lng_max, self._clst.bounds.lim_lat_max,
                  f'{number_of_clusters} Cluster (Noise: {noisy_txt})',
@@ -500,7 +505,7 @@ class UserInterface():
         id_list_selected = list()
         for index in selection[::-1]:
             listbox.delete(index)
-            id_list_selected.append(self._clst.top_list[index][0])
+            id_list_selected.append(self._clst.top_list[index].name)
             del self._clst.top_list[index]
         # remove all cleaned posts from processing list if
         # location is removed
@@ -508,7 +513,7 @@ class UserInterface():
             self._delete_post_locations(id_list_selected)
 
     def _delete_post_locations(self,
-                               post_locids: List[str]) -> List[CleanedPost]:
+                               post_locids: List[str]):
         """Remove all posts with post_locid from list
 
         Returns a list of values for fast lookup

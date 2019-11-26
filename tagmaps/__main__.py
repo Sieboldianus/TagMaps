@@ -13,6 +13,8 @@ imported using from tagmaps import TagMaps as TM
 """
 
 from __future__ import absolute_import
+# delay evaluation of annotations at runtime (PEP 563)
+from __future__ import annotations
 
 __author__ = "Alexander Dunkel"
 __license__ = "GNU GPLv3"

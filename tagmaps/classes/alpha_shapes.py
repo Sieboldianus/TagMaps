@@ -5,30 +5,54 @@ Module for tag maps alpha shapes generation
 """
 
 from __future__ import absolute_import
+# delay evaluation of annotations at runtime (PEP 563)
+from __future__ import annotations
 
 import math
-from collections import namedtuple
 
 import numpy as np
-
+from typing import List, Optional
 from scipy.spatial import Delaunay  # pylint: disable=E0611
 import shapely.geometry as geometry
 from shapely.ops import cascaded_union, polygonize
-
+from dataclasses import dataclass
 from tagmaps.classes.compile_output import Compile
+from .shared_structure import ItemCounter
 
-# results will be compiled as namedtuple
-AlphaShapesAndMeta = namedtuple(
-    'AlphaShapesAndMeta',
-    'shape post_count views user_count item_name item_totalcount '
-    'weightsv1 weightsv2 weightsv3 shapetype')
+
+@dataclass
+class AlphaShapesAndMeta():
+    """Stores cluster geometry and calculated summary statistics"""
+    shape: geometry.Polygon
+    post_count: int
+    views: int
+    user_count: int
+    item_name: str
+    item_totalcount: int
+    weightsv1: float
+    weightsv2: float
+    weightsv3: float
+    shapetype: str
+
+    def __getitem__(self, key):
+        """Implements subscription by name"""
+        return getattr(self, key)
+
+
+@dataclass
+class AlphaShapesArea:
+    """Collection of of Alpha Shapes (list of geometries and meta)
+    and total area
+    """
+    alphashape: Optional[List[AlphaShapesAndMeta]]
+    item_area: float
 
 
 class AlphaShapes():
     """Converts (cluster) point clouds to shapes"""
     @staticmethod
     def get_single_cluster_shape(
-            item, single_post,
+            item: ItemCounter, single_post,
             cluster_distance: float, proj_coords):
         """Get Shapes for items with no clusters
         Will return a buffer based on cluster distance
@@ -52,14 +76,14 @@ class AlphaShapes():
         # append statistics for item with no cluster
         single_cluster_result = AlphaShapesAndMeta(
             result_polygon, 1, max(single_post.post_views_count,
-                                   single_post.post_like_count), 1, str(item[0]),
-            item[1], 1, 1, 1, shapetype
+                                   single_post.post_like_count), 1, item.name,
+            item.ucount, 1, 1, 1, shapetype
         )
         return single_cluster_result
 
     @staticmethod
     def get_cluster_shape(
-            item, clustered_post_guids,
+            item: ItemCounter, clustered_post_guids,
             cleaned_post_dict,
             cluster_distance: float,
             local_saturation_check,
@@ -106,7 +130,7 @@ class AlphaShapes():
                     item_area += result_polygon.area
                 alphashapedata = AlphaShapesAndMeta(
                     result_polygon, post_count, sum_views,
-                    unique_user_count, item[0], item[1],
+                    unique_user_count, item.name, item.ucount,
                     weightsv1, weightsv2, weightsv3,
                     shapetype)
                 alphashapes_and_meta_tmp.append(alphashapedata)
@@ -114,9 +138,7 @@ class AlphaShapes():
             # finally sort and append all
             # cluster shapes for this tag
             alphashapes_and_meta_tmp = sorted(
-                alphashapes_and_meta_tmp, key=lambda x: -x[6])
-        AlphaShapesArea = namedtuple(
-            'AlphaShapesArea', 'alphashape item_area')
+                alphashapes_and_meta_tmp, key=lambda x: -x.weightsv1)
         return AlphaShapesArea(alphashapes_and_meta_tmp, item_area)
 
     @staticmethod
@@ -285,6 +307,7 @@ class AlphaShapes():
             list(points))
         poly_shape = None
         pointcount = len(points)
+        shapetype: str = ""
         if pointcount >= 5:
             if pointcount < 10:
                 poly_shape, shapetype = AlphaShapes._get_poly_five_to_ten(

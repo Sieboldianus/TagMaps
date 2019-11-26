@@ -5,7 +5,7 @@ test:
       - conda init bash
       - source ~/.bashrc
       # activate default ci_env from registry image
-      # contains pylint, anybadge
+      # contains anybadge
       - conda activate ci_env
       - conda env create -f environment.yml
       # activate tagmaps env
@@ -29,8 +29,7 @@ test:
     - argdown parse_args.py > docs/argparse/args.md
     # to enable all warnings during ci doc generation
     # - export PYTHONWARNINGS='error::UserWarning'
-    # To enable annotaions: --config show_type_annotations=True
-    - pdoc --template-dir docs/apidoc/ --html --output-dir docs/api/ tagmaps
+    - pdoc --config show_type_annotations=True --template-dir docs/apidoc/ --html --output-dir docs/api/ tagmaps
     # create badges
     - pylint --output-format=text tagmaps | tee pylint.txt || pylint-exit $?
     - score=$(sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p' pylint.txt)

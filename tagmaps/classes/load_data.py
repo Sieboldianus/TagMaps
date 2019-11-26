@@ -12,10 +12,11 @@ from __future__ import absolute_import
 
 import csv
 import json
-import sys
 import logging
+import sys
 from decimal import Decimal
-from typing import Dict, Set, TextIO, Tuple, Iterable
+from typing import (IO, Any, Dict, Iterable, Iterator, Optional, OrderedDict,
+                    Set, Tuple)
 
 from shapely.geometry import Point
 
@@ -78,7 +79,7 @@ class LoadData():
         """Contextmanager exit: nothing to do here"""
         return False
 
-    def _parse_input_files(self, count: bool = None):
+    def _parse_input_files(self, count: bool = None) -> Iterator[IO[str]]:
         """Loops input input filelist and
         returns opened file handles
         """
@@ -103,11 +104,13 @@ class LoadData():
                 return True
             return False
 
-    def _process_inputfile(self, file_handles):
+    def _process_inputfile(
+            self, file_handles: Iterator[IO[str]]) -> Iterator[Any]:
         """File parse for CSV or JSON from open file handle
 
         Output: produces a list of post that can be parsed
         """
+        post_reader = []
         for file_handle in file_handles:
             if self.cfg.source_map.file_extension == "csv":
                 post_reader = csv.DictReader(
@@ -121,7 +124,8 @@ class LoadData():
                     file_handle.read())
             yield post_reader
 
-    def _parse_postlist(self, post_readers: Iterable[TextIO]):
+    def _parse_postlist(
+            self, post_readers: Iterable[OrderedDict[str, Optional[str]]]):
         """Process posts according to specifications
 
         Returns generator for single record
@@ -166,30 +170,34 @@ class LoadData():
             f'{self.stats.count_tags_global}')
         return msg
 
-    def _parse_post(self, post: Dict[str, str]) -> PostStructure:
+    def _parse_post(self, post: Dict[str, str]) -> Optional[PostStructure]:
         """Process single post and attach to common structure"""
         # skip duplicates and erroneous entries
         post_guid = post.get(self.cfg.source_map.post_guid_col)
         if post_guid in self.guid_hash:
             self.stats.skipped_count += 1
             return None
+        if post_guid is None:
+            raise ValueError(f"Post guid is None: {post}")
         self.guid_hash.add(post_guid)
         origin_id = post.get(self.cfg.source_map.originid_col)
+        if origin_id is None:
+            origin_id = 0
         if (self.filter_origin and
                 not origin_id == self.filter_origin):
             # optional exclude origin
             self.stats.skipped_count += 1
             return None
-        # Continue Parse Post
-        lbsn_post = PostStructure()
-        lbsn_post.guid = post_guid  # guid
-        lbsn_post.origin_id = origin_id
         user_guid = post.get(self.cfg.source_map.user_guid_col)
+        if user_guid is None:
+            raise ValueError(f"User guid is None: {post}")
         if not self.cfg.ignore_stoplists and \
                 self.cfg.sort_out_user_set is not None \
                 and user_guid in self.cfg.sort_out_user_set:
             return None
-        lbsn_post.user_guid = user_guid
+        # Continue Parse Post
+        lbsn_post = PostStructure(
+            origin_id=int(origin_id), guid=post_guid, user_guid=user_guid)
         lbsn_post.post_url = post.get(self.cfg.source_map.post_url_col)
         lbsn_post.post_publish_date = \
             post.get(self.cfg.source_map.post_publish_date_col)
@@ -292,7 +300,7 @@ class LoadData():
         return filelist
 
     @staticmethod
-    def _get_count_frompost(count_string: str) -> int:
+    def _get_count_frompost(count_string: Optional[str]) -> int:
         """Parse post like count field"""
         if count_string and not count_string == "":
             try:
@@ -310,7 +318,7 @@ class LoadData():
                     f'Returning 0.')
         return 0
 
-    def _get_emoji(self, post_body: str) -> Set[str]:
+    def _get_emoji(self, post_body: Optional[str]) -> Set[str]:
         """extract emoji, use selection list if available"""
         emoji_filtered = Utils.select_emoji(
             Utils.extract_emoji(post_body), self.cfg.select_emoji_set)
@@ -318,7 +326,7 @@ class LoadData():
             self.stats.count_emojis_global += len(emoji_filtered)
         return emoji_filtered
 
-    def _get_tags(self, tags_string: str) -> Set[str]:
+    def _get_tags(self, tags_string: Optional[str]) -> Set[str]:
         """extract tags, apply filter lists if available"""
         # base str conversion to set
         tags = set(filter(None, tags_string.lower().split(";")))
@@ -340,7 +348,7 @@ class LoadData():
         return tags
 
     def _correct_placelatlng(
-            self, place_guid_string: str, lat, lng) -> Tuple[Decimal, Decimal]:
+            self, place_guid_string: Optional[str], lat, lng) -> Tuple[Decimal, Decimal]:
         """If place corrections available, update lat/lng coordinates
         Needs test: not place_guid_string
         """
@@ -367,8 +375,8 @@ class LoadData():
         if post.loc_id not in self.shape_included_locid_hash:
             lng_lat_point = Point(post.longitude, post.latitude)
             if Utils.check_intersect_polylist(
-                    lng_lat_point, self.cfg.shp_geom,
-                    self.cfg.shp_exclude_geom) is False:
+                    lng_lat_point, self.cfg.shapefile_intersect,
+                    self.cfg.shapefile_exclude) is False:
                 self.stats.skipped_count += 1
                 self.shape_exclude_locid_hash.add(post.loc_id)
                 return True

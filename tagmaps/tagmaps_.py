@@ -3,23 +3,26 @@ TagMaps: Tag, Emoji and Location clustering
          from spatially referenced and tagged records
 """
 
-from __future__ import absolute_import
+# delay evaluation of annotations at runtime (PEP 563)
+from __future__ import absolute_import, annotations
 
 import logging
-from typing import Dict
 from functools import wraps
 from pathlib import Path
+from typing import Dict, Optional
 
 from .classes.cluster import ClusterGen
 from .classes.compile_output import Compile
 from .classes.interface import UserInterface
 from .classes.prepare_data import PrepareData
 from .classes.shared_structure import (EMOJI, LOCATIONS, TAGS, TOPICS,
-                                       ClusterType, PostStructure)
+                                       PostStructure)
 from .classes.utils import Utils
 
 __author__ = "Alexander Dunkel"
 __license__ = "GNU GPLv3"
+
+# pylint: disable=logging-format-interpolation
 
 
 class TagMaps():
@@ -155,6 +158,10 @@ class TagMaps():
             logging_level=None, topic_cluster: bool = None,
             cluster_cut_distance: float = None):
         """Init settings for Tag Maps Clustering"""
+        if output_folder is None:
+            output_folder = Path.cwd() / "02_Output"
+        # create output dir if not exists
+        Utils.init_dir(output_folder)
         self.output_folder = output_folder
         self.remove_long_tail = remove_long_tail
         self.limit_bottom_user_count = limit_bottom_user_count
@@ -175,8 +182,6 @@ class TagMaps():
             self.cluster_types.append(LOCATIONS)
         if topic_cluster:
             self.cluster_types.append(TOPICS)
-        # create output dir if not exists
-        Utils.init_output_dir(self.output_folder)
         # init logger (logging to console and file log.txt)
         if logging_level is None:
             logging_level = logging.INFO
@@ -186,12 +191,14 @@ class TagMaps():
         else:
             self.log = tm_logger
         # data structures for clustering
-        self.lbsn_data: PrepareData = None
+        self.lbsn_data: Optional[PrepareData] = None
         self.cleaned_post_dict = None
         self.cleaned_post_list = None
         self.cleaned_stats = None
-        self.clusterer: Dict[ClusterType, ClusterGen] = dict()
-        self.cluster_cut_distance = cluster_cut_distance
+        self.clusterer: Dict[str, ClusterGen] = dict()
+        self.cluster_cut_distance: Optional[float] = None
+        if cluster_cut_distance is not None:
+            self.cluster_cut_distance = cluster_cut_distance
         self.itemized_cluster_shapes = list()
         self.global_cluster_centroids = list()
 
@@ -326,8 +333,8 @@ class TagMaps():
 
     def set_cluster_distance(self, cluster_distance: float):
         """Set cluster distance for all clusters manually"""
-        for clusterer in self.clusterer:
-            clusterer.cluster_cut_distance = cluster_distance
+        for clusterer in self.clusterer.values():
+            clusterer.cluster_distance = cluster_distance
 
     def cluster_tags(self):
         """Calculate all tag clusters"""
@@ -342,7 +349,7 @@ class TagMaps():
         self._cluster(LOCATIONS, itemized=False)
 
     @TMDec.prepare_clustering_check
-    def _cluster(self, cluster_type: ClusterType,
+    def _cluster(self, cluster_type: str,
                  itemized=True):
         """Run clusterer based on type and output
 
@@ -413,25 +420,25 @@ class TagMaps():
         )
 
     @TMDec.prepare_clustering_check
-    def get_selection_map(self, cls_type: ClusterType, item):
+    def get_selection_map(self, cls_type: str, item):
         """Return plt.figure for item selection."""
         fig = self.clusterer[cls_type].get_sel_preview(item)
         return fig
 
     @TMDec.prepare_clustering_check
-    def get_cluster_map(self, cls_type: ClusterType, item):
+    def get_cluster_map(self, cls_type: str, item):
         """Return plt.figure for item clusters."""
         fig = self.clusterer[cls_type].get_cluster_preview(item)
         return fig
 
     @TMDec.prepare_clustering_check
-    def get_cluster_shapes_map(self, cls_type: ClusterType, item):
+    def get_cluster_shapes_map(self, cls_type: str, item):
         """Return plt.figure for item cluster shapes."""
         fig = self.clusterer[cls_type].get_clustershapes_preview(item)
         return fig
 
     @TMDec.prepare_clustering_check
-    def get_singlelinkagetree_preview(self, cls_type: ClusterType, item):
+    def get_singlelinkagetree_preview(self, cls_type: str, item):
         """Return plt.figure for item cluster shapes."""
         fig = self.clusterer[cls_type].get_singlelinkagetree_preview(item)
         return fig

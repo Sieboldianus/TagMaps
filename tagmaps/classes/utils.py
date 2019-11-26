@@ -3,10 +3,10 @@
 """Module with general utility methods used in tag maps package.
 """
 
-from __future__ import absolute_import
+# delay evaluation of annotations at runtime (PEP 563)
+from __future__ import absolute_import, annotations
 
 import argparse
-import contextlib
 import hashlib
 import io
 import logging
@@ -21,7 +21,7 @@ from datetime import timedelta
 from importlib import reload
 from math import asin, cos, radians, sin, sqrt
 from pathlib import Path
-from typing import Dict, Iterable, List, Set, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Set, Tuple, Union
 
 import emoji
 import numpy as np
@@ -29,7 +29,7 @@ import pyproj
 import regex
 import shapely.geometry as geometry
 
-from tagmaps.classes.shared_structure import AnalysisBounds, CleanedPost
+from ..classes.shared_structure import AnalysisBounds, ConfigMap, ItemCounter
 
 
 class Utils():
@@ -39,10 +39,31 @@ class Utils():
     """
 
     @staticmethod
+    def check_folder_file(
+            folder_file: Path, create_folder: bool = None) -> Path:
+        """Check if folder exists, optionally create it"""
+        if not folder_file.exists():
+            pname = "File"
+            if folder_file.is_dir():
+                return folder_file
+            pname = "Folder"
+            if create_folder:
+                Utils.init_dir(folder_file)
+                return folder_file
+            raise ValueError(f"{pname} {folder_file} not found.")
+        return folder_file
+
+    @staticmethod
     def check_fileheader(
-            fieldnames: Iterable[str], source_map: 'ConfigMap', filename: str):
+            fieldnames: Iterable[str],
+            source_map: ConfigMap, filename: Optional[str]):
         """Checks against existing file columns
         warns if required keys are missing
+
+        Args:
+            source_map (ConfigMap): Custom headers definition
+            Note: the type hint above makes use of forward-references
+            defined in PEP 484, as a means to avoid cyclic imports
         """
         header_req = [
             source_map.post_guid_col,
@@ -147,18 +168,6 @@ class Utils():
         else:
             epsg_code = '327' + utm_band
         return epsg_code
-
-    @staticmethod
-    def default_empty_cstructure():
-        """Generates a tuple of parametric length with
-        empty strings:
-        (" "," "," "," "," "," "," "," "," "," "," "," ")
-        """
-        empty_string_list = list()
-        for _ in range(len(CleanedPost._fields)):
-            empty_string_list.append(" ")
-        empty_string_tuple = tuple(empty_string_list)
-        return empty_string_tuple
 
     @staticmethod
     def encode_string(text_s):
@@ -290,7 +299,7 @@ class Utils():
         logging.getLogger("fiona.collection").disabled = True
 
     @staticmethod
-    def set_logger(output_folder, logging_level=None):
+    def set_logger(output_folder: Path = None, logging_level=None):
         """ Set logging handler manually,
         so we can also print to console while logging to file
         """
@@ -310,28 +319,28 @@ class Utils():
             logging_level = logging.INFO
         if output_folder is not None:
             if not output_folder.exists():
-                Utils.init_output_dir(output_folder)
+                Utils.init_dir(output_folder)
             # input(f'{type(output_folder)}')
             __log_file = output_folder / 'log.txt'
-        log.format = '%(message)s'
-        log.datefmt = ''
+        log.format = '%(message)s'  # type: ignore
+        log.datefmt = ''  # type: ignore
         log.setLevel(logging_level)
         # Set Output to Replace in case of
         # encoding issues (console/windows)
         if isinstance(sys.stdout, io.TextIOWrapper):
             # only for console output (not Juypter Notebook stream)
             sys.stdout = io.TextIOWrapper(
-                sys.stdout.detach(), sys.stdout.encoding, 'replace')
+                sys.stdout.detach(), sys.stdout.encoding, 'replace')  # type: ignore
             log.addHandler(logging.StreamHandler())
             if output_folder is not None:
                 # only log to file in console mode
                 log.addHandler(
-                    logging.FileHandler(__log_file, 'w', 'utf-8'))
+                    logging.FileHandler(__log_file, 'w', 'utf-8'))  # type: ignore
         else:
             # log to stdout, not stderr in Jupyter Mode to prevent
             # log.Info messages appear as red boxes
             logging.basicConfig(
-                stream=sys.stdout, format=log.format,
+                stream=sys.stdout, format=log.format,  # type: ignore
                 level=logging_level, datefmt=None)
             # log.stream = sys.stdout
         # flush once to clear console
@@ -339,11 +348,11 @@ class Utils():
         return log
 
     @staticmethod
-    def init_output_dir(output_folder):
-        """Creates local output dir if not exists"""
-        if output_folder is not None and not output_folder.exists():
-            output_folder.mkdir()
-            print(f'Folder {output_folder.name}/ was created')
+    def init_dir(path_folder: Path):
+        """Creates local dir if not exists"""
+        if not path_folder.exists():
+            path_folder.mkdir()
+            print(f'Folder {path_folder.name}/ was created')
 
     @staticmethod
     def query_yes_no(question, default="yes"):
@@ -527,7 +536,7 @@ class Utils():
         return flags
 
     @staticmethod
-    def extract_emoji(string_with_emoji: str) -> Set[str]:
+    def extract_emoji(string_with_emoji: Optional[str]) -> Set[str]:
         """Extract emoji and flags using regex package
 
         This is a new version to extract emoji (see old method:
@@ -696,21 +705,21 @@ class Utils():
                 count_tags, count_skipped)
 
     @staticmethod
-    def get_index_of_tup(
-            l_tuple_str: List[Tuple[str, int]], index: int, value: str) -> int:
+    def get_index_of_item(
+            l_tuple_str: List[ItemCounter], value: Optional[str]) -> int:
         """Get index pos from list of tuples.
 
         Stops iterating through the list as
         soon as it finds the value
         """
         for pos, tuple_str in enumerate(l_tuple_str):
-            if tuple_str[index] == value:
+            if tuple_str.name == value:
                 return pos
         # Matches behavior of list.index
-        raise ValueError("list.index(x): x not in list")
+        raise ValueError(f"{value}: x not in list")
 
     @staticmethod
-    def get_locname(item: str, loc_name_dict: Dict[str, str]):
+    def get_locname(item: str, loc_name_dict: Optional[Dict[str, str]]):
         """Gets location name from ID, if available"""
         if loc_name_dict:
             item_name = loc_name_dict.get(item, item)
