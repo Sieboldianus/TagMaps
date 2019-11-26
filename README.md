@@ -125,10 +125,11 @@ GNU GPLv3
 
 2019-11-26: **TagMaps v0.20.2**
 
-- mainly improvements of type annotations and code legebility
+- mainly improvements of type annotations and code legibility
 - include type hints in [api-docs](https://ad.vgiscience.org/tagmaps/docs/api/tagmaps_.html)
 - migration from namedtuples to (awesome) new dataclass from Python 3.7
 (this is now the minimum requirement from v0.20.2 onwards)
+- fix various small bugs
 
 2019-05-08: [**TagMaps v0.17.6**](https://cloudstore.zih.tu-dresden.de/index.php/s/ahl8mKQVcXOGo8d/download)
 
