@@ -172,7 +172,7 @@ class ClusterGen():
         # data always in lat/lng WGS1984
         Utils.set_proj_dir()
         # define input and UTM projections
-        self.crs_wgs = Proj(init='epsg:4326', preserve_units=False)
+        self.crs_wgs = Proj('epsg:4326', preserve_units=False)
         self.crs_proj, __ = Utils.get_best_utmzone(
             self.bound_points_shapely)
         # define projection function ahead, if available

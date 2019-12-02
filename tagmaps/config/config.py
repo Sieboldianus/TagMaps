@@ -536,7 +536,7 @@ class BaseConfig:
 
         Note: not fully implemented
         """
-        self.crs_proj = pyproj.Proj(init="epsg:{0}".format(override_crs))
+        self.crs_proj = pyproj.Proj("epsg:{0}".format(override_crs))
         print("Custom CRS set: " + str(self.crs_proj.srs))
         self.epsg_code = override_crs
 

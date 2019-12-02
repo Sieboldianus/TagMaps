@@ -139,7 +139,7 @@ class Utils():
         input_lat_center = bound_points_shapely.centroid.coords[0][1]
         epsg_code = Utils._convert_wgs_to_utm(
             input_lon_center, input_lat_center)
-        crs_proj = pyproj.Proj(init=f'epsg:{epsg_code}', preserve_units=False)
+        crs_proj = pyproj.Proj(f'epsg:{epsg_code}', preserve_units=False)
         return crs_proj, epsg_code
 
     @staticmethod
