@@ -123,7 +123,7 @@ GNU GPLv3
 
 ## Changelog & Download
 
-2019-11-26: **TagMaps v0.20.2**
+2019-11-26: [**TagMaps v0.20.2**](https://cloudstore.zih.tu-dresden.de/index.php/s/89qpdXtd9rTTXL9/download)
 
 - mainly improvements of type annotations and code legibility
 - include type hints in [api-docs](https://ad.vgiscience.org/tagmaps/docs/api/tagmaps_.html)
