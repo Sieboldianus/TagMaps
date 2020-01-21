@@ -13,7 +13,7 @@ test:
       - conda activate tagmaps --stack
       # install additional packages
       # needed in tagmaps ci job
-      - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.vgiscience.de:tud_ifk/argdown.git
+      - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.vgiscience.de/tud_ifk/argdown.git
       - conda install pylint bitarray
       - pip install pdoc3 pylint-exit
   stage: test
