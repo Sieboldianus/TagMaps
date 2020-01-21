@@ -7,21 +7,31 @@ self executable folder on Windows for Windows
 users who cannot use package manager. The resulting
 tagmaps.exe can be directly run.
 
-Has been tested with conda environment.
+Has been tested with conda environment (Windows 10)
+
+Prerequisites:
+    - install cx_freeze
+    - install matplotlib (instead of matplotlib-base) from conda-forge
+    - install [OSGeosW64][1], add C:/OSGeo4W64/bin (e.g.) to PATH
+    - set variable [EPSG_SHARE][2] to where GDAL gcs.csv is stored
+    - install [mkl-service][3]
 
 Run build with:
     python cx_setup.py build
 
-Extra Requirements for build:
-    - install OSGeosW64, add C:/OSGeo4W64/bin to PATH
-    - install mkl-service
+[1]: https://trac.osgeo.org/osgeo4w/
+[2]: e.g. SET EPSG_SHARE=C:\OSGeo4W64\share\epsg_csv
+[3]: e.g. conda install mkl-service -c conda-forge
 """
 
 import glob
 import json
 import os.path
-import opcode
+import sys
 from pathlib import Path
+
+import opcode
+
 from cx_Freeze import Executable, setup
 
 # Derive Package Paths Dynamically
@@ -31,6 +41,14 @@ os.environ['TCL_LIBRARY'] = os.path.join(
     PYTHON_INSTALL_DIR, 'tcl', 'tcl8.6')
 os.environ['TK_LIBRARY'] = os.path.join(
     PYTHON_INSTALL_DIR, 'tcl', 'tk8.6')
+
+PYTHON_VERSION = f'{sys.version_info.major}.{sys.version_info.minor}'
+print(f"Running cx_freeze for Python {PYTHON_VERSION}")
+
+EPSG_SHARE = os.environ['EPSG_SHARE']
+if not EPSG_SHARE:
+    raise ValueError(
+        "Please set environment variable EPSG_SHARE to where GDAL gcs.csv is stored")
 
 # opcode is not a virtualenv module,
 # so we can use it to find the stdlib; this is the same
@@ -108,12 +126,14 @@ INCLUDE_FOLDERS_FILES = [
     (os.path.join(PYTHON_INSTALL_DIR, 'Library', 'share', 'proj'),
      os.path.join('proj')
      ),
-    os.path.join(os.environ['GDAL_DATA'], 'gcs.csv'),
+    # os.path.join(PYTHON_INSTALL_DIR, 'Library', 'plugins', 'platforms'),
+    os.path.join(os.environ['EPSG_SHARE'], 'gcs.csv'),
     'resources/01_Input/',
     'resources/00_Config/',
     'resources/00_generateClusters_OnlyEmoji.cmd',
     'resources/00_generateClusters_OnlyPhotoLocations.cmd',
     'resources/00_generateClusters_OnlyTags.cmd',
+    'README.md',
     ('tagmaps/matplotlibrc',
      "matplotlibrc")
 ] + NUMPY_DLLS_FULLPATH
@@ -134,7 +154,7 @@ EXECUTABLES = [
                targetName="tagmaps.exe")
 ]
 
-BUILD_NAME = f'tagmaps-{VERSION}-win-amd64-3.6'
+BUILD_NAME = f'tagmaps-{VERSION}-win-amd64-{PYTHON_VERSION}'
 
 setup(name="tagmaps",
       version=VERSION,
