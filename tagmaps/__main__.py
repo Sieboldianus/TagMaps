@@ -23,6 +23,7 @@ __license__ = "GNU GPLv3"
 import sys
 import time
 
+from multiprocessing import freeze_support
 from tagmaps.tagmaps_ import TagMaps
 from tagmaps.classes.load_data import LoadData
 from tagmaps.classes.utils import Utils
@@ -175,4 +176,5 @@ def main():
 
 
 if __name__ == "__main__":
+    freeze_support()
     main()

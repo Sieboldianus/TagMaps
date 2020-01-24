@@ -295,7 +295,7 @@ class Utils():
         # set console view parameters
         # stretch console
         if platform.system() == 'Windows':
-            os.system('mode con: cols=197 lines=40')
+            os.system('mode con: cols=197 lines=500')
         logging.getLogger("fiona.collection").disabled = True
 
     @staticmethod

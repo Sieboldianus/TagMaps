@@ -8,6 +8,7 @@ for (optional) user input
 
 from __future__ import absolute_import
 
+import threading
 import sys
 import traceback
 import tkinter as tk
@@ -46,6 +47,7 @@ class UserInterface():
                  ):
         """Prepare user interface and start Tkinter mainloop()
         """
+        # threading.Thread.__init__(self)
         self._clst_list = list()
         # append clusters to list
         if not clusterer_list:

@@ -11,7 +11,9 @@ import sys
 import warnings
 from collections import defaultdict, namedtuple
 from functools import partial, wraps
-from multiprocessing.pool import ThreadPool
+import threading
+import queue
+# from multiprocessing.pool import ThreadPool
 from typing import Any, Dict, List, Optional, Set, Tuple
 import matplotlib.pyplot as plt
 import numpy as np
@@ -41,7 +43,8 @@ try:
 except ImportError:
     import hdbscan
 
-POOL = ThreadPool(processes=1)
+my_queue = queue.Queue()
+# POOL = ThreadPool(processes=1)
 sns.set_context('poster')
 sns.set_style('white')
 
@@ -77,6 +80,12 @@ class ClusterResults:
 
     def __iter__(self):
         return iter(astuple(self))
+
+
+def storeInQueue(f):
+    def wrapper(*args):
+        my_queue.put(f(*args))
+    return wrapper
 
 
 @dataclass
@@ -471,25 +480,36 @@ class ClusterGen():
         if min_cluster_size is None:
             min_cluster_size = max(
                 2, int(((len(points))/100)*5))
-        self.clusterer = hdbscan.HDBSCAN(
+        clusterer = hdbscan.HDBSCAN(
             min_cluster_size=min_cluster_size,
             gen_min_span_tree=min_span_tree,
             allow_single_cluster=allow_single_cluster,
             min_samples=1)
         # Start clusterer on different thread
         # to prevent GUI from freezing
-        with warnings.catch_warnings():
-            # disable joblist multithread warning
-            # because there's only one thread
-            warnings.simplefilter('ignore', UserWarning)
-            async_result = POOL.apply_async(
-                ClusterGen._fit_cluster, (self.clusterer, tag_radians_data))
-            self.clusterer = async_result.get()
+        t = threading.Thread(
+            target=ClusterGen._fit_cluster,
+            args=(clusterer, tag_radians_data),
+            group=None,
+            name="tm-clustering",
+        )
+        t.start()
+        clusterer = my_queue.get()
+
+        # t = threading.Thread(target=get_name, args = ("foo", ))
+
+        # with warnings.catch_warnings():
+        #     # disable joblist multithread warning
+        #     # because there's only one thread
+        #     warnings.simplefilter('ignore', UserWarning)
+        #     async_result = POOL.apply_async(
+        #         ClusterGen._fit_cluster, (self.clusterer, tag_radians_data))
+        #     self.clusterer = async_result.get()
 
         if self.autoselect_clusters:
-            cluster_labels = self.clusterer.labels_
+            cluster_labels = clusterer.labels_
         else:
-            cluster_labels = self.clusterer.single_linkage_tree_.get_clusters(
+            cluster_labels = clusterer.single_linkage_tree_.get_clusters(
                 Utils.get_radians_from_meters(
                     self.cluster_distance), min_cluster_size=2)
         # exit function in case of
@@ -864,6 +884,7 @@ class ClusterGen():
         return shapes_and_meta, self.cls_type, itemized
 
     @staticmethod
+    @storeInQueue
     def _fit_cluster(clusterer, data):
         """Perform HDBSCAN clustering from features or distance matrix.
 
@@ -1021,14 +1042,14 @@ class ClusterGen():
         geom_shape_proj = transform(project.transform, geom_shape)
         return geom_shape_proj
 
-    def get_singlelinkagetree_preview(self, item):
+    def get_singlelinkagetree_preview(self, item, clusterer):
         """Returns figure for single linkage tree from HDBSCAN clustering"""
         if self.cls_type == TOPICS:
             item = Utils.concat_topic(item)
         cluster_results = self.cluster_item(
             item=item,
             preview_mode=True)
-        axis = self.clusterer.single_linkage_tree_.plot(
+        axis = clusterer.single_linkage_tree_.plot(
             truncate_mode='lastp',
             p=max(50, min(cluster_results.cluster_count*10, 256)))
         fig = TPLT.get_single_linkage_tree_preview(
