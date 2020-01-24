@@ -45,10 +45,12 @@ os.environ['TK_LIBRARY'] = os.path.join(
 PYTHON_VERSION = f'{sys.version_info.major}.{sys.version_info.minor}'
 print(f"Running cx_freeze for Python {PYTHON_VERSION}")
 
-EPSG_SHARE = os.environ['EPSG_SHARE']
-if not EPSG_SHARE:
+try:
+    EPSG_SHARE = os.environ['EPSG_SHARE']
+except KeyError:
     raise ValueError(
-        "Please set environment variable EPSG_SHARE to where GDAL gcs.csv is stored")
+        "Please set environment variable EPSG_SHARE to "
+        "where GDAL gcs.csv is stored.")
 
 # opcode is not a virtualenv module,
 # so we can use it to find the stdlib; this is the same
