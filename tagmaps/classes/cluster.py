@@ -20,7 +20,7 @@ import pyproj
 from dataclasses import dataclass, astuple
 import seaborn as sns
 import shapely.geometry as geometry
-from pyproj import Proj  # pylint: disable=C0412
+from pyproj import Proj, CRS, Transformer  # pylint: disable=C0412
 from shapely.ops import transform  # pylint: disable=C0412
 
 from tagmaps.classes.alpha_shapes import (
@@ -31,13 +31,6 @@ from tagmaps.classes.shared_structure import (EMOJI, LOCATIONS, TAGS, TOPICS,
                                               AnalysisBounds, CleanedPost,
                                               ItemCounter, POST_FIELDS)
 from tagmaps.classes.utils import Utils
-
-# transformer only available from pyproj>=2.0.0
-# load if available to improve projection speed
-try:
-    from pyproj import Transformer  # pylint: disable=C0412
-except ImportError:
-    pass
 
 try:
     # filter DeprecationWarning
@@ -169,30 +162,22 @@ class ClusterGen():
         self._update_bounds()
         self.bound_points_shapely = Utils.get_shapely_bounds(
             self.bounds)
-        # data always in lat/lng WGS1984
+        # verify that PROJ_LIB exists
         Utils.set_proj_dir()
+        # input data always in lat/lng WGS1984
         # define input and UTM projections
-        self.crs_wgs = Proj('epsg:4326', preserve_units=False)
+        self.crs_wgs = "epsg:4326"
         self.crs_proj, __ = Utils.get_best_utmzone(
             self.bound_points_shapely)
-        # define projection function ahead, if available
-        if 'pyproj.transformer' in sys.modules:
-            self.proj_transformer = Transformer.from_proj(
-                self.crs_wgs, self.crs_proj)
-            self.proj_transformer_back = Transformer.from_proj(
-                self.crs_proj, self.crs_wgs)
-        else:
-            self.proj_transformer = None
-            self.proj_transformer_back = None
-        # partial used for geometry projection
-        self.proj_transformer_partial = partial(
-            pyproj.transform,
-            self.crs_wgs,
-            self.crs_proj)
-        self.proj_transformer_partial_back = partial(
-            pyproj.transform,
-            self.crs_proj,
-            self.crs_wgs)
+        # define projection function ahead
+        # for reasons of speed
+        # always_xy ensures traditional order of
+        # coordinates (lng, lat), see also:
+        # https://gis.stackexchange.com/a/326919/33092
+        self.proj_transformer = Transformer.from_crs(
+            self.crs_wgs, self.crs_proj, always_xy=True)
+        self.proj_transformer_back = Transformer.from_crs(
+            self.crs_proj, self.crs_wgs, always_xy=True)
 
     @classmethod
     def new_clusterer(cls,
@@ -703,20 +688,12 @@ class ClusterGen():
     def _proj_coords(self, lng: float, lat: float):
         """Project coordinates based on available packages
 
-        If pyproj > 2.0.0, pyproj.transformer is available,
+        pyproj.transformer needs pyproj > 2.0.0,
         which provides a more convenient and faster way to
         project many coordinates.
-
-        However, pyproj <2.0.0 does not support pyproj.transformer,
-        in this case (self.proj_transformer is None) use pyproj.transform
-        directly.
         """
-        if self.proj_transformer:
-            lng_proj, lat_proj = self.proj_transformer.transform(
-                lng, lat)
-        else:
-            lng_proj, lat_proj = pyproj.transform(self.crs_wgs, self.crs_proj,
-                                                  lng, lat)
+        lng_proj, lat_proj = self.proj_transformer.transform(
+            lng, lat)
         return lng_proj, lat_proj
 
     def get_cluster_centroids(
@@ -1033,7 +1010,7 @@ class ClusterGen():
 
         simple list comprehension with projection:
         """
-        project = self.proj_transformer_partial_back
+        project = self.proj_transformer_back
         shapes_wgs = [(ClusterGen._project_geometry(
             shape, project)) for shape in shapes]
         return shapes_wgs
@@ -1041,7 +1018,7 @@ class ClusterGen():
     @staticmethod
     def _project_geometry(geom_shape, project):
         # geom_shape_proj = project.transform(geom_shape)
-        geom_shape_proj = transform(project, geom_shape)
+        geom_shape_proj = transform(project.transform, geom_shape)
         return geom_shape_proj
 
     def get_singlelinkagetree_preview(self, item):

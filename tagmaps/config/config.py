@@ -536,8 +536,8 @@ class BaseConfig:
 
         Note: not fully implemented
         """
-        self.crs_proj = pyproj.Proj("epsg:{0}".format(override_crs))
-        print("Custom CRS set: " + str(self.crs_proj.srs))
+        self.crs_proj = f"epsg:{override_crs}"
+        print(f"Custom CRS set: {self.crs_proj}")
         self.epsg_code = override_crs
 
     def load_sourcemapping(self):

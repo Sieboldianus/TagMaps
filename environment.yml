@@ -8,7 +8,7 @@ dependencies:
   - fiona
   - shapely
   - pandas>=0.24.2
-  - pyproj>=1.9.6
+  - pyproj>=2.0.0
   - numpy
   - matplotlib-base
   - emoji>=0.5.1
