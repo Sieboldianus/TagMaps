@@ -171,8 +171,9 @@ class ClusterGen():
         self._update_bounds()
         self.bound_points_shapely = Utils.get_shapely_bounds(
             self.bounds)
-        # verify that PROJ_LIB exists
-        Utils.set_proj_dir()
+        # verify that PROJ_LIB exists,
+        # only necessary for pyproj < 2.0.0
+        # Utils.set_proj_dir()
         # input data always in lat/lng WGS1984
         # define input and UTM projections
         self.crs_wgs = "epsg:4326"

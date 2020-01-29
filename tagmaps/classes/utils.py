@@ -109,7 +109,11 @@ class Utils():
 
     @staticmethod
     def set_proj_dir():
-        """Update PROJ_LIB location if not found."""
+        """Update PROJ_LIB location if not found
+
+        Leftover from pyproj < 2.0.0 compatibility,
+        PROJ_LIB not needed anymore
+        """
         if not os.environ.get('PROJ_LIB'):
             local_proj_path = Path.cwd() / "proj"
             if not local_proj_path.exists():

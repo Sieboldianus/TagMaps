@@ -10,18 +10,36 @@ tagmaps.exe can be directly run.
 Has been tested with conda environment (Windows 10)
 
 Prerequisites:
-    - install cx_freeze
-    - install matplotlib (instead of matplotlib-base) from conda-forge
-    - install [OSGeosW64][1], add C:/OSGeo4W64/bin (e.g.) to PATH
-    - set variable [EPSG_SHARE][2] to where GDAL gcs.csv is stored
-    - install [mkl-service][3]
+
+- use conda, create environment, e.g.:
+  `conda create -n tagmaps_cx`
+- install tagmaps dependencies and tagmaps
+- install cx_freeze
+- install matplotlib (instead of matplotlib-base) from conda-forge
+- install [OSGeosW64][1], add C:/OSGeo4W64/bin (e.g.) to PATH
+- install [mkl-service][2]
+- fix hdbscan-joblib-parallel (see note below):
+    - install hdbscan regularly with:
+      `conda install hdbscan -c conda-forge`
+    - then remove hdbscan without removing dependencies:
+      `conda remove hdbscan -c conda-forge --force`
+    - clone [4], install without dependencies into conda-environment:
+      `python setup.py develop --no-deps`
+
+
+[Joblib-freeze-issue][3]: as of 2020-01-29, joblib.Parallel
+can only be run in frozen apps when prefer="threads" is used. This
+has been changed in a fork of HDBSCAN found [here][4]
 
 Run build with:
-    python cx_setup.py build
+```
+python cx_setup.py build
+```
 
 [1]: https://trac.osgeo.org/osgeo4w/
-[2]: e.g. SET EPSG_SHARE=C:\OSGeo4W64\share\epsg_csv
-[3]: e.g. conda install mkl-service -c conda-forge
+[2]: e.g. conda install mkl-service -c conda-forge
+[3]: https://github.com/joblib/joblib/issues/1002
+[4]: https://github.com/Sieboldianus/hdbscan
 """
 
 import glob
@@ -44,13 +62,6 @@ os.environ['TK_LIBRARY'] = os.path.join(
 
 PYTHON_VERSION = f'{sys.version_info.major}.{sys.version_info.minor}'
 print(f"Running cx_freeze for Python {PYTHON_VERSION}")
-
-try:
-    EPSG_SHARE = os.environ['EPSG_SHARE']
-except KeyError:
-    raise ValueError(
-        "Please set environment variable EPSG_SHARE to "
-        "where GDAL gcs.csv is stored.")
 
 # opcode is not a virtualenv module,
 # so we can use it to find the stdlib; this is the same
@@ -125,11 +136,6 @@ INCLUDE_FOLDERS_FILES = [
     (os.path.join(PYTHON_INSTALL_DIR, 'Library', 'bin', 'geos_c.dll'),
      os.path.join('geos_c.dll')
      ),
-    (os.path.join(PYTHON_INSTALL_DIR, 'Library', 'share', 'proj'),
-     os.path.join('proj')
-     ),
-    # os.path.join(PYTHON_INSTALL_DIR, 'Library', 'plugins', 'platforms'),
-    os.path.join(os.environ['EPSG_SHARE'], 'gcs.csv'),
     'resources/01_Input/',
     'resources/00_Config/',
     'resources/00_generateClusters_OnlyEmoji.cmd',
