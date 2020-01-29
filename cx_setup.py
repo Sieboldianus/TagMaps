@@ -2,6 +2,8 @@
 
 """Setup config for cx_freeze (build)
 
+Be warned: freezing is complicated.
+
 This cx_freeze setup is configured to build
 self executable folder on Windows for Windows
 users who cannot use package manager. The resulting
