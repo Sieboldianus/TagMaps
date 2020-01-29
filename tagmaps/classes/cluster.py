@@ -7,41 +7,35 @@ Module for tag maps clustering methods
 from __future__ import absolute_import
 
 import logging
+import queue
 import sys
-import warnings
-from collections import defaultdict, namedtuple
-from functools import partial, wraps
-from multiprocessing.pool import ThreadPool
-from typing import Any, Dict, List, Optional, Set, Tuple
+import threading
+from collections import defaultdict
+from dataclasses import astuple, dataclass
+from functools import wraps
+from typing import Dict, List, Optional, Set, Tuple
+
+import hdbscan
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import pyproj
-from dataclasses import dataclass, astuple
 import seaborn as sns
 import shapely.geometry as geometry
-from pyproj import Proj, CRS, Transformer  # pylint: disable=C0412
+from pyproj import Transformer  # pylint: disable=C0412
 from shapely.ops import transform  # pylint: disable=C0412
 
-from tagmaps.classes.alpha_shapes import (
-    AlphaShapes, AlphaShapesArea, AlphaShapesAndMeta)
+from tagmaps.classes.alpha_shapes import (AlphaShapes, AlphaShapesAndMeta,
+                                          AlphaShapesArea)
 from tagmaps.classes.plotting import TPLT
 from tagmaps.classes.prepare_data import PreparedStats
-from tagmaps.classes.shared_structure import (EMOJI, LOCATIONS, TAGS, TOPICS,
-                                              AnalysisBounds, CleanedPost,
-                                              ItemCounter, POST_FIELDS)
+from tagmaps.classes.shared_structure import (EMOJI, LOCATIONS, POST_FIELDS,
+                                              TAGS, TOPICS, AnalysisBounds,
+                                              CleanedPost, ItemCounter)
 from tagmaps.classes.utils import Utils
 
-try:
-    # filter DeprecationWarning
-    # by catching outdated hdbscan imports from sklearn.externals
-    sys.modules['sklearn.externals.six'] = __import__('six')
-    sys.modules['sklearn.externals.joblib'] = __import__('joblib')
-    import hdbscan
-except ImportError:
-    import hdbscan
+# init threaded cluster queue
+cluster_queue = queue.Queue()
 
-POOL = ThreadPool(processes=1)
 sns.set_context('poster')
 sns.set_style('white')
 
@@ -77,6 +71,13 @@ class ClusterResults:
 
     def __iter__(self):
         return iter(astuple(self))
+
+
+def store_in_queue(f):
+    """Decorator to store function in threaded queue"""
+    def wrapper(*args):
+        cluster_queue.put(f(*args))
+    return wrapper
 
 
 @dataclass
@@ -162,8 +163,9 @@ class ClusterGen():
         self._update_bounds()
         self.bound_points_shapely = Utils.get_shapely_bounds(
             self.bounds)
-        # verify that PROJ_LIB exists
-        Utils.set_proj_dir()
+        # verify that PROJ_LIB exists,
+        # only necessary for pyproj < 2.0.0
+        # Utils.set_proj_dir()
         # input data always in lat/lng WGS1984
         # define input and UTM projections
         self.crs_wgs = "epsg:4326"
@@ -471,20 +473,22 @@ class ClusterGen():
         if min_cluster_size is None:
             min_cluster_size = max(
                 2, int(((len(points))/100)*5))
-        self.clusterer = hdbscan.HDBSCAN(
+        # init hdbscan clusterer
+        clusterer = hdbscan.HDBSCAN(
             min_cluster_size=min_cluster_size,
             gen_min_span_tree=min_span_tree,
             allow_single_cluster=allow_single_cluster,
             min_samples=1)
         # Start clusterer on different thread
         # to prevent GUI from freezing
-        with warnings.catch_warnings():
-            # disable joblist multithread warning
-            # because there's only one thread
-            warnings.simplefilter('ignore', UserWarning)
-            async_result = POOL.apply_async(
-                ClusterGen._fit_cluster, (self.clusterer, tag_radians_data))
-            self.clusterer = async_result.get()
+        t = threading.Thread(
+            target=ClusterGen._fit_cluster,
+            args=(clusterer, tag_radians_data),
+            group=None,
+            name="tm-clustering",
+        )
+        t.start()
+        self.clusterer = cluster_queue.get()
 
         if self.autoselect_clusters:
             cluster_labels = self.clusterer.labels_
@@ -864,6 +868,7 @@ class ClusterGen():
         return shapes_and_meta, self.cls_type, itemized
 
     @staticmethod
+    @store_in_queue
     def _fit_cluster(clusterer, data):
         """Perform HDBSCAN clustering from features or distance matrix.
 
