@@ -16,3 +16,6 @@ from .classes.shared_structure import (
 __pdoc__ = {}
 __pdoc__["tagmaps.classes"] = False
 __pdoc__["tagmaps.config"] = False
+
+# pdoc documentation include format
+__pdoc__["tagmaps.__main__"] = True
