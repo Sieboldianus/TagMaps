@@ -31,6 +31,6 @@ gdal-config --version # Output: 2.2.3
 pip install GDAL==2.2.3
 # Install latest tagmaps from GitHub
 pip install .
-# or from latest release on ip:
+# or from latest release on pip:
 # pip install tagmaps
 ```
