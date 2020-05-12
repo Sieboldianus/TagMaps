@@ -1,0 +1,1 @@
+"""Tagmaps package config submodule"""
