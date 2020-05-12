@@ -19,5 +19,3 @@ dependencies:
   - descartes
   - regex
   - scipy
-  - six
-  - joblib

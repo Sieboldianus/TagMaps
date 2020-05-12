@@ -15,5 +15,3 @@ seaborn
 descartes
 regex
 scipy
-six
-joblib

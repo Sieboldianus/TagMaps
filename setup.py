@@ -47,8 +47,6 @@ setup(name="tagmaps",
           'descartes',
           'regex',
           'scipy',
-          'six',
-          'joblib',
       ],
       entry_points={
           'console_scripts': [
