@@ -12,10 +12,8 @@ from .classes.interface import UserInterface
 from .classes.shared_structure import (
     EMOJI, LOCATIONS, TAGS, TOPICS, PostStructure, ClusterTypes)
 
-# pdoc documentation exclude format
+# pdoc documentation include/exclude
 __pdoc__ = {}
-__pdoc__["tagmaps.classes"] = False
-__pdoc__["tagmaps.config"] = False
 
 # pdoc documentation include format
 __pdoc__["tagmaps.__main__"] = True
