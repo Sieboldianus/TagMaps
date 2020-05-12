@@ -523,23 +523,6 @@ class Utils():
             return True
 
     @staticmethod
-    def split_emoji_count(text_with_emoji):
-        """Split emoji from string and count"""
-        emoji_list = []
-        # use \X (eXtended grapheme cluster) regular expression:
-        data = regex.findall(r'\X', text_with_emoji)
-        for word in data:
-            if any(char in emoji.UNICODE_EMOJI for char in word):
-                emoji_list.append(word)
-        return emoji_list
-
-    @staticmethod
-    def extract_flags(text_with_flags):
-        """Extract emoji flags from string"""
-        flags = regex.findall(u'[\U0001F1E6-\U0001F1FF]', text_with_flags)
-        return flags
-
-    @staticmethod
     def extract_emoji(string_with_emoji: Optional[str]) -> Set[str]:
         """Extract emoji and flags using regex package
 
@@ -548,7 +531,7 @@ class Utils():
         https://stackoverflow.com/a/49242754/4556479
         This method supports extracting grapheme clusters,
         emoji constructed of multiple emoji (the "perceived
-        pictograms") e.g.: 👨‍👩‍👦‍👦
+        pictograms")
 
         Compare:
         A: _extract_emoji_old:
@@ -559,13 +542,19 @@ class Utils():
         Total emoji count for the 100 most
         used emoji in selected area: 25793.
         Total distinct emoji (DEC): 1349
-        """
 
-        emoji_split = Utils.split_emoji_count(string_with_emoji)
-        emoji_list = [emoji for emoji in emoji_split]
-        flags_list = Utils.extract_flags(string_with_emoji)
-        emoji_list.extend(flags_list)
-        return set(emoji_list)
+        Original Code @ sheldonzy:
+        https://stackoverflow.com/a/49242754/4556479
+        """
+        emoji_set = set()
+        if not string_with_emoji:
+            return emoji_set
+        # use \X (eXtended grapheme cluster) regular expression:
+        data = regex.findall(r'\X', string_with_emoji)
+        for grapheme in data:
+            if any(char in emoji.UNICODE_EMOJI for char in grapheme):
+                emoji_set.add(grapheme)
+        return emoji_set
 
     @staticmethod
     def _extract_emoji_old(string_with_emoji):
