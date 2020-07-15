@@ -8,6 +8,10 @@ repo_url: https://github.com/Sieboldianus/TagMaps/
 
 theme:
   name: 'readthedocs'
+  highlightjs: true
+  hljs_languages:
+    - python
+    - bash
 
 markdown_extensions:
   - admonition
