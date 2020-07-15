@@ -7,14 +7,16 @@ site_dir: site
 repo_url: https://github.com/Sieboldianus/TagMaps/
 
 theme:
-  name: 'readthedocs'
+  name: readthedocs
   highlightjs: true
   hljs_languages:
-    - python
-    - bash
+  - python
+  - bash
+  titles_only: true
 
 markdown_extensions:
   - admonition
+  - sane_lists
 
 nav:
     - Introduction: index.md
