@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.20.9 (2021-01-03)
+### Fix
+* Correct pin joblib ([`7c87979`](https://github.com/Sieboldianus/TagMaps/commit/7c879795975f7c3e54ce9088418f7dfc12b9e5c4))
+
 ## v0.20.8 (2021-01-03)
 
 
