@@ -23,7 +23,6 @@ import seaborn as sns
 import shapely.geometry as geometry
 from pyproj import Transformer  # pylint: disable=C0412
 from shapely.ops import transform  # pylint: disable=C0412
-
 from tagmaps.classes.alpha_shapes import (AlphaShapes, AlphaShapesAndMeta,
                                           AlphaShapesArea)
 from tagmaps.classes.plotting import TPLT
@@ -751,9 +750,12 @@ class ClusterGen():
         if not cluster_guids:
             return AlphaShapesArea(None, 0)
         alphashapes_data = AlphaShapes.get_cluster_shape(
-            item, cluster_guids, self.cleaned_post_dict,
-            self.cluster_distance,
-            self.local_saturation_check, self._proj_coords)
+            item=item,
+            clustered_post_guids=cluster_guids,
+            cleaned_post_dict=self.cleaned_post_dict,
+            cluster_distance=self.cluster_distance,
+            local_saturation_check=self.local_saturation_check,
+            proj_coords=self._proj_coords)
         return alphashapes_data
 
     def _get_item_clusterarea(
@@ -988,21 +990,24 @@ class ClusterGen():
         # selected post guids: all posts for item
         # points: numpy-points for plotting
         # clusters: hdbscan labels for clustered items
+        item = ItemCounter(item, 0)
         result = self.cluster_item(
-            item=item,
+            item=item.name,
             preview_mode=True)
         if result is None:
             return print("No items found.")
         # cluster_guids: those guids that are clustered
         cluster_guids = self._get_cluster_guids(
             result.clusters, result.guids)
+
         shapes_and_area = self._get_item_clustershapes(
             item, cluster_guids.clustered)
         # get only shapely shapes, not usercount and other info
-        shapes = [meta[0] for meta in shapes_and_area.alphashape]
+
+        shapes = [meta.shape for meta in shapes_and_area.alphashape]
         shapes_wgs = self._project_centroids_back(shapes)
         fig = TPLT.get_cluster_preview(
-            points=result.points, sel_colors=result.colors, item_text=item,
+            points=result.points, sel_colors=result.colors, item_text=item.name,
             bounds=self.bounds, mask_noisy=result.mask_noisy,
             cluster_distance=self.cluster_distance,
             number_of_clusters=result.cluster_count,
