@@ -93,7 +93,6 @@ class AlphaShapes():
         # so that it is not overwritten each time
         alphashapes_and_meta_tmp = list()
         item_area = 0
-
         for post_guids in clustered_post_guids:
             # for each cluster for this toptag
             posts = [cleaned_post_dict[x]
