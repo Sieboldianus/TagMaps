@@ -19,3 +19,4 @@ dependencies:
   - descartes
   - regex
   - scipy
+  - joblib<=0.17.0

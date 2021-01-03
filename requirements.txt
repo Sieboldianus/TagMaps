@@ -15,4 +15,4 @@ seaborn
 descartes
 regex
 scipy
-joblib==0.17.0
+joblib<=0.17.0
