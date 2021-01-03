@@ -93,6 +93,7 @@ INCLUDES_MOD = [
     'gdal',
     'pyproj.datadir',
     'shapely.geometry',
+    'joblib==0.17.0'
 ]
 
 # include all mkl files
