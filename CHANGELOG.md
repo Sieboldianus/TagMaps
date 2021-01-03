@@ -2,6 +2,9 @@
 
 <!--next-version-placeholder-->
 
+## v0.20.6 (2021-01-03)
+
+
 ## v0.20.5 (2021-01-03)
 ### Fix
 * Emoji flags split from grapheme clusters ([`c0512e3`](https://github.com/Sieboldianus/TagMaps/commit/c0512e33a11af0d4ef026b12453bff65954f1f85))
