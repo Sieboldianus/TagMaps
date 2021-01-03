@@ -2,6 +2,9 @@
 
 <!--next-version-placeholder-->
 
+## v0.20.8 (2021-01-03)
+
+
 ## v0.20.7 (2021-01-03)
 ### Fix
 * Name not found on manual get_cluster_shapes_map() ([`6bd9d66`](https://github.com/Sieboldianus/TagMaps/commit/6bd9d665eabfce7ed6bb3dfe7f7549df61ee9dfb))
