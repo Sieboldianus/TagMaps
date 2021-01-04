@@ -36,7 +36,7 @@ test:
     - echo "Pylint score was $score"
     - anybadge -l pylint --value=$score --file=pylint.svg 2=red 4=orange 9=yellow 10=green
     - anybadge -l pipeline --value=passing --file=pipeline.svg passing=green failing=red
-    - version_var=$(git tag | grep -E 'v[0-9].[0-9].[0-9]' | tail -n 1 | cut -c2-)
+    - version_var=$(sed -n "s#__version__ =\s*'\(.*\)'#\1#p" tagmaps/version.py)
     - echo "Version for badges $version_var"
     - conda_version=$(conda search tagmaps -c conda-forge | tail -1 | awk  '{print $2}')
     - echo "Conda version was $conda_version"
