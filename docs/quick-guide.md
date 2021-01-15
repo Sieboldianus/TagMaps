@@ -8,7 +8,7 @@ There are many ways to install python tools:
     - install all dependencies first (e.g. Windows users: use [Gohlke wheels](<https://www.lfd.uci.edu/~gohlke/pythonlibs/>) if available) and then run:
     - `pip install tagmaps --no-dependencies`
     - or clone the repository, and install locally with:
-    - `pip install --editable . --no-dependencies`
+    - `pip install --no-dependencies --editable .`
 
 Of these 3 choices, **using conda is the one that I prefer**. For users who are not familiar with python package managers, please see the detailed instructions to install tagmaps with conda provided [here](../user-guide/installation/).
 
