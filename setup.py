@@ -39,7 +39,7 @@ setup(name="tagmaps",
           'pyproj>=2.0.0',
           'numpy',
           'matplotlib',
-          'emoji>=0.5.1',
+          'emoji>=1.0.1',
           'cython',
           'hdbscan>=0.8.20',
           'gdal',
@@ -47,7 +47,7 @@ setup(name="tagmaps",
           'descartes',
           'regex',
           'scipy',
-          'joblib<=0.17.0'
+          'joblib'
       ],
       entry_points={
           'console_scripts': [
