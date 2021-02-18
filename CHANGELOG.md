@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.20.10 (2021-02-18)
+### Fix
+* Graphemes not found in newest emoji.UNICODE_EMOJI (emoji >= v.1.0.1) ([`9952cd2`](https://github.com/Sieboldianus/TagMaps/commit/9952cd253d3637d8dff1304541720e9f37ea1abd))
+
+### Documentation
+* Correct order of pip --editable --no-deps ([`5c58cdd`](https://github.com/Sieboldianus/TagMaps/commit/5c58cdda327191796a0e37f9388ca0605b6dac75))
+
 ## v0.20.9 (2021-01-03)
 ### Fix
 * Correct pin joblib ([`7c87979`](https://github.com/Sieboldianus/TagMaps/commit/7c879795975f7c3e54ce9088418f7dfc12b9e5c4))
