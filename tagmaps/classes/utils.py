@@ -552,7 +552,7 @@ class Utils():
         # use \X (eXtended grapheme cluster) regular expression:
         data = regex.findall(r'\X', string_with_emoji)
         for grapheme in data:
-            if any(char in emoji.UNICODE_EMOJI for char in grapheme):
+            if any(char in emoji.UNICODE_EMOJI["en"] for char in grapheme):
                 emoji_set.add(grapheme)
         return emoji_set
 
