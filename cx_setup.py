@@ -2,40 +2,61 @@
 
 """Setup config for cx_freeze (build)
 
-Be warned: freezing is complicated.
+Be warned: freezing is _complicated_.
 
-This cx_freeze setup is configured to build
-self executable folder on Windows for Windows
-users who cannot use package manager. The resulting
+This cx_freeze setup is configured to build a
+self executable folder on Windows for Windows, for
+users who cannot use a package manager. The resulting
 tagmaps.exe can be directly run.
 
 Has been tested with conda environment (Windows 10)
 
 Prerequisites:
 
-- use conda, create environment, e.g.:
-  `conda create -n tagmaps_cx`
-- install tagmaps dependencies and tagmaps
-- install cx_freeze
-- install matplotlib (instead of matplotlib-base) from conda-forge
-- install [OSGeosW64][1], add C:/OSGeo4W64/bin (e.g.) to PATH
-- install [mkl-service][2]
-- fix hdbscan-joblib-parallel (see note below):
+- use a fresh conda env and 
+  install tagmaps dependencies and tagmaps, e.g.:
+- install [OSGeosW64][1], add `C:/OSGeo4W64/bin` (e.g.) to PATH
+- use environment_cx.yml to install cx_freeze dependencies:
+    - [mkl-service][2]
+    - instead of matplotlib-base, matplotlib is used
+
+```cmd
+conda update -n base conda
+conda config --env --set channel_priority strict
+conda env create -f environment_cx.yml
+conda activate tagmaps_cx
+pip install --no-dependencies .
+```
+
+Two additional steps:
+- fix hdbscan-joblib-parallel:
+    - [Joblib-freeze-issue][3]: as of 2020-01-29, 
+      joblib.Parallel can only be run in frozen 
+      apps when prefer="threads" is used. This
+      has been changed in a fork of HDBSCAN found [here][4]
     - install hdbscan regularly with:
       `conda install hdbscan -c conda-forge`
     - then remove hdbscan without removing dependencies:
       `conda remove hdbscan -c conda-forge --force`
-    - clone [4], install without dependencies into conda-environment:
-      `python setup.py develop --no-deps`
+    - clone [4], update from upstream if necessary, 
+      and install without dependencies into conda-environment:
+      `pip install --no-dependencies .`
+- fix shapely and pyproj in cxfreeze:
+    - the way shapely and pyproj are packaged by conda is not 
+      compatible with cxfreeze
+    - `conda remove shapely pyproj -c conda-forge --force`
+    - `pip install shapely pyproj`
 
-
-[Joblib-freeze-issue][3]: as of 2020-01-29, joblib.Parallel
-can only be run in frozen apps when prefer="threads" is used. This
-has been changed in a fork of HDBSCAN found [here][4]
-
-Run build with:
-```
+- make sure that `C:/OSGeo4W64/bin` is available on PATH
+- run build with:
+```cmd
 python cx_setup.py build
+```
+- rename `C:/OSGeo4W64/` or remove from PATH
+- test: 
+```cmd
+tagmaps.exe ^
+    --load_intermediate 01_Input/flickr_dresden_cc-by-licenses.csv
 ```
 
 [1]: https://trac.osgeo.org/osgeo4w/
@@ -46,6 +67,7 @@ python cx_setup.py build
 
 import glob
 import json
+import pathlib
 import os.path
 import sys
 from pathlib import Path
@@ -61,6 +83,7 @@ os.environ['TCL_LIBRARY'] = os.path.join(
     PYTHON_INSTALL_DIR, 'tcl', 'tcl8.6')
 os.environ['TK_LIBRARY'] = os.path.join(
     PYTHON_INSTALL_DIR, 'tcl', 'tk8.6')
+
 
 PYTHON_VERSION = f'{sys.version_info.major}.{sys.version_info.minor}'
 print(f"Running cx_freeze for Python {PYTHON_VERSION}")
@@ -87,17 +110,18 @@ INCLUDES_MOD = [
     'scipy.sparse.csgraph',
     'argparse',
     'scipy.sparse.csgraph._validation',
+    'scipy.spatial.transform._rotation_groups',
     'numpy',
     'scipy._distributor_init',
     'multiprocessing',
     'gdal',
-    'pyproj.datadir',
-    'shapely.geometry',
-    'joblib<=0.17.0'
+    'joblib',
+    'shapely',
+    'shapely.geometry'
 ]
 
 # include all mkl files
-# https://stackoverflow.com/questions/54337644/cannot-load-mkl-intel-thread-dll-on-python-executable
+# https://stackoverflow.com/q/54337644/4556479
 # https://github.com/anthony-tuininga/cx_Freeze/issues/214
 # get json file that has mkl files list (exclude the "service" file)
 MKL_FILES_JSON_FILE = glob.glob(
@@ -139,17 +163,24 @@ INCLUDE_FOLDERS_FILES = [
     (os.path.join(PYTHON_INSTALL_DIR, 'Library', 'bin', 'geos_c.dll'),
      os.path.join('geos_c.dll')
      ),
+    # strange, but Library/share/proj
+    # needs to move to /lib/share/proj
+    # in frozen build
+    (os.path.join(PYTHON_INSTALL_DIR, 'Library', 'share', 'proj'),
+     os.path.join('lib', 'share', 'proj')
+     ),        
     'resources/01_Input/',
     'resources/00_Config/',
     'resources/00_generateClusters_OnlyEmoji.cmd',
     'resources/00_generateClusters_OnlyPhotoLocations.cmd',
     'resources/00_generateClusters_OnlyTags.cmd',
+    'resources/00_generateClusters_test.cmd',
     'README.md',
     ('tagmaps/matplotlibrc',
      "matplotlibrc")
 ] + NUMPY_DLLS_FULLPATH
 
-PACKAGES_MOD = ["tkinter", "hdbscan"]
+PACKAGES_MOD = ["tkinter", "hdbscan", "sqlite3", "shapely", "shapely.geometry"]
 EXCLUDES_MOD = [
     "scipy.spatial.cKDTree",
     "distutils"]
@@ -182,7 +213,6 @@ setup(name="tagmaps",
           }
       },
       executables=EXECUTABLES)
-
 
 # open issue Windows:
 # after build, rename

@@ -126,6 +126,11 @@ GNU GPLv3
 
 This is a high-level summary of version progress. See [CHANGELOG.md](CHANGELOG.md) for a full list of changes.
 
+2021-02-22: [**TagMaps v0.20.10**](https://cloudstore.zih.tu-dresden.de/index.php/s/DknNe8ooosWHwaF/download)
+
+- fix emoji grapheme detection issue with `emoji>=1.01`
+- several fixes in cx-freeze build, re-compile with python 3.9
+
 2020-01-24: [**TagMaps v0.20.4**](https://cloudstore.zih.tu-dresden.de/index.php/s/25xyGZyBmY8PoRM/download)
 
 - mainly improvements of type annotations and code legibility
@@ -135,12 +140,12 @@ This is a high-level summary of version progress. See [CHANGELOG.md](CHANGELOG.m
 - fix projection resulting in flipped geometries for pyproj>2.0.0
 - fix various other small bugs
 
-2019-05-08: [**TagMaps v0.17.6**](https://cloudstore.zih.tu-dresden.de/index.php/s/ahl8mKQVcXOGo8d/download)
+2019-05-08: **TagMaps v0.17.6**
 
 - as of this version, tagmaps package is available on [conda-forge](<https://anaconda.org/conda-forge/tagmaps>)
 - fixed a bug with newer versions of pyproj (>2.0.0) that would result in very slow projection performance
 
-2019-03-08: [**TagMaps v0.17.4**](https://cloudstore.zih.tu-dresden.de/index.php/s/AcfL5ZkRhPas0O4/download)
+2019-03-08: **TagMaps v0.17.4**
 
 - First version of public API, e.g. load tagmaps to other packages with `import tagmaps` or `from tagmaps import TagMaps`
 - Refactor of LoadData and PrepareData in separate classes, use of contextmanager/ pipeline generator
@@ -148,14 +153,14 @@ This is a high-level summary of version progress. See [CHANGELOG.md](CHANGELOG.m
 - Basic system integration test pipeline
 - Jupyter Notebook compatibility
 
-2019-01-23: [**TagMaps v0.11.1**](https://cloudstore.zih.tu-dresden.de/index.php/s/QhKT3Pj9fk4H9ns/download)
+2019-01-23: **TagMaps v0.11.1**
 
 - complete refactor of code with improved encapsulation, code now largely follows PEP conventions
 - bugfix: emoji handling now accurately recognizes grapheme clusters consisting of multiple unicode codepoints.
 - interface: add feature to filter based on toplists for tags, emoji and locations
 - added sample CC-BY dataset
 
-2018-01-31: [**TagMaps v0.9.2**](https://cloudstore.zih.tu-dresden.de/index.php/s/8EFfeJcpNCStQ9X/download)
+2018-01-31: **TagMaps v0.9.2**
 
 - because Tag Maps can be generated from local to regional to continental scale, finding an algorythm that fits all was not straight forward. The current implementation will produce shapes for all of these scales without any user input.
 - this alpha shape implementation is motivated from [Kevin Dwyer/ Sean Gillies](http://blog.thehumangeo.com/2014/05/12/drawing-boundaries-in-python/) great base code

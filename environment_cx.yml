@@ -1,0 +1,25 @@
+name: tagmaps_cx
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python >=3.7
+  - pip
+  - cx_freeze
+  - fiona
+  - pandas >=0.24.2
+  - pyproj >=2.0.0
+  - numpy
+  - matplotlib
+  - mkl-service
+  - emoji >=1.0.1
+  - cython
+  - hdbscan >=0.8.20
+  - gdal
+  - seaborn
+  - descartes
+  - regex
+  - scipy
+  - joblib
+  - pip:
+    - shapely
