@@ -15,12 +15,11 @@ from pathlib import Path
 from typing import List, Set, Dict, Tuple, Optional
 
 import fiona
-import pyproj
 from shapely.geometry import shape
 
 from tagmaps import __version__
-from ..classes.utils import Utils
-from ..classes.shared_structure import ConfigMap
+from tagmaps.classes.utils import Utils
+from tagmaps.classes.shared_structure import ConfigMap
 
 
 class BaseConfig:

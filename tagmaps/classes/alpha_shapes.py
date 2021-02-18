@@ -17,7 +17,7 @@ import shapely.geometry as geometry
 from shapely.ops import cascaded_union, polygonize
 from dataclasses import dataclass
 from tagmaps.classes.compile_output import Compile
-from .shared_structure import ItemCounter
+from tagmaps.classes.shared_structure import ItemCounter
 
 
 @dataclass

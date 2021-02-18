@@ -21,10 +21,10 @@ from typing import Counter, DefaultDict, Dict, List, Optional, Set, Union
 
 from _csv import QUOTE_MINIMAL
 
-from .shared_structure import (EMOJI, LOCATIONS, POST_FIELDS, TAGS, TOPICS,
+from tagmaps.classes.shared_structure import (EMOJI, LOCATIONS, POST_FIELDS, TAGS, TOPICS,
                                AnalysisBounds, CleanedPost, ClusterTypes,
                                ItemCounter, PostStructure)
-from .utils import Utils
+from tagmaps.classes.utils import Utils
 
 
 @dataclass

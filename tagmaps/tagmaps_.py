@@ -11,13 +11,13 @@ from functools import wraps
 from pathlib import Path
 from typing import Dict, Optional
 
-from .classes.cluster import ClusterGen
-from .classes.compile_output import Compile
-from .classes.interface import UserInterface
-from .classes.prepare_data import PrepareData
-from .classes.shared_structure import (EMOJI, LOCATIONS, TAGS, TOPICS,
+from tagmaps.classes.cluster import ClusterGen
+from tagmaps.classes.compile_output import Compile
+from tagmaps.classes.interface import UserInterface
+from tagmaps.classes.prepare_data import PrepareData
+from tagmaps.classes.shared_structure import (EMOJI, LOCATIONS, TAGS, TOPICS,
                                        PostStructure)
-from .classes.utils import Utils
+from tagmaps.classes.utils import Utils
 
 __author__ = "Alexander Dunkel"
 __license__ = "GNU GPLv3"
