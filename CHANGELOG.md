@@ -13,18 +13,12 @@
 ### Fix
 * Correct pin joblib ([`7c87979`](https://github.com/Sieboldianus/TagMaps/commit/7c879795975f7c3e54ce9088418f7dfc12b9e5c4))
 
-## v0.20.8 (2021-01-03)
-
-
 ## v0.20.7 (2021-01-03)
 ### Fix
 * Name not found on manual get_cluster_shapes_map() ([`6bd9d66`](https://github.com/Sieboldianus/TagMaps/commit/6bd9d665eabfce7ed6bb3dfe7f7549df61ee9dfb))
 
 ### Documentation
 * Add pip --editable note ([`c51d75a`](https://github.com/Sieboldianus/TagMaps/commit/c51d75aaa55e341e6a074fe01977a0504364da53))
-
-## v0.20.6 (2021-01-03)
-
 
 ## v0.20.5 (2021-01-03)
 ### Fix

@@ -124,6 +124,8 @@ GNU GPLv3
 
 ## Changelog & Download
 
+This is a high-level summary of version progress. See [CHANGELOG.md](CHANGELOG.md) for a full list of changes.
+
 2020-01-24: [**TagMaps v0.20.4**](https://cloudstore.zih.tu-dresden.de/index.php/s/25xyGZyBmY8PoRM/download)
 
 - mainly improvements of type annotations and code legibility
