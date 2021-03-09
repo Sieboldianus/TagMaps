@@ -1,9 +1,11 @@
-There're two types of input that can be processed by tagmaps with the provided files in `00_Config`:
+# Use your own data
+
+There are two types of input that can be processed by tagmaps with the provided files in `00_Config`:
 
 * A) raw data
 * B) preprocessed data
 
-### A: raw data
+## A: Raw data
 
 This is the most typical situation. If you have messy raw data, use this approach and simply provide a CSV with the following header:
 
@@ -39,9 +41,7 @@ origin_id,post_guid,latitude,longitude,user_guid,post_create_date,post_publish_d
 
 ```
 
-
-
-### B: preprocessed data
+## B: Preprocessed data
 
 If you have data that was already processed (e.g. cleaned) by yourself and you want to directly produce a clustered output, use this approach. Tagmaps will not try to filter such input. Preprocessed data is also available as an intermediate output from **A**. You may therefore use this to continue Tagmaps processing from already cleaned data.
 

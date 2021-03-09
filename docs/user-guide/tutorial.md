@@ -1,3 +1,5 @@
+# Tutorial
+
 ![IR](https://wwwpub.zih.tu-dresden.de/~s7398234/tagmaps/docs/img/01_emojotagmap_zoo.png?01 "Map (Goal of Workshop)")
 
 We'll create a Tag Map for **Dresden** from about 500.000 spatially referenced publicly available Social Media Photos (and emoji).

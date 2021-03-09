@@ -1,4 +1,5 @@
-# Papers
+# Concept
+## Papers
 
 This section contains excerpts from the papers:
 
@@ -11,13 +12,13 @@ This section contains excerpts from the papers:
 !!! Note
     The theoretic background presented here is part of a workshop & lecture series and is also available as [Jekyll reveal slides](https://ad.vgiscience.org/tagmaps_intro/).
 
-# Tag Maps Focus
+## Tag Maps Focus
 
 * Exploratory Visualizations of Big Data for evaluating collective perception
 * Enriching and supplementing traditional GI with implicitly collected Social Media
 * Subjective, Human-scale values & attribution of meaning
 
-# Overview of processing steps 
+## Overview of processing steps 
 
 Toronto High Park example:
 
@@ -28,7 +29,7 @@ Toronto High Park example:
 
 ![Tag Map Example](https://ad.vgiscience.org/tagmaps/tagmaps_steps.png?raw=true)
 
-# User behaviour in the context of social media photo sharing
+## User behavior in the context of social media photo sharing
 
 Photo taking and photo sharing in communities can be seen as a sequential process.
 
@@ -38,7 +39,7 @@ Even if these steps are carried out separately, they are interrelated in specifi
 
 ---
 
-**First**, taking a photo of something requires an active decision. Kevin Lynch proposed “[. . .] the generalized mental picture of the exteriorphysical world that is held by an individual [. . .] is the productboth of immediate sensation and of the memory of past experience, and it is used to interpret information and to guide action” (Lynch, 1960, p. 4). In summary of the findings from John Collier (1967), Susan Sontag (1977), and others (Dakin, 2003; Scott & Canter, 1997), the action of taking a photo can be considered as not only being triggered by the immediate environment, but by all aspects of cognition: personal preferences, memories, opinions, and more. Here, the need of beingin situ for creating spatial content (i.e. taking a photo) is crucial. As a result, the photograph that someone takes of a place, and the photographs they choose to upload may both reflect, in some way, their perceptions of the place.
+**First**, taking a photo of something requires an active decision. Kevin Lynch proposed “[. . .] the generalized mental picture of the exterior physical world that is held by an individual [. . .] is the productboth of immediate sensation and of the memory of past experience, and it is used to interpret information and to guide action” (Lynch, 1960, p. 4). In summary of the findings from John Collier (1967), Susan Sontag (1977), and others (Dakin, 2003; Scott & Canter, 1997), the action of taking a photo can be considered as not only being triggered by the immediate environment, but by all aspects of cognition: personal preferences, memories, opinions, and more. Here, the need of beingin situ for creating spatial content (i.e. taking a photo) is crucial. As a result, the photograph that someone takes of a place, and the photographs they choose to upload may both reflect, in some way, their perceptions of the place.
 
 **Second**, the subsequent, optional act of tagging photos is used by photographers to describe the important aspects of a picture for purposes of self-organization and communication. Tags do not only encompass physically visual elements but also conceptualized information of the environment. Tagging involves several mental processes. Contrary to direct perception, tags are assigned at a later time, based on the photo itself and the photographer’s memory of the scene. Even if tags relate to potentially visible elements, they may also describe associated aspects that are not visible in the photo. This means, there is no right or wrong in tagging photos; even uncommon words or unique descriptors may, from the user’s perspective, relate to (personally) relevant aspects of the photo and the memorized scene. Specifically because of this undirected nature, tags can function as artifacts of the user’s personal conceptualization and abstraction of the world.
 
@@ -75,7 +76,7 @@ Even if these steps are carried out separately, they are interrelated in specifi
 
 The conclusions relevant to the visualization algorithm of tagmaps are the following. If multiple people take photographs at a location, the photographs might be linked to a specific visible or associated characteristic (or absence of characteristics) that initiates the same decision process for that place or area. The more people that follow these patterns, the more significant the underlying characteristics might be. The same applies to tags as semantic descriptors of the abstracted, memorized scene. Repeatedly used tags in an area may relate to similar perceptual or cognitive processes triggered in groups or sub-groups of people by the environment. Thus, it can be said that graphics generated from crowdsourced photo content, such as tagmaps, visualize perception and cognition-based decision processes. An important characteristic follows: there is no known dimension that can be assigned directly to values. Therefore, it is of higher importance to visualize relative meaning rather than absolute numbers.
 
-# Data processing
+## Data processing
 
 Because perceptual patterns manifest differently on different scales, tagmaps are scale dependent. The aggregation of data on different scales results in different patterns emerging on the final map.
 
@@ -163,7 +164,7 @@ The clustering is implemented using the single-linkage tree that is available fr
 
 Therefore, all cluster trees (Dendrograms) for tags are *cut* at the same user-defined distance, to allow comparison of patterns at the given scale.
 
-# Choosing the best Cluster Distance
+## Choosing the best Cluster Distance
 
 Compare the following graphics for the tag 'water' and different clustering distances:
 
@@ -198,7 +199,7 @@ Some aspects feature more pronounced clustering (e.g. *sakura* or *cherry*) at t
 
 ![IR](https://wwwpub.zih.tu-dresden.de/~s7398234/tagmaps/docs/img/03_ttc_grid.png)  
 
-# Tag Clustering at different scales
+## Tag Clustering at different scales
 
 As a results, tag maps feature different patterns depending on the chosen scale and clustering distance.
 

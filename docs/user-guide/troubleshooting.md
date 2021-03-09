@@ -1,6 +1,17 @@
+# Troubleshooting
+
 The following is an (incomplete) list of issues and solutions that have been observed with the package install.
 
-### 'proj' datadir not found
+## The UI does not work in Linux / WSL
+
+Currently, the UI will only work if you have a graphical output device available. This is not the case in WSL, for example.
+
+In this case, you need to setup and run tagmaps in Windows Command Line to be able to access the GUI.
+
+!!! Note
+    We plan to refactor the interface to be served through a web client.
+    
+## 'proj' datadir not found
 
 If you see the following after running `tagmaps` in your shell:
 
@@ -19,7 +30,7 @@ This does not work when using Git Bash in Windows. Check if `PROJ_LIB` environme
 
 Solution: Use native Windows command line. You can access the command line in your current folder by holding `Shift` + `Rightclick` and selecting "Open command Window here".
 
-### _tkinter.TclError: no display name and no $DISPLAY environment variable
+## _tkinter.TclError: no display name and no $DISPLAY environment variable
 
 To access the optional interface for filtering and preview data, you need to run tagmaps within a visual environment (e.g. Windows). The current error will be given if you try to access the interface from a shell-only environment (such as Windows Subsystem for Linux; or standard Linux shell):
 

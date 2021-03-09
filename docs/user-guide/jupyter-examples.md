@@ -1,6 +1,8 @@
+# Jupyter Lab examples
+
 Tagmaps package can be imported to Jupyter notebook or Jupyter lab with `from tagmaps import TagMaps`. In Jupyter, it is currently not possible to visualize final word clouds. However, several intermediate functions are available and can be used to filter and preview data. The clustered data available from tagmaps can be used to develop own visualization techniques in Jupyter.
 
-# Extracting common areas of interest for given topics from LBSM
+## Extracting common areas of interest for given topics from LBSM
 
 The task in the notebook presented here is to extract and visualize common areas or regions of interest for a given topic from Location Based Social Media (LBSM) data. On Social Media, people react to many things, and a significant share of these reactions can be seen as forms of valuation or attribution of meaning to to the physical environment. However, for visualizing such values for whole cities, there are several challenges involved:
 
@@ -29,7 +31,7 @@ from tagmaps import BaseConfig
 from tagmaps.classes.utils import Utils
 ```
 
-## Load Data & Overview
+### Load Data & Overview
 
 
 ```python
@@ -56,7 +58,7 @@ tm = TagMaps(
     topic_cluster=True)
 ```
 
-### a) Read from original data
+#### a) Read from original data
 
 Read input records from raw-csv:
 
@@ -68,7 +70,7 @@ with input_data as records:
 input_data.input_stats_report()tm.lbsn_data.write_cleaned_data(panon=False)
 ```
 
-### b) Read from pre-filtered intermediate data
+#### b) Read from pre-filtered intermediate data
 
 Read data form (already prepared) cleaned output. Cleaned output is a filtered version of original data of type UserPostLocation (UPL), which is a reference in tagmaps as 'CleanedPost'. A UPL simply has all posts of a single user at a single coordinate merged, e.g. a reduced list of terms, tags and emoji based on global occurrence (i.e. no duplicates).
 there're other metrics used throughout the tagmaps package, which will become handy for measuring topic reactions here:
@@ -107,7 +109,7 @@ tm.item_stats_report()
     Bounds are: Min 13.581848 50.972288 Max 13.88668 51.138001
 
 
-# Topic Selection & Clustering
+## Topic Selection & Clustering
 
 The next goal is to select reactions to given topics. TagMaps allows selecting posts for 4 different types:
 - TAGS (i.e. single terms)
@@ -156,7 +158,7 @@ We can see some areas of increased coverage: the Großer Garten, some parts of t
 **Topic Vectors**
 A better approach would be to select Topics based on "Topic-Vectors", e.g. after a list of terms is supplied, a vector is calculated that represents this topic. This topic vector can then be used to select posts that have similar vectors. Using a wide or narrow search angle, the broadness of selection can be affected. This is currently not implemented here but an important future improvement.
 
-## HDBSCAN Cluster
+### HDBSCAN Cluster
 
 We can visualize clusters for the selected topic using HDBSCAN. The important parameter for HDBSCAN is the cluster distance, which is chosen automatically by Tag Maps given the current scale of analysis. In the following, we manually reduce the cluster distance from 800 to 400, so we can a finer grained picture of topic clusters.
 
@@ -205,7 +207,7 @@ tm.clusterer[TOPICS].cluster_distance = 400
 # tm.clusterer[TOPICS].autoselect_clusters = False
 ```
 
-## Cluster centroids
+### Cluster centroids
 
 Similarly, we can retrieve centroids of clusters. This shows again the unequal distribution of data:
 

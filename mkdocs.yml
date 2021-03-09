@@ -12,7 +12,7 @@ theme:
   hljs_languages:
   - python
   - bash
-  titles_only: true
+  collapse_navigation: true
 
 markdown_extensions:
   - admonition
@@ -21,7 +21,7 @@ markdown_extensions:
 nav:
     - Introduction: index.md
     - Contents: contents.md
-    - Quick Installation: quick-guide.md
+    - Installation: quick-guide.md
     - Concept: theory/introduction.md
     - User Guide:
         - Detailed installation guide: user-guide/installation.md
