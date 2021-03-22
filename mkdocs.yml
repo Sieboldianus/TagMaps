@@ -10,14 +10,24 @@ theme:
   name: readthedocs
   highlightjs: true
   hljs_languages:
-  - python
-  - bash
+    - yaml
+    - python
+    - bash
   collapse_navigation: true
+  custom_dir: docs/overrides
 
 markdown_extensions:
-  - admonition
-  - sane_lists
+    - toc:
+        permalink: true
+    - markdown_include.include:
+        base_path: docs
+    - admonition
+    - fenced_code
+    - sane_lists
 
+plugins:
+    - search
+    - git-revision-date-localized
 nav:
     - Introduction: index.md
     - Contents: contents.md
