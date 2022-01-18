@@ -2,6 +2,15 @@
 
 <!--next-version-placeholder-->
 
+## v0.20.11 (2022-01-18)
+### Fix
+* Deprecated shapely cascaded_union() ([`2dfb2a1`](https://github.com/Sieboldianus/TagMaps/commit/2dfb2a13ddc544b7cf78fffc9b7f47d4788b9678))
+
+### Documentation
+* Add git revision date to pages ([`728dcd4`](https://github.com/Sieboldianus/TagMaps/commit/728dcd4fcaa17622259901b1477a8ff505889e30))
+* Improve formatting and revise structure ([`c1d1cc0`](https://github.com/Sieboldianus/TagMaps/commit/c1d1cc04a97dbe49ad2cd85f12efc71db778ca89))
+* Cleanup changelog ([`9ce4021`](https://github.com/Sieboldianus/TagMaps/commit/9ce40210cfe42620f1d99aaad687e37984c34f19))
+
 ## v0.20.10 (2021-02-18)
 ### Fix
 * Graphemes not found in newest emoji.UNICODE_EMOJI (emoji >= v.1.0.1) ([`9952cd2`](https://github.com/Sieboldianus/TagMaps/commit/9952cd253d3637d8dff1304541720e9f37ea1abd))
