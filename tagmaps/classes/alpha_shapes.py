@@ -14,7 +14,7 @@ import numpy as np
 from typing import List, Optional
 from scipy.spatial import Delaunay  # pylint: disable=E0611
 import shapely.geometry as geometry
-from shapely.ops import cascaded_union, polygonize
+from shapely.ops import unary_union, polygonize
 from dataclasses import dataclass
 from tagmaps.classes.compile_output import Compile
 from tagmaps.classes.shared_structure import ItemCounter
@@ -431,5 +431,5 @@ class AlphaShapes():
 
         mmulti_line_str = geometry.MultiLineString(edge_points)
         triangles = list(polygonize(mmulti_line_str))
-        return cascaded_union(triangles)  # , edge_points
+        return unary_union(triangles)  # , edge_points
         # return geometry.polygon.asPolygon(edge_points,holes=None)
