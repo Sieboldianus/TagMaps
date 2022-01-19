@@ -430,6 +430,6 @@ class AlphaShapes():
             ) for edgepoint in edge_points]
 
         mmulti_line_str = geometry.MultiLineString(edge_points)
-        triangles = list(polygonize(mmulti_line_str))
+        triangles = [geom for geom in polygonize(mmulti_line_str.geoms)]
         return unary_union(triangles)  # , edge_points
         # return geometry.polygon.asPolygon(edge_points,holes=None)
