@@ -80,4 +80,6 @@ pages:
   only:
     - master
     - ci-test
-
+  tags:
+    # use specific gitlab runner
+    - vector-cluster
