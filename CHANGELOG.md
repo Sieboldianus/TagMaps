@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.20.12 (2022-01-19)
+### Fix
+* ShapelyDeprecationWarning use geoms property ([`1352ea9`](https://github.com/Sieboldianus/TagMaps/commit/1352ea94feb77db37b5305a9f6281e5c5b2834b5))
+
 ## v0.20.11 (2022-01-18)
 ### Fix
 * Deprecated shapely cascaded_union() ([`2dfb2a1`](https://github.com/Sieboldianus/TagMaps/commit/2dfb2a13ddc544b7cf78fffc9b7f47d4788b9678))
