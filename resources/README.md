@@ -1,16 +1,29 @@
 ## Resources
 
-This folder contains resources for creating Tagmaps with ESRI ArcMap/ArcPro.
+This folder contains additonal resources and layout files for creating Tagmaps.
+
+### ArcGIS/ArcPro visualization templates
+
+Templates for visualizing clustered data with ESRI ArcMap/ArcPro.
+
+Note: I am not a big fan of ESRI, but so far, the visualization of labels for tagmaps
+has only implemented in ArcGIS/ArcPro.
 
 The `*.mxd` ArcMap and `*.aprx` ArcProject files contain prepared label
-expressions to visualize tagmaps, customized to the output shapefiles produces
-by this Python package.
+expressions to visualize clustered tagmap data, which is customized to the output 
+shapefiles produces by this Python package.
 
-The folder `00_Config` contains default column mappings for CSV files.
+See additional information in the [docs](https://ad.vgiscience.org/tagmaps/docs/user-guide/tutorial/#arcmap).
 
-The folder `01_Input` contains a sample data file with pseudonymized Creative Commons Flickr images.
+### Additional data
 
-## Notes for using `*.mxd` and `*.aprx` files
+The folder `00_Config` contains default column mappings for CSV files, used in the 
+tagmaps package.
+
+The folder `01_Input` contains a sample data file with pseudonymized Creative Commons Flickr images,
+which can be used to test the tagmaps package.
+
+### Notes for using `*.mxd` and `*.aprx` files
 
 **Fix missing data source:**
 
