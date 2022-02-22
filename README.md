@@ -31,10 +31,9 @@ Overview of processing steps (Toronto High Park example):
 ## Installation
 
 1. The recommended way to install the package is with `conda install tagmaps -c conda-forge`
-2. For Windows users, an alternative is to download the newest pre-compiled build from [Changelog & Download](#changelog--download) and run `tagmaps.exe`
-3. If you need to install with pip, it is recommended to install all dependencies first (e.g. Windows users: use [Gohlke wheels](<https://www.lfd.uci.edu/~gohlke/pythonlibs/>) if available) and then run `pip install tagmaps`
+2. If you need to install with pip, it is recommended to install all dependencies first (e.g. Windows users: use [Gohlke wheels](<https://www.lfd.uci.edu/~gohlke/pythonlibs/>) if available) and then run `pip install tagmaps`
 
-See the [documentation](https://ad.vgiscience.org/tagmaps/docs/user-guide/installation/) for a complete guide to setup tagmaps package in Windows 10.
+For a detailed guide to setup tagmaps package in Windows 10See the [documentation](https://ad.vgiscience.org/tagmaps/docs/user-guide/installation/) .
 
 ## Documentation
 
@@ -44,24 +43,24 @@ See the [tagmaps documentation](https://ad.vgiscience.org/tagmaps/docs/) for add
 
 1. Clone `resources` folder somewhere locally
    - `git clone https://github.com/Sieboldianus/TagMaps.git && cd TagMaps && git filter-branch --subdirectory-filter resources`
-2. Place geotagged data in `/01_Input` subfolder
+2. Place geotagged data in `/01_Input` sub-folder
    - information on how to structure data is available in the [documentation](https://ad.vgiscience.org/tagmaps/docs/user-guide/use-your-own-data/)
 3. Run `tagmaps` within folder `resources`. Output files will be saved to `/02_Output`
    - 2 shapefiles in auto-selected UTM projection, one containing all tag cluster and one with the overall location clusters
 3. Visualize shapefiles, e.g. using ESRI ArcGIS
-   - download `BasemapLayout_World.mxd` from [resources folder](/resources/) and replace missing links with 2 resulting shapefiles in `/02_Output`
+   - download `BasemapLayout_World.mxd` from [resources folder](/resources/) and replace missing links with 2 resulting shape-files in `/02_Output`
    - adjust minimum and maximum font sizes, weighting formula or other metrics to your needs.
 
 **Some background**:
 
 Tag Maps package can be used with any tagged & spatially referenced data, but it has been specifically developed with Social Media data in mind (Flickr, Twitter etc.).
-There're two ways to load input data:
+There are two ways to load input data:
 
 1. Unfiltered raw data
    - Use `tagmaps.add_record(record)` where record is of type `PostStructure` (see [shared_structure.py](/tagmaps/classes/shared_structure.py))
-   - How you clean up data totally depends on the type, have a look at LoadData class in [load_data.py](/tagmaps/classes/load_data.py) for Twitter and Flickr cleanup
+   - How you clean up data totally depends on the type, have a look at LoadData class in [load_data.py](/tagmaps/classes/load_data.py) for Twitter and  Flickr cleanup
 2. Filtered data
-   - the result from 1 is a `UserPostLocation` (**UPL**), which is a reference of type 'CleanedPost'. A UPL simply has all posts of a single user at a single coordinate merged,
+   - the result from 1 is a `UserPostLocation` (**UPL**), which is a reference of type 'CleanedPost'. A UPL simply has all posts of a single user at a  single coordinate merged,
      e.g. a reduced list of terms, tags and emoji based on global occurrence (i.e. no duplicates).
    - there're other metrics used throughout the package:
      - **UPL** - User post location
@@ -75,8 +74,8 @@ There're two ways to load input data:
      - **DLC** - Total distinct locations
 3. The filtered data that is used for tagmaps can be exported using `tagmaps.write_cleaned_data()`.
    Since this will remove all terms/tags/emoji that do not appear in the top 1000 (e.g.) occurring global list of terms,
-   this will produce a highly pseudo-anonymized set of information, with only collectively relevant terms remaining.
-   The default value (1000) can be adjusted using `max_items` arg, e.g. the smaller max_items, the higher is the effect of anonymization/generalization.
+   this will produce a highly pseudonymized set of information, with only collectively relevant terms remaining.
+   The default value (1000) can be adjusted using the `max_items` argument, e.g. the smaller max_items, the higher is the effect of anonymization/generalization.
 
 ## Code
 
@@ -96,7 +95,7 @@ for examples on how to use tag maps package.
 Some future goals:
 
 - include topic modeling
-- improve automatic detection of general vs specific tags for an area
+- improve automatic detection of general vs specific tags for an area (e.g. chi square)
 - include mapping/visualization step (replace ArcGIS)
 - improve unit testing (pytest) for tagmaps package
 - move from tkinter interface to browser based solution
@@ -128,12 +127,12 @@ GNU GPLv3
 
 This is a high-level summary of version progress. See [CHANGELOG.md](CHANGELOG.md) for a full list of changes.
 
-2021-02-22: [**TagMaps v0.20.10**](https://cloudstore.zih.tu-dresden.de/index.php/s/DknNe8ooosWHwaF/download)
+2021-02-22: **TagMaps v0.20.10**
 
 - fix emoji grapheme detection issue with `emoji>=1.01`
 - several fixes in cx-freeze build, re-compile with python 3.9
 
-2020-01-24: [**TagMaps v0.20.4**](https://cloudstore.zih.tu-dresden.de/index.php/s/25xyGZyBmY8PoRM/download)
+2020-01-24: **TagMaps v0.20.4**
 
 - mainly improvements of type annotations and code legibility
 - include type hints in [api-docs](https://ad.vgiscience.org/tagmaps/docs/api/tagmaps_.html)
