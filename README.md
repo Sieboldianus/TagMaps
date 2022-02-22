@@ -17,7 +17,7 @@ Based on the papers:
 
 > Dunkel, A. (2016). Assessing the perceived environment through crowdsourced spatial photo content for application to the fields of landscape and urban planning. Thesis, TU Dresden Landscape and Environmental Planning. [DOI](https://nbn-resolving.org/urn:nbn:de:bsz:14-qucosa-207927) / [PDF](http://alexanderdunkel.com/Dissertation_AlexanderDunkel.pdf)
 
-> Dunkel, A. (2020). Tag Maps in der Landschaftsplanung. In book: Handbuch Methoden Visueller Kommunikation in der Räumlichen Planung. [DOI](https://doi.org/10.1080/13658816.2018.1546390)
+> Dunkel, A. (2020). Tag Maps in der Landschaftsplanung. In book: Handbuch Methoden Visueller Kommunikation in der Räumlichen Planung. [DOI](https://doi.org/10.1007/978-3-658-29862-3_8)
 
 Overview of processing steps (Toronto High Park example):
 
