@@ -28,6 +28,10 @@ Overview of processing steps (Toronto High Park example):
 
 ![Tag Map Example](https://ad.vgiscience.org/tagmaps/tagmaps_steps.png?raw=true)
 
+The label placement based on descending importance is currently (still) implemented only in ArcGIS. See the folder [resources](resources/) for information. The following animation illustrates the placement algorithm for the TU Dresden Campus.
+
+![Label Placement Example](https://ad.vgiscience.org/tagmaps/label_placement.gif?raw=true)
+
 ## Installation
 
 1. The recommended way to install the package is with `conda install tagmaps -c conda-forge`
@@ -60,18 +64,9 @@ There are two ways to load input data:
    - Use `tagmaps.add_record(record)` where record is of type `PostStructure` (see [shared_structure.py](/tagmaps/classes/shared_structure.py))
    - How you clean up data totally depends on the type, have a look at LoadData class in [load_data.py](/tagmaps/classes/load_data.py) for Twitter and  Flickr cleanup
 2. Filtered data
-   - the result from 1 is a `UserPostLocation` (**UPL**), which is a reference of type 'CleanedPost'. A UPL simply has all posts of a single user at a  single coordinate merged,
+   - the result from 1 is a `UserPostLocation` (UPL), which is a reference of type 'CleanedPost'. A UPL means that all posts of a single user at a single coordinate are merged,
      e.g. a reduced list of terms, tags and emoji based on global occurrence (i.e. no duplicates).
-   - there're other metrics used throughout the package:
-     - **UPL** - User post location
-     - **UC** - User count
-     - **PC** - Post count
-     - **PTC** - Total tag count ("Post Tag Count")
-     - **PEC** - Total emoji count
-     - **UD** - User days (counting distinct users per day)
-     - **DTC** - Total distinct tags
-     - **DEC** - Total distinct emoji
-     - **DLC** - Total distinct locations
+
 3. The filtered data that is used for tagmaps can be exported using `tagmaps.write_cleaned_data()`.
    Since this will remove all terms/tags/emoji that do not appear in the top 1000 (e.g.) occurring global list of terms,
    this will produce a highly pseudonymized set of information, with only collectively relevant terms remaining.

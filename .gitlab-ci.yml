@@ -65,6 +65,7 @@ pages:
     - mkdir .public
     - cp resources/img6.png .public
     - cp resources/tagmaps_steps.png .public
+    - cp resources/label_placement.gif .public
     - cp *.svg .public
     - mv .public public
     # build docs
