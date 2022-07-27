@@ -70,7 +70,8 @@ def main():
         topic_modeling=cfg.topic_modeling,
         local_saturation_check=cfg.local_saturation_check,
         max_items=cfg.max_items,
-        logging_level=cfg.logging_level)
+        logging_level=cfg.logging_level,
+        mapnik_export=cfg.mapnik_export,)
 
     if cfg.load_from_intermediate or input_data.is_intermediate():
         # load data from intermediate (already filtered) results

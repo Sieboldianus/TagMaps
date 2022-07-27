@@ -91,6 +91,13 @@ class TagMaps():
         Provide a cluster cut distance (in meters) where the clustering
         will be stopped. This will override the auto detection of cluster
         distance.
+
+    mapnik_export : bool (default=None)
+        If enabled, emoji and tags will be exported together, in a single
+        shapefile, to be used in the Mapnik renderer - unlike the default
+        output, for ESRI ArcGIS/ArcPro, where
+        emoji need to be written to a separate file, to be joined later -
+        due to a bug in the ESRI software that continues to exists.
     """
 
     class TMDec():
@@ -156,7 +163,7 @@ class TagMaps():
             limit_bottom_user_count: int = 5, topic_modeling: bool = False,
             local_saturation_check: bool = False, max_items: int = None,
             logging_level=None, topic_cluster: bool = None,
-            cluster_cut_distance: float = None):
+            cluster_cut_distance: float = None, mapnik_export: bool = None):
         """Init settings for Tag Maps Clustering"""
         if output_folder is None:
             output_folder = Path.cwd() / "02_Output"
@@ -166,6 +173,7 @@ class TagMaps():
         self.remove_long_tail = remove_long_tail
         self.limit_bottom_user_count = limit_bottom_user_count
         self.topic_modeling = topic_modeling
+        self.mapnik_export = mapnik_export
         if max_items is None:
             max_items = 1000
         if topic_cluster is None:
@@ -416,7 +424,8 @@ class TagMaps():
         Compile.write_shapes(
             bounds=self.lbsn_data.bounds,
             shapes_and_meta_list=shapelist,
-            output_folder=self.output_folder
+            output_folder=self.output_folder,
+            mapnik_export=self.mapnik_export,
         )
 
     @TMDec.prepare_clustering_check

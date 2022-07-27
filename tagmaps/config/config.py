@@ -59,6 +59,7 @@ class BaseConfig:
         self.output_folder = None
         self.config_folder = None
         self.cluster_cut_distance = None
+        self.mapnik_export = False
 
         # additional auto settings
         self.sort_out_always_set = set()
@@ -307,6 +308,13 @@ class BaseConfig:
                             help="A (relative) path to load from "
                             "intermediate (cleaned) data",
                             type=Path)
+        parser.add_argument("--mapnik_export",
+            help="If enabled, emoji and tags will be exported together, in a single "
+                "shapefile, to be used in the Mapnik renderer. Unlike the default "
+                "output, for ESRI ArcGIS/ArcPro, where "
+                "emoji need to be written to a separate file, to be joined later - "
+                "due to a bug in the ESRI software that continues to exists. ",
+            action="store_true")
 
         args = parser.parse_args()
         if args.verbose:
@@ -388,6 +396,8 @@ class BaseConfig:
                 self.resource_path / args.load_intermediate)
         if args.cluster_cut_distance:
             self.cluster_cut_distance = args.cluster_cut_distance
+        if args.mapnik_export:
+            self.mapnik_export = True
 
     def load_filterlists(self):
         """Load filterlists for filtering terms (in-string and full match)

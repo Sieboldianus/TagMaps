@@ -28,7 +28,7 @@ class Compile():
     def write_shapes(cls,
                      bounds: AnalysisBounds,
                      shapes_and_meta_list,
-                     output_folder: Path):
+                     output_folder: Path, mapnik_export):
         """Main wrapper for writing
         all results to output
 
@@ -49,11 +49,11 @@ class Compile():
         __, epsg_code = tagmaps.classes.utils.Utils.get_best_utmzone(
             bound_points_shapely)
         cls._compile_merge_shapes(
-            shapes_and_meta_list, epsg_code, output_folder)
+            shapes_and_meta_list, epsg_code, output_folder, mapnik_export)
 
     @classmethod
     def _compile_merge_shapes(cls, shapes_and_meta_list,
-                              epsg_code, output_folder):
+                              epsg_code, output_folder, mapnik_export):
         all_itemized_shapes = list()
         all_non_itemized_shapes = list()
         contains_emoji_output = False
@@ -79,7 +79,7 @@ class Compile():
         if all_itemized_shapes:
             cls._write_all(
                 all_itemized_shapes, True,
-                contains_emoji_output, epsg_code, output_folder)
+                contains_emoji_output, epsg_code, output_folder, mapnik_export)
         if all_non_itemized_shapes:
             cls._write_all(
                 all_non_itemized_shapes, False,
@@ -145,7 +145,8 @@ class Compile():
 
     @classmethod
     def _write_all(cls, shapes, itemized,
-                   contains_emoji_output, epsg_code, output_folder):
+                   contains_emoji_output, epsg_code, output_folder,
+                   mapnik_export: bool = None):
         schema = cls._get_shape_schema(itemized)
         # update for emoji only run
         if itemized:
@@ -164,23 +165,26 @@ class Compile():
                 encoding='UTF-8', driver='ESRI Shapefile',
                 schema=schema, crs=from_epsg(epsg_code)) as shapefile:
             cls._attach_emojitable_handler(
-                shapefile,
-                shapes,
-                contains_emoji_output,
-                itemized, output_folder)
+                shapefile, shapes, contains_emoji_output,
+                itemized, output_folder, mapnik_export)
 
     @classmethod
-    def _attach_emojitable_handler(cls, shapefile,
-                                   shapes,
-                                   contains_emoji_output,
-                                   itemized, output_folder):
+    def _attach_emojitable_handler(
+            cls, shapefile, shapes, contains_emoji_output,
+            itemized, output_folder, mapnik_export):
         """If Emoji Output present, open csv for writing
         Note: refactor as optional property!
         """
         if contains_emoji_output:
-            # If newline is '', no translation takes place on write
+            if mapnik_export:
+                cls._write_all_shapes_emoji(
+                    shapefile, shapes, itemized)
+                return
+            # ArcGIS Bug: Emoji must be written to separate CSV file
+            # and joined back to the shapefile inside ArcGIS;
+            # Note: If newline is '', no translation takes place on write
             # that means: \n (LF) is written, not CRLF
-            with open(output_folder / f'emojiTable.csv',
+            with open(output_folder / 'emojiTable.csv',
                       "w", newline='', encoding='utf-8') as emoji_table:
                 emoji_table.write("FID,Emoji\n")
                 if itemized:
@@ -211,6 +215,20 @@ class Compile():
                         emoji_table,
                         is_emoji_record)
                     fid += 1
+            else:
+                cls._write_nonitemized_shape(
+                    shapefile, shape)
+
+    @classmethod
+    def _write_all_shapes_emoji(
+            cls, shapefile, shapes,
+            itemized: bool):
+        for shape in shapes:
+            if itemized:
+                # check if colum 10 is set to 1
+                # == emoji record
+                cls._write_itemized_shape(
+                    shapefile, shape, False)
             else:
                 cls._write_nonitemized_shape(
                     shapefile, shape)
@@ -269,7 +287,7 @@ class Compile():
 
     @staticmethod
     def _get_himp(idx, shapes):
-        """check if current cluster is most
+        """Check if current cluster is most
         used for item
         Compares item str to previous item,
         if different, then himp=1
@@ -283,7 +301,7 @@ class Compile():
             # if item is different to
             # previous item and
             # user count is not 1
-            # TODO: check - prviously and not shapes[idx][2]
+            # TODO: check - previously and not shapes[idx][2]
             h_imp = 1
         else:
             h_imp = 0
