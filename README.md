@@ -127,7 +127,7 @@ This is a high-level summary of version progress. See [CHANGELOG.md](CHANGELOG.m
 
 2022-07-27: **TagMaps v0.21.0**
 
-- Add export to Mapnik ([`9db0d0d`](https://github.com/Sieboldianus/TagMaps/commit/9db0d0dc0a266f9eef7c3aac5bf663337c096f80))
+- Add export to Mapnik ([`9db0d0d`](https://github.com/Sieboldianus/TagMaps/commit/9db0d0dc0a266f9eef7c3aac5bf663337c096f80)), enable with `--mapnik_export`
 - See a [jupyter lab notebook](https://ad.vgiscience.org/tagmaps-mapnik-jupyter/01_mapnik-tagmaps.html) that illustrates visualization of tag map data in [Mapnik](https://mapnik.org/)
 
 2021-02-22: **TagMaps v0.20.10**
