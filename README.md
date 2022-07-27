@@ -28,7 +28,7 @@ Overview of processing steps (Toronto High Park example):
 
 ![Tag Map Example](https://ad.vgiscience.org/tagmaps/tagmaps_steps.png?raw=true)
 
-The label placement based on descending importance is currently implemented in [ArcGIS](https://ad.vgiscience.org/tagmaps/docs/user-guide/tutorial/#arcmap) and [Mapnik](https://ad.vgiscience.org/tagmaps/docs/user-guide/mapnik/). See the folder [resources](resources/) for information regarding ArcGIS and a [Jupyter Notebook for Mapnik](https://ad.vgiscience.org/tagmaps-mapnik-jupyter/01_mapnik-tagmaps.html). [The following animation](https://wwwpub.zih.tu-dresden.de/~s7398234/map_000_4k.webm) illustrates the ArcMap placement algorithm for the TU Dresden Campus.
+The label placement based on descending importance is currently implemented in [ArcGIS](https://ad.vgiscience.org/tagmaps/docs/user-guide/tutorial/#arcmap) and [Mapnik](https://ad.vgiscience.org/tagmaps/docs/user-guide/mapnik/). See the folder [resources](resources/) for information regarding ArcGIS and a [Jupyter Notebook for Mapnik](https://ad.vgiscience.org/tagmaps-mapnik-jupyter/01_mapnik-tagmaps.html). [The following animation](https://wwwpub.zih.tu-dresden.de/~s7398234/map_000_4k.webm) illustrates the ArcMap label placement algorithm for the TU Dresden Campus.
 
 ![Label Placement Example](resources/label_placement.gif?raw=true)
 
