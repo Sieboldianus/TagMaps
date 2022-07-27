@@ -134,6 +134,10 @@ A number of additional files provide some statistics:
 
 For the final visualization step (placing word-clouds on a map), ArcMap is needed. It is a future goal for tagmaps development to feature an independend label placement algorithm (e.g. for leaflet or mapbox).
 
+!!! Note
+    As of tagmaps `0.21.0`, [visualization with Mapnik is supported](../mapnik/), as an alternative
+    to the visualization in ESRI ArcGIS.
+
 ![IR](https://wwwpub.zih.tu-dresden.de/~s7398234/tagmaps/docs/img/09_openArcMap.gif)
 
 Open `Basemap_World.mxd` (available from [resource folder](https://github.com/Sieboldianus/TagMaps/tree/master/resources)).
