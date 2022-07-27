@@ -2,6 +2,19 @@
 
 <!--next-version-placeholder-->
 
+## v0.21.0 (2022-07-27)
+### Feature
+* Add export to Mapnik ([`9db0d0d`](https://github.com/Sieboldianus/TagMaps/commit/9db0d0dc0a266f9eef7c3aac5bf663337c096f80))
+
+### Documentation
+* Add section on visualization with Mapnik ([`25dbb2c`](https://github.com/Sieboldianus/TagMaps/commit/25dbb2c0208f42d844fe92d6c863f909ce395f4f))
+* Add webm link to animation ([`f1190c8`](https://github.com/Sieboldianus/TagMaps/commit/f1190c8521851d93a13d3227ec031b51928c59fe))
+* Add label placement animation ([`82c987d`](https://github.com/Sieboldianus/TagMaps/commit/82c987d3af76b9c7343d5088adc8c1ae587e3b6d))
+* Remove deprecated cx_freeze references ([`92098e6`](https://github.com/Sieboldianus/TagMaps/commit/92098e6bd7d2817ca2c537401d3a19b9dc1dacbf))
+* Add publication link ([`9e3cb16`](https://github.com/Sieboldianus/TagMaps/commit/9e3cb163123ebbc87207d9ad56a6e457ac3fd28a))
+* Improve readme for resource folder ([`f8ef9f7`](https://github.com/Sieboldianus/TagMaps/commit/f8ef9f746d5cb0bfe14022c182f3c06e8fbb1040))
+* Add note to resources folder ([`ff9fe96`](https://github.com/Sieboldianus/TagMaps/commit/ff9fe962acbb2c833551e218137cab683e04fbcd))
+
 ## v0.20.12 (2022-01-19)
 ### Fix
 * ShapelyDeprecationWarning use geoms property ([`1352ea9`](https://github.com/Sieboldianus/TagMaps/commit/1352ea94feb77db37b5305a9f6281e5c5b2834b5))
