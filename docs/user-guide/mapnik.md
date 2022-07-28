@@ -3,11 +3,15 @@
 As of tagmaps `0.21.0`, visualization in Mapnik is supported, as an alternative
 to the visualization in ESRI ArcGIS [illustrated in the tutorial](../tutorial/#arcmap).
 
+Due to the different label processes and style parameters, Mapnik maps allow more
+fine grained control over the label placement, such as limiting the allowed offset of
+labels in dense areas.
+
+![IR](https://wwwpub.zih.tu-dresden.de/~s7398234/tagmaps/docs/img/mapnik-arcpro-compare.png)  
+
 [Mapnik][mapnik] is the render engine backing [OpenStreetMap][osm]
 and offers extensive options to customize rendering of spatial data such as
-produced by tagmaps. Particularly, the label placement algorithm is on a par with
-the proprietary ArcGIS Maplex render engine and thus suited to render tagmaps data with Python
-Open Source Software.
+produced by tagmaps.
 
 Enable this option with the flag [`--mapnik_export`](../../argparse/args/#-mapnik_export)
 ```bash
