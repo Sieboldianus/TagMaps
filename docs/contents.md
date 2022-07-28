@@ -8,6 +8,7 @@
     * [Detailed installation guide](user-guide/installation.md)
     * [Use your own data](user-guide/use-your-own-data.md)
     * [Tutorial](user-guide/tutorial.md)
+    * [Visualization in Mapnik](user-guide/mapnik.md)
     * [Jupyter Lab examples](user-guide/jupyter-examples.md)
     * [Troubleshooting](user-guide/troubleshooting.md)
 * [Command Line Interface](argparse/args.md)
