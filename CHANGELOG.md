@@ -68,3 +68,47 @@
 * Fix readme download link ([`1ff63ae`](https://github.com/Sieboldianus/TagMaps/commit/1ff63ae546f552cae5c559a76cb4adbf3f833dc4))
 * Update release notes, add link to win-37 build ([`f224de2`](https://github.com/Sieboldianus/TagMaps/commit/f224de20d0d3e68a67c4d48443432ddf31893f5a))
 * Update release notes, add link to win-37 build ([`5bfcc76`](https://github.com/Sieboldianus/TagMaps/commit/5bfcc76dafd9786fc7b7b66cc06a7313db3269f2))
+
+## v0.20.4 (2020-01-24)
+
+* mainly improvements of type annotations and code legibility
+* include type hints in [api-docs](https://ad.vgiscience.org/tagmaps/docs/api/tagmaps_.html)
+* migration from namedtuples to (awesome) new dataclass from Python 3.7
+(this is the minimum requirement from v0.20.2 onwards)
+* fix projection resulting in flipped geometries for pyproj>2.0.0
+* fix various other small bugs
+
+## v0.17.6 (2019-05-08)
+
+* as of this version, tagmaps package is available on [conda-forge](<https://anaconda.org/conda-forge/tagmaps>)
+* fixed a bug with newer versions of pyproj (>2.0.0) that would result in very slow projection performance
+
+## v0.17.4 (2019-03-08)
+
+* First version of public API, e.g. load tagmaps to other packages with `import tagmaps` or `from tagmaps import TagMaps`
+* Refactor of LoadData and PrepareData in separate classes, use of contextmanager/ pipeline generator
+* Improved generation of Alpha Shapes
+* Basic system integration test pipeline
+* Jupyter Notebook compatibility
+
+## v0.11.1 (2019-01-23)
+
+* complete refactor of code with improved encapsulation, code now largely follows PEP conventions
+* bugfix: emoji handling now accurately recognizes grapheme clusters consisting of multiple unicode codepoints.
+* interface: add feature to filter based on toplists for tags, emoji and locations
+* added sample CC-BY dataset
+
+## v0.9.2 (2018-01-31)
+
+* because Tag Maps can be generated from local to regional to continental scale, finding an algorythm that fits all was not straight forward. The current implementation will produce shapes for all of these scales without any user input.
+* this alpha shape implementation is motivated from [Kevin Dwyer/ Sean Gillies](http://blog.thehumangeo.com/2014/05/12/drawing-boundaries-in-python/) great base code
+* auto-projection from geographic to projected Coordinate System: select the most suitable UTM Zone for projecting data.
+
+## v0.9.1 (2018-01-17)
+
+* first build with python
+* initial commit, still lots of unnecessary comments/code parts left in code
+
+## v0.0.1 (2010-03-30)
+
+* first implementation of tagmaps concept in ArcGIS Model Builder
