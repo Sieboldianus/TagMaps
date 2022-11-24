@@ -69,7 +69,7 @@ class TPLT():
         else:
             axis.scatter(points.T[0], points.T[1],
                          color='red', **TPLT.PLOT_KWDS)
-        fig.canvas.set_window_title('Preview Map')
+        fig.canvas.manager.set_window_title('Preview Map')
         TPLT.plt_setxy_lim(axis, bounds)
         axis.tick_params(labelsize=10)
         return fig
@@ -130,7 +130,7 @@ class TPLT():
         # create main cluster points map
         axis.scatter(points.T[0], points.T[1],
                      c=sel_colors, **TPLT.PLOT_KWDS)
-        fig.canvas.set_window_title('Cluster Preview')
+        fig.canvas.manager.set_window_title('Cluster Preview')
         TPLT.set_plt_suptitle(fig, item_text, cls_type)
         dist_text = ''
         if shapes:
@@ -160,7 +160,7 @@ class TPLT():
             item_text, fig, cluster_distance, cls_type):
         """Gets figure for single linkage tree from HDBSCAN results"""
         TPLT.set_plt_suptitle(fig, item_text, cls_type)
-        fig.canvas.set_window_title('Single Linkage Tree')
+        fig.canvas.manager.set_window_title('Single Linkage Tree')
         axis = fig.get_axes()[0]
         axis.set_title('Single Linkage Tree', fontsize=12,
                        loc='center')

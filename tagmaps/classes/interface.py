@@ -285,7 +285,7 @@ class UserInterface():
                 axis=axis,
                 log_size=True
             )
-            self.fig3.canvas.set_window_title('Condensed Tree')
+            self.fig3.canvas.manager.set_window_title('Condensed Tree')
             TPLT.set_plt_suptitle(
                 self.fig3, sel_item, self._clst.cls_type)
             TPLT.set_plt_tick_params(axis)
@@ -302,7 +302,7 @@ class UserInterface():
                 edge_alpha=0.6,
                 node_size=10,
                 edge_linewidth=1)
-            self.fig4.canvas.set_window_title(
+            self.fig4.canvas.manager.set_window_title(
                 'Minimum Spanning Tree')
             # tkinter.messagebox.showinfo("messagr", str(type(ax)))
             TPLT.set_plt_suptitle(
@@ -484,7 +484,7 @@ class UserInterface():
         # plt references the last figure accessed
         self.fig1 = plt.figure()
         TPLT.set_plt_suptitle(self.fig1, sel_item.name, self._clst.cls_type)
-        self.fig1.canvas.set_window_title('Cluster Preview')
+        self.fig1.canvas.manager.set_window_title('Cluster Preview')
         dist_text = ''
         if self._clst.autoselect_clusters is False:
             dist_text = f'@ {self._clst.cluster_distance}m'
