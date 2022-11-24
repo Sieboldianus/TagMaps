@@ -10,8 +10,8 @@ dependencies:
   - pandas >=0.24.2
   - pyproj >=2.0.0
   - numpy
-  - matplotlib-base
-  - emoji >=1.0.1
+  - matplotlib-base >=3.0.0
+  - emoji >=2.0.0
   - cython
   - hdbscan >=0.8.20
   - gdal
