@@ -43,4 +43,5 @@ nav:
     - Command Line Interface: argparse/args.md
     - API Reference (external): api/tagmaps_.html
     - Additional resources: resources.md
+    - Changelog: changelog.md
     - About: about.md

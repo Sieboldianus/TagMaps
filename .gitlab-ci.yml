@@ -20,6 +20,8 @@ test:
   script:
     # test dev install
     - pip install -e . --no-dependencies
+    # copy changelog
+    - cp CHANGELOG.md docs/changelog.md
     # run main integration test
     - cleaned_data_file=01_Input/flickr_dresden_cc-by-licenses.csv
     - python tests/test_all.py --max_items 50 --auto_mode --load_intermediate=$cleaned_data_file
@@ -49,6 +51,7 @@ test:
       # special character in YAML
       - '*.svg'
       - docs/argparse/args.md
+      - docs/changelog.md
       - docs/api/
   only:
     - master
