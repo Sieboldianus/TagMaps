@@ -23,10 +23,9 @@ from math import asin, cos, radians, sin, sqrt
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple, Union
 
-import emoji
+from emoji import distinct_emoji_list
 import numpy as np
 import pyproj
-import regex
 import shapely.geometry as geometry
 
 from ..classes.shared_structure import AnalysisBounds, ConfigMap, ItemCounter
@@ -524,97 +523,12 @@ class Utils():
 
     @staticmethod
     def extract_emoji(string_with_emoji: Optional[str]) -> Set[str]:
-        """Extract emoji and flags using regex package
-
-        This is a new version to extract emoji (see old method:
-        _extract_emoji_old). Code source:
-        https://stackoverflow.com/a/49242754/4556479
-        This method supports extracting grapheme clusters,
-        emoji constructed of multiple emoji (the "perceived
-        pictograms")
-
-        Compare:
-        A: _extract_emoji_old:
-        Total emoji count for the 100 most
-        used emoji in selected area: 27722.
-        Total distinct emoji (DEC): 918
-        B: _extract_emoji:
-        Total emoji count for the 100 most
-        used emoji in selected area: 25793.
-        Total distinct emoji (DEC): 1349
-
-        Original Code @ sheldonzy:
-        https://stackoverflow.com/a/49242754/4556479
+        """Extract emoji and flags using emoji package
         """
-        emoji_set = set()
         if not string_with_emoji:
-            return emoji_set
-        # use \X (eXtended grapheme cluster) regular expression:
-        data = regex.findall(r'\X', string_with_emoji)
-        for grapheme in data:
-            if any(char in emoji.UNICODE_EMOJI["en"] for char in grapheme):
-                emoji_set.add(grapheme)
-        return emoji_set
-
-    @staticmethod
-    def _extract_emoji_old(string_with_emoji):
-        """Extracts (one or more) emoji from string
-
-        - uses emoji package
-        str = str.decode('utf-32').encode('utf-32', 'surrogatepass')
-        return list(c for c in str if c in emoji.UNICODE_EMOJI)
-
-        c = a single character
-        This code cannot cannot detect flags in the text, e.g.:
-        _extract_emoji("🇵🇰 👧 🏿")
-        i.e. that is because it iterates over every character.
-        Unicode flags are a combination of two "regional indicator"
-        characters which are not, individually, emoji.
-        If you want to detect Unicode flags you'll need
-        to check pairs of characters.
-
-        there's also a bug in _check_emoji_type if emoji
-        package is upgraded from 0.4.5 to 0.5.1
-        see:
-        https://stackoverflow.com/questions/49276977/how-to-extract-emojis-and-flags-from-strings-in-python?noredirect=1&lq=1
-        """
-        emoji_list = list(c for c in string_with_emoji if c in
-                          emoji.UNICODE_EMOJI and
-                          Utils._check_emoji_type(c) is True)
-        return emoji_list
-
-    @staticmethod
-    def _surrogatepair(match):
-        char = match.group()
-        assert ord(char) > 0xffff
-        encoded = char.encode('utf-16-le')
-        return (
-            chr(int.from_bytes(encoded[:2], 'little')) +
-            chr(int.from_bytes(encoded[2:], 'little')))
-
-    @staticmethod
-    def _with_surrogates(text):
-        """Process emoji with surrogates text
-
-        test: text = '❤️👨‍⚕️'
-        """
-        _nonbmp = re.compile(r'[\U00010000-\U0010FFFF]')
-        return _nonbmp.sub(Utils._surrogatepair, text)
-
-    @staticmethod
-    def _convert_encode_emoji(emoji_text):
-        """Fix weird emoji encoding issue with surrogates
-
-        see:
-        https://stackoverflow.com/questions/52179465/best-and-clean-way-to-encode-emojis-python-from-text-file
-
-        test: emoji_text = '❤️👨‍⚕️'
-        """
-        emoji_encoded = (emoji_text
-                         .encode('utf-16', 'surrogatepass')
-                         .decode('utf-16')
-                         )
-        return emoji_encoded
+            # empty
+            return set()
+        return set(distinct_emoji_list(string_with_emoji))
 
     @staticmethod
     def str2bool(str_text):
