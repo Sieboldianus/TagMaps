@@ -2,6 +2,14 @@
 
 <!--next-version-placeholder-->
 
+## v0.21.1 (2022-11-24)
+### Fix
+* Matplotlib fig.canvas.set_window_title() deprecated in Matplotlib>=3.4 ([`6459d5f`](https://github.com/Sieboldianus/TagMaps/commit/6459d5f8ee4395677fa3d1eedf6d8dda8fd40eda))
+* EMOJI_UNICODE deprecated in emoji>=2.0.0 ([`9d1e243`](https://github.com/Sieboldianus/TagMaps/commit/9d1e2438ce81cbf8e65f3d47fad3c17afbcfbd61))
+
+### Documentation
+* Add comparison graphic for Mapnik/ArcPro rendering ([`e15682d`](https://github.com/Sieboldianus/TagMaps/commit/e15682d2626d883f9997b9121705789da91fcb1c))
+
 ## v0.21.0 (2022-07-27)
 ### Feature
 * Add export to Mapnik ([`9db0d0d`](https://github.com/Sieboldianus/TagMaps/commit/9db0d0dc0a266f9eef7c3aac5bf663337c096f80))
