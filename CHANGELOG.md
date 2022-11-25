@@ -100,7 +100,7 @@
 
 ## v0.9.2 (2018-01-31)
 
-* because Tag Maps can be generated from local to regional to continental scale, finding an algorythm that fits all was not straight forward. The current implementation will produce shapes for all of these scales without any user input.
+* because Tag Maps can be generated from local to regional to continental scale, finding an algorithm that fits all was not straight forward. The current implementation will produce shapes for all of these scales without any user input.
 * this alpha shape implementation is motivated from [Kevin Dwyer/ Sean Gillies](http://blog.thehumangeo.com/2014/05/12/drawing-boundaries-in-python/) great base code
 * auto-projection from geographic to projected Coordinate System: select the most suitable UTM Zone for projecting data.
 
