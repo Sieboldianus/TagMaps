@@ -1,3 +1,7 @@
+# This supplementary file may be used to create an environment using:
+# conda env create -n tagmaps -f environment.yml
+# conda activate tagmaps
+# pip install --no-deps --editable .
 name: tagmaps
 channels:
   - conda-forge
