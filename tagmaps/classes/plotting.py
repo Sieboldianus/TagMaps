@@ -231,11 +231,36 @@ class TPLT():
         axis.tick_params(labelsize=10)
 
     @staticmethod
+    def polygon_patch(polygon, **kwargs):
+        """PolygonPatch function from descartes.
+
+        Source: https://github.com/geopandas/geopandas/issues/1039#issuecomment-509649752
+        """
+
+        def coding(ob):
+            # The codes will be all "LINETO" commands, except for "MOVETO"s at the
+            # beginning of each subpath
+            n = len(getattr(ob, "coords", None) or ob)
+            vals = ones(n, dtype=Path.code_type) * Path.LINETO
+            vals[0] = Path.MOVETO
+            return vals
+
+        vertices = concatenate(
+            [asarray(polygon.exterior)[:, :2]]
+            + [asarray(r)[:, :2] for r in polygon.interiors]
+        )
+        codes = concatenate(
+            [coding(polygon.exterior)] + [coding(r) for r in polygon.interiors]
+        )
+
+        return PathPatch(Path(vertices, codes), **kwargs)
+
+    @staticmethod
     def _get_poly_patch(polygon):
         """Returns a matplotlib polygon-patch from shapely polygon"""
-        patch = PolygonPatch(polygon, fc='#999999',
-                             ec='#000000', fill=True,
-                             zorder=-1, alpha=0.7)
+        patch = TPLT.polygon_patch(
+            polygon, fc="#999999", ec="#000000", fill=True, zorder=-1, alpha=0.7
+        )
         return patch
 
     # @staticmethod

@@ -16,7 +16,6 @@ dependencies:
   - hdbscan >=0.8.20
   - gdal
   - seaborn
-  - descartes
   - regex
   - scipy
   - joblib
