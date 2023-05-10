@@ -2,6 +2,15 @@
 
 <!--next-version-placeholder-->
 
+## v0.21.2 (2023-05-10)
+### Fix
+* GDAL/Fiona ImportError: DLL load failed while importing _env (Windows) ([`7952df3`](https://github.com/Sieboldianus/TagMaps/commit/7952df3d5693cf99a2c6d65967a7951a436b36b9))
+
+### Documentation
+* Fix link in README.md ([`2429c9b`](https://github.com/Sieboldianus/TagMaps/commit/2429c9bd98a80d91a6c89eb337436d61f880b439))
+* Update table of contents ([`dba0e2e`](https://github.com/Sieboldianus/TagMaps/commit/dba0e2e1ad7101626b2a2c1491e9e8897d191096))
+* Add CHANGELOG to documentation ([`adfe3e5`](https://github.com/Sieboldianus/TagMaps/commit/adfe3e569d8119f5ae72bc5fcc855fcaa2c4cf8c))
+
 ## v0.21.1 (2022-11-24)
 ### Fix
 * Matplotlib fig.canvas.set_window_title() deprecated in Matplotlib>=3.4 ([`6459d5f`](https://github.com/Sieboldianus/TagMaps/commit/6459d5f8ee4395677fa3d1eedf6d8dda8fd40eda))
