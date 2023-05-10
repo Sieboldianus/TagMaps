@@ -2,6 +2,14 @@
 
 <!--next-version-placeholder-->
 
+## v0.22.0 (2023-05-10)
+### Feature
+* Migrate project to pyproject.toml only ([`fc79efd`](https://github.com/Sieboldianus/TagMaps/commit/fc79efd653c982dc0db20e8a7f64110c152c037d))
+
+### Documentation
+* Add basic description of project structure and release-flow for developers to documentation ([`f7e77db`](https://github.com/Sieboldianus/TagMaps/commit/f7e77db0754a70d4e92dafdd3ec9f19c4024a394))
+* Add purpose as docstring to environment.yml ([`5583627`](https://github.com/Sieboldianus/TagMaps/commit/558362784de10c360d88ed0be10ca5939c29bc38))
+
 ## v0.21.2 (2023-05-10)
 ### Fix
 * GDAL/Fiona ImportError: DLL load failed while importing _env (Windows) ([`7952df3`](https://github.com/Sieboldianus/TagMaps/commit/7952df3d5693cf99a2c6d65967a7951a436b36b9))
