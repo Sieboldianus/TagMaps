@@ -8,15 +8,16 @@ from __future__ import absolute_import
 from typing import Tuple
 
 import matplotlib.pyplot as plt
-from descartes import PolygonPatch
+from matplotlib.patches import PathPatch
+from matplotlib.path import Path
 from matplotlib.ticker import FuncFormatter
+from numpy import asarray, concatenate, ones
 
-from tagmaps.classes.shared_structure import (EMOJI, LOCATIONS, TAGS,
-                                              AnalysisBounds)
+from tagmaps.classes.shared_structure import EMOJI, LOCATIONS, TAGS, AnalysisBounds
 from tagmaps.classes.utils import Utils
 
 
-class TPLT():
+class TPLT:
     """Tag Maps plotting Class
 
     To remember (because mpl/pyplot can be confusing):
@@ -34,25 +35,21 @@ class TPLT():
     for more information, see:
     https://stackoverflow.com/questions/19816820/how-to-retrieve-colorbar-instance-from-figure-in-matplotlib
     """
-    PLOT_KWDS = {'alpha': 0.5, 's': 10, 'linewidths': 0}
+
+    PLOT_KWDS = {"alpha": 0.5, "s": 10, "linewidths": 0}
 
     @staticmethod
-    def _get_xy_dists(
-            bounds: AnalysisBounds) -> Tuple[float, float]:
+    def _get_xy_dists(bounds: AnalysisBounds) -> Tuple[float, float]:
         """Get X/Y Distances from Analysis Bounds"""
-        dist_y_lat = (
-            bounds.lim_lat_max - bounds.lim_lat_min)
-        dist_x_lng = (
-            bounds.lim_lng_max - bounds.lim_lng_min)
+        dist_y_lat = bounds.lim_lat_max - bounds.lim_lat_min
+        dist_x_lng = bounds.lim_lng_max - bounds.lim_lng_min
         return dist_y_lat, dist_x_lng
 
     @staticmethod
     def plt_setxy_lim(axis, bounds: AnalysisBounds):
         """Set global plotting bounds basedon Analysis Bounds"""
-        axis.set_xlim(
-            [bounds.lim_lng_min, bounds.lim_lng_max])
-        axis.set_ylim(
-            [bounds.lim_lat_min, bounds.lim_lat_max])
+        axis.set_xlim([bounds.lim_lng_min, bounds.lim_lng_max])
+        axis.set_ylim([bounds.lim_lat_min, bounds.lim_lat_max])
 
     @staticmethod
     def get_fig_points(fig, points, bounds, point_size=None):
@@ -64,12 +61,17 @@ class TPLT():
         axis = fig.get_axes()[0]
         # only one subplot (nrows, ncols, axnum)
         if point_size is not None:
-            axis.scatter(points.T[0], points.T[1],
-                         color='red', alpha=0.5, s=point_size, linewidths=0)
+            axis.scatter(
+                points.T[0],
+                points.T[1],
+                color="red",
+                alpha=0.5,
+                s=point_size,
+                linewidths=0,
+            )
         else:
-            axis.scatter(points.T[0], points.T[1],
-                         color='red', **TPLT.PLOT_KWDS)
-        fig.canvas.manager.set_window_title('Preview Map')
+            axis.scatter(points.T[0], points.T[1], color="red", **TPLT.PLOT_KWDS)
+        fig.canvas.manager.set_window_title("Preview Map")
         TPLT.plt_setxy_lim(axis, bounds)
         axis.tick_params(labelsize=10)
         return fig
@@ -94,9 +96,18 @@ class TPLT():
 
     @staticmethod
     def get_cluster_preview(
-            points, sel_colors, item_text, bounds, mask_noisy,
-            cluster_distance, number_of_clusters, auto_select_clusters=None,
-            shapes=None, fig=None, cls_type=None) -> plt.figure:
+        points,
+        sel_colors,
+        item_text,
+        bounds,
+        mask_noisy,
+        cluster_distance,
+        number_of_clusters,
+        auto_select_clusters=None,
+        shapes=None,
+        fig=None,
+        cls_type=None,
+    ) -> plt.figure:
         """Get cluster preview figure
 
         Args:
@@ -128,25 +139,27 @@ class TPLT():
             fig.add_subplot(111)
         axis = fig.get_axes()[0]
         # create main cluster points map
-        axis.scatter(points.T[0], points.T[1],
-                     c=sel_colors, **TPLT.PLOT_KWDS)
-        fig.canvas.manager.set_window_title('Cluster Preview')
+        axis.scatter(points.T[0], points.T[1], c=sel_colors, **TPLT.PLOT_KWDS)
+        fig.canvas.manager.set_window_title("Cluster Preview")
         TPLT.set_plt_suptitle(fig, item_text, cls_type)
-        dist_text = ''
+        dist_text = ""
         if shapes:
             for shape in shapes:
                 patch = TPLT._get_poly_patch(shape)
                 axis.add_patch(patch)
         if auto_select_clusters is False:
-            dist_text = '@ ' + str(int(cluster_distance)) + 'm'
-        axis.set_title(f'Cluster Preview {dist_text}',
-                       fontsize=12, loc='center')
-        noisy_txt = '{} / {}'.format(mask_noisy.sum(), len(mask_noisy))
-        axis.text(bounds.lim_lng_max,
-                  bounds.lim_lat_max,
-                  f'{number_of_clusters} Clusters (Noise: {noisy_txt})',
-                  fontsize=10, horizontalalignment='right',
-                  verticalalignment='top', fontweight='bold')
+            dist_text = "@ " + str(int(cluster_distance)) + "m"
+        axis.set_title(f"Cluster Preview {dist_text}", fontsize=12, loc="center")
+        noisy_txt = f"{mask_noisy.sum()} / {len(mask_noisy)}"
+        axis.text(
+            bounds.lim_lng_max,
+            bounds.lim_lat_max,
+            f"{number_of_clusters} Clusters (Noise: {noisy_txt})",
+            fontsize=10,
+            horizontalalignment="right",
+            verticalalignment="top",
+            fontweight="bold",
+        )
         # set plotting bounds
         TPLT.plt_setxy_lim(axis, bounds)
         TPLT.set_plt_tick_params(axis)
@@ -156,23 +169,22 @@ class TPLT():
         return fig
 
     @staticmethod
-    def get_single_linkage_tree_preview(
-            item_text, fig, cluster_distance, cls_type):
+    def get_single_linkage_tree_preview(item_text, fig, cluster_distance, cls_type):
         """Gets figure for single linkage tree from HDBSCAN results"""
         TPLT.set_plt_suptitle(fig, item_text, cls_type)
-        fig.canvas.manager.set_window_title('Single Linkage Tree')
+        fig.canvas.manager.set_window_title("Single Linkage Tree")
         axis = fig.get_axes()[0]
-        axis.set_title('Single Linkage Tree', fontsize=12,
-                       loc='center')
+        axis.set_title("Single Linkage Tree", fontsize=12, loc="center")
         # plot cutting distance
-        y_value = Utils.get_radians_from_meters(
-            cluster_distance)
+        y_value = Utils.get_radians_from_meters(cluster_distance)
         axis.relim()
         xmin = axis.get_xlim()[0]
         xmax = axis.get_xlim()[1]
         axis.plot(
-            [xmin, xmax], [y_value, y_value], color='k',
-            label=f'Cluster (Cut) Distance {int(cluster_distance)}m'
+            [xmin, xmax],
+            [y_value, y_value],
+            color="k",
+            label=f"Cluster (Cut) Distance {int(cluster_distance)}m",
         )
         axis.legend(fontsize=10)
         # replace y_value labels with meters text (instead of radians dist)
@@ -183,29 +195,27 @@ class TPLT():
     @staticmethod
     def y_formatter(y_value, __):
         """Format radians y-labels as meters for improved legibility"""
-        return f'{Utils.get_meters_from_radians(y_value):3.0f}m'
+        return f"{Utils.get_meters_from_radians(y_value):3.0f}m"
 
     @staticmethod
     def set_plt_suptitle(fig, item: str, cls_type):
         """Sets suptitle for plot (plt) and Cluster Type"""
-        TPLT._set_pltspec_suptitle(
-            fig, item, cls_type)
+        TPLT._set_pltspec_suptitle(fig, item, cls_type)
 
     @staticmethod
     def _set_pltspec_suptitle(fig, item: str, cls_type=None):
         """Sets suptitle for plot (plt)"""
         title = TPLT._get_pltspec_suptitle(item, cls_type)
         if cls_type and cls_type == EMOJI:
-            plt.rcParams['font.family'] = 'DejaVu Sans'
+            plt.rcParams["font.family"] = "DejaVu Sans"
         else:
-            plt.rcParams['font.family'] = 'sans-serif'
+            plt.rcParams["font.family"] = "sans-serif"
         TPLT._set_plt_suptitle_st(fig, title)
 
     @staticmethod
     def _set_plt_suptitle_st(fig, title: str):
         """Set title of plt"""
-        fig.suptitle(title,
-                     fontsize=18, fontweight='bold')
+        fig.suptitle(title, fontsize=18, fontweight="bold")
 
     @staticmethod
     def _get_pltspec_suptitle(item: str, cls_type=None) -> str:
@@ -220,7 +230,7 @@ class TPLT():
             title = item.upper()
         elif cls_type == EMOJI:
             emoji_name = Utils.get_emojiname(item)
-            title = f'{item} ({emoji_name})'
+            title = f"{item} ({emoji_name})"
         else:
             title = item.upper()
         return title
