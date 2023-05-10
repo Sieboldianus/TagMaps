@@ -3,7 +3,7 @@ Run Integration test for TagMaps
 
 
 This will check complete process of main() as if
-evoked with tagmaps --autoMode --maxItems 50
+invoked with tagmaps --autoMode --maxItems 50
 """
 
 import sys
@@ -25,5 +25,5 @@ def tagmaps_system_integration_test():
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     tagmaps_system_integration_test()
