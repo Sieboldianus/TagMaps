@@ -27,7 +27,7 @@ or [Gitlab](https://gitlab.vgiscience.de/ad/tagmaps).
 
 The project structure follows the [src-layout](https://setuptools.pypa.io/en/latest/userguide/package_discovery.html#src-layout).
 
-The packaging is organized as described in the setuptools [declarative config (pyproject.toml)](https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html)
+The packaging is organized as described in the setuptools [declarative config (pyproject.toml)](https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html).
 
 Releases are made with [python-semantic-release](https://github.com/python-semantic-release/python-semantic-release) through Gitlab CI.
 
