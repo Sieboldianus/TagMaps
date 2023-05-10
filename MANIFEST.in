@@ -1,5 +1,7 @@
 include README.md
+include LICENSE.md
+include CHANGELOG.md
 include VERSION
-include tagmaps/classes/*
-include tagmaps/config/*
+include src/tagmaps/matplotlibrc
+recursive-include src/tagmaps/ *.py
 include tests/*

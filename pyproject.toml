@@ -1,0 +1,117 @@
+[build-system]
+requires = ["setuptools>=64.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tagmaps"
+authors = [{name = "Alexander Dunkel", email = "alexander.dunkel@tu-dresden.de"}]
+license = {text = "GNU GPLv3 or any higher"}
+description = "Tag Clustering for Tag Maps"
+requires-python = ">=3.7"
+dependencies = [
+    "fiona==1.8.22",
+    "shapely",
+    "pandas>=0.24.2",
+    "pyproj>=2.0.0",
+    "numpy",
+    "matplotlib>=3.0.0",
+    "emoji>=2.0.0",
+    "cython",
+    "hdbscan>=0.8.20",
+    "gdal>3.4.1",
+    "seaborn",
+    "regex",
+    "scipy",
+    "joblib",
+]
+dynamic = ["version"]
+
+[project.readme]
+file = "README.md"
+content-type = "text/markdown"
+
+[project.urls]
+Homepage = "https://github.com/Sieboldianus/TagMaps"
+
+[project.scripts]
+tagmaps = "tagmaps.__main__:main"
+
+[tool.semantic_release]
+version_variable = "src/tagmaps/version.py:__version__"
+upload_to_pypi = "true"
+branch = "master"
+build_command = "python -m build"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools.package-data]
+"*" = ["README.md", "matplotlibrc"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = [
+    "tagmaps",
+    "tagmaps.*",
+]
+namespaces = false
+
+[tool.setuptools.dynamic]
+version = {attr = "tagmaps/version.__version__"}
+
+[tool.black]
+line-length = 88
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | \.vscode
+  | _build
+  | buck-out
+  | build
+  | dist
+  | dev/
+  | src/tagmaps/config/config.py
+)/
+'''
+
+[tool.isort]
+profile = "black"
+known_first_party = ["tagmaps"]
+line_length = 88
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+
+[tool.mypy]
+# Error output
+show_column_numbers = true
+show_error_codes = true
+show_error_context = true
+show_traceback = true
+pretty = true
+check_untyped_defs = false
+# Warnings
+warn_no_return = true
+warn_redundant_casts = true
+warn_unreachable = true
+files = ["src", "tests"]
+
+[tool.pylint.format]
+max-line-length = 88
+
+[tool.pylint.message_control]
+enable = ["c-extension-no-member", "no-else-return"]
+
+[tool.pylint.variables]
+dummy-variables-rgx = "_+$|(_[a-zA-Z0-9_]*[a-zA-Z0-9]+?$)|dummy|^ignored_|^unused_"
+ignored-argument-names = "_.*|^ignored_|^unused_|args|kwargs"
+
+[tool.codespell]
+ignore-words-list = " "
