@@ -7,11 +7,12 @@ Setup for building and installing tagmaps package.
 import sys
 from setuptools import setup
 
-with open('README.md') as f:
+with open("README.md") as f:
     LONG_DESCRIPTION = f.read()
 
 try:
     from semantic_release import setup_hook
+
     setup_hook(sys.argv)
 except ImportError:
     pass
