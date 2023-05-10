@@ -29,11 +29,11 @@ The project structure follows the [src-layout](https://setuptools.pypa.io/en/lat
 
 The packaging is organized as described in the setuptools [declarative config (pyproject.toml)](https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html).
 
-Releases are made with [python-semantic-release](https://github.com/python-semantic-release/python-semantic-release) through Gitlab CI.
-
 The version is maintained both as git tags and inside `src/tagmaps/version.py`, with the latter as the single point of truth.
 
-Preview the release flow with:
+Releases are made with [python-semantic-release](https://github.com/python-semantic-release/python-semantic-release). At the
+moment, releases are triggered manually after certain progress is available. Preview release flow with:
+
 ```bash
 semantic-release publish --verbosity=DEBUG --noop
 ```
