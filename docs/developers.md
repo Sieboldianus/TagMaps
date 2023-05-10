@@ -2,6 +2,9 @@
 
 The tagmaps python package is research software. Maintenance usually happens in chunks, whenever I have time.
 
+You can contribute feedback, submit issues for bugs etc. on [Github](https://github.com/Sieboldianus/tagmaps) 
+or [Gitlab](https://gitlab.vgiscience.de/ad/tagmaps).
+
 ## Importing tagmaps as a package
 
 It is possible to import tagmaps as a package:
@@ -15,13 +18,6 @@ from tagmaps.classes.utils import Utils
 ```
 
 Have a look at the [Jupyter Lab examples](user-guide/jupyter-examples.md).
-
-## Contribute
-
-tagmaps is in an early stage of development.
-
-You can contribute feedback, submit issues for bugs etc. on [Github](https://github.com/Sieboldianus/tagmaps) 
-or [Gitlab](https://gitlab.vgiscience.de/ad/tagmaps).
 
 ## Structure of the project
 
