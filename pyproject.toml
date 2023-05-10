@@ -9,7 +9,7 @@ license = {text = "GNU GPLv3 or any higher"}
 description = "Tag Clustering for Tag Maps"
 requires-python = ">=3.7"
 dependencies = [
-    "fiona==1.8.22",
+    "fiona",
     "shapely",
     "pandas>=0.24.2",
     "pyproj>=2.0.0",
