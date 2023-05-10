@@ -61,8 +61,8 @@ Tag Maps package can be used with any tagged & spatially referenced data, but it
 There are two ways to load input data:
 
 1. Unfiltered raw data
-   - Use `tagmaps.add_record(record)` where record is of type `PostStructure` (see [shared_structure.py](/tagmaps/classes/shared_structure.py))
-   - How you clean up data totally depends on the type, have a look at LoadData class in [load_data.py](/tagmaps/classes/load_data.py) for Twitter and  Flickr cleanup
+   - Use `tagmaps.add_record(record)` where record is of type `PostStructure` (see [shared_structure.py](src/tagmaps/classes/shared_structure.py))
+   - How you clean up data totally depends on the type, have a look at LoadData class in [load_data.py](src/tagmaps/classes/load_data.py) for Twitter and  Flickr cleanup
 2. Filtered data
    - the result from 1 is a `UserPostLocation` (UPL), which is a reference of type 'CleanedPost'. A UPL means that all posts of a single user at a single coordinate are merged,
      e.g. a reduced list of terms, tags and emoji based on global occurrence (i.e. no duplicates).
@@ -75,7 +75,7 @@ There are two ways to load input data:
 ## Code
 
 The code has been completely refactored in January 2019, but there are still some missing pieces.
-Particularly the API (that is: `import tagmaps`) is still in an early stage. See method main() in [**main**.py](/tagmaps/__main__.py)
+Particularly the API (that is: `import tagmaps`) is still in an early stage. See method main() in [**main**.py](src/tagmaps/__main__.py)
 for examples on how to use tag maps package.
 
 ## Resources
