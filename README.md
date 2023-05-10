@@ -124,6 +124,12 @@ GNU GPLv3
 
 This is a high-level summary of version progress. See [CHANGELOG.md](CHANGELOG.md) for a full list of changes.
 
+2022-05-10: **tagMaps v0.22.0**
+
+- the project has finally migrated to a `pyproject.toml`-only based packaging system, as described in the [declarative config (pyproject.toml)](https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html)
+- structure now follows the [src-layout](https://setuptools.pypa.io/en/latest/userguide/package_discovery.html#src-layout).
+- fiona was pinned to `1.8.22` until [#213](https://github.com/conda-forge/fiona-feedstock/issues/213) (Windows installations only) is solved
+
 2022-07-27: **TagMaps v0.21.0**
 
 - Add export to Mapnik ([`9db0d0d`](https://github.com/Sieboldianus/TagMaps/commit/9db0d0dc0a266f9eef7c3aac5bf663337c096f80)), enable with `--mapnik_export`
