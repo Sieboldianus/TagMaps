@@ -2,6 +2,9 @@
 
 <!--next-version-placeholder-->
 
+## v0.22.2 (2023-05-16)
+
+
 ## v0.22.1 (2023-05-16)
 ### Documentation
 * Restructure Developers section ([`ae93e68`](https://github.com/Sieboldianus/TagMaps/commit/ae93e686040d23e75117fcd1053ede7502da4bdb))
