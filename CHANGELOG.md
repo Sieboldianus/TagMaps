@@ -2,6 +2,11 @@
 
 <!--next-version-placeholder-->
 
+## v0.22.1 (2023-05-16)
+### Documentation
+* Restructure Developers section ([`ae93e68`](https://github.com/Sieboldianus/TagMaps/commit/ae93e686040d23e75117fcd1053ede7502da4bdb))
+* Add high-level update to changelog ([`6a1bc1f`](https://github.com/Sieboldianus/TagMaps/commit/6a1bc1f9db9355ff6ba1efd99cac9a1b510945d1))
+
 ## v0.22.0 (2023-05-10)
 ### Feature
 * Migrate project to pyproject.toml only ([`fc79efd`](https://github.com/Sieboldianus/TagMaps/commit/fc79efd653c982dc0db20e8a7f64110c152c037d))
