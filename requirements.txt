@@ -8,10 +8,6 @@ pyproj>=2.0.0
 numpy
 matplotlib-base>=3.0.0
 emoji>=2.0.0
-cython
 hdbscan>=0.8.20
-gdal>3.4.1
 seaborn
-regex
 scipy
-joblib
