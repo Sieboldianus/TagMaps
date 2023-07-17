@@ -410,7 +410,7 @@ class AlphaShapes:
         # loop over triangles:
         # vert_ia, ib, ic = indices of corner points of the
         # triangle
-        for vert_ia, vert_ib, vert_ic in tri.vertices:
+        for vert_ia, vert_ib, vert_ic in tri.simplices:
             pa_v = coords[vert_ia]
             pb_v = coords[vert_ib]
             pc_v = coords[vert_ic]
