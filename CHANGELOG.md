@@ -2,6 +2,10 @@
 
 <!--next-version-placeholder-->
 
+## v0.22.3 (2023-07-17)
+### Fix
+* Tri.vertices - Delaunay object has no attribute vertices ([`621b267`](https://github.com/Sieboldianus/TagMaps/commit/621b2673e34cec61c35c625a512b73b9937d6497))
+
 ## v0.22.2 (2023-05-16)
 
 
