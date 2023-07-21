@@ -1,5 +1,5 @@
 test:
-  image: registry.gitlab.vgiscience.org/tud_ifk/miniconda-cidefault
+  image: registry.gitlab.vgiscience.org/tud_ifk/miniconda-cidefault:0.3.0
   before_script:
     # initialize conda shell
     - conda init bash
@@ -7,19 +7,16 @@ test:
     # activate default ci_env from registry image
     # contains anybadge
     - conda activate ci_env
-    - conda env create -f environment.yml
-    # activate tagmaps env
-    # with --stack environments
-    - conda activate tagmaps --stack
+    - pip install -r requirements.txt
     # install additional packages
     # needed in tagmaps ci job
     - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.vgiscience.de/tud_ifk/argdown.git
-    - conda install pylint bitarray -c conda-forge
+    - pip install pylint bitarray -c conda-forge
     - pip install pdoc3 pylint-exit
   stage: test
   script:
     # test dev install
-    - pip install -e . --no-dependencies
+    - pip install --no-deps --editable .
     # copy changelog
     - cp CHANGELOG.md docs/changelog.md
     # run main integration test
