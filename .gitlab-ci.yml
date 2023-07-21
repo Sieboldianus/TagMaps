@@ -1,5 +1,5 @@
 test:
-  image: registry.gitlab.vgiscience.org/tud_ifk/miniconda-cidefault:0.3.0
+  image: registry.gitlab.vgiscience.org/tud_ifk/miniconda-cidefault:0.4.0
   before_script:
     # initialize conda shell
     - conda init bash
