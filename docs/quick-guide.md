@@ -43,7 +43,7 @@ Setup requires gdal to be available. As a minimal example, have a look at the fo
 
 First, install base dependencies:
 ```
-apt-get install python3-venv python3-dev python3-tk -y
+apt-get install python3-venv python3-dev python3-tk gcc -y
 ```
 
 Then clone the repository, install python3-venv and install dependencies:
