@@ -2,6 +2,15 @@
 
 <!--next-version-placeholder-->
 
+## v0.22.4 (2023-07-21)
+### Fix
+* Requirements.txt containing misspelled and missing dependencies ([`54fa4c1`](https://github.com/Sieboldianus/TagMaps/commit/54fa4c122c75ea580bbe136864815dd1ee265dc5))
+* HDBSCAN TypeError: 'numpy.float64', [1] ([`4f9a652`](https://github.com/Sieboldianus/TagMaps/commit/4f9a652111d1fa28e393051df64e8a7e9f179cca))
+
+### Documentation
+* Add instructions to install on Linux and from requirements.txt ([`07cc618`](https://github.com/Sieboldianus/TagMaps/commit/07cc618175f6cfa9b0da1abf26d9932af752283e))
+* Add instructions to use conda together with no-dependencies and --editable flags ([`d8143db`](https://github.com/Sieboldianus/TagMaps/commit/d8143db52c19b5867c7e981618b847076a1f9190))
+
 ## v0.22.3 (2023-07-17)
 ### Fix
 * Tri.vertices - Delaunay object has no attribute vertices ([`621b267`](https://github.com/Sieboldianus/TagMaps/commit/621b2673e34cec61c35c625a512b73b9937d6497))
