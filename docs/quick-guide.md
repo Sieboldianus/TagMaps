@@ -41,6 +41,12 @@ Both `pip install tagmaps` and `conda install tagmaps -c conde-forge` are availa
 
 Setup requires gdal to be available. As a minimal example, have a look at the following commands for Ubuntu:
 
+First, install base dependencies:
+```
+apt-get install python3-venv python3-dev python3-tk -y
+```
+
+Then clone the repository, install python3-venv and install dependencies:
 ```bash
 git clone https://github.com/Sieboldianus/TagMaps.git
 cd tagmaps
@@ -60,4 +66,14 @@ pip install GDAL==2.2.3
 pip install --editable .
 # or from latest release on pip:
 # pip install tagmaps
+```
+
+Depending on your Linux distribution and version, you _may_ get away without the GDAL related instructions above.
+
+Alternatively, you can also install using `requirements.txt`:
+```
+python3 -m venv tagmaps
+source ./tagmaps/bin/activate
+pip install -r requirements.txt
+pip install --no-deps --editable .
 ```
