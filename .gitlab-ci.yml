@@ -11,7 +11,7 @@ test:
     # install additional packages
     # needed in tagmaps ci job
     - pip install git+https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.vgiscience.de/tud_ifk/argdown.git
-    - pip install pylint bitarray -c conda-forge
+    - pip install pylint bitarray
     - pip install pdoc3 pylint-exit
   stage: test
   script:
