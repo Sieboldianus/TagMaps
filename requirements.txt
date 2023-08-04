@@ -9,7 +9,7 @@ pandas>=0.24.2
 pyproj>=2.0.0
 numpy
 matplotlib>=3.0.0
-emoji>=2.0.0
+emoji>=2.7.0, < 3.0.0
 hdbscan>=0.8.31
 seaborn
 scipy
