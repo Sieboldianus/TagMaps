@@ -2,6 +2,21 @@
 
 
 
+## v0.22.6 (2023-08-04)
+
+### Build
+
+* build: Fix python-semantic-release version_variabl[2], add upstream issue ([`5d9a1d6`](https://github.com/Sieboldianus/TagMaps/commit/5d9a1d67c9056350dd840529564dad2ff4f4a713))
+
+### Fix
+
+* fix: Semantic-release flow for &gt;8.x.x ([`ae7c077`](https://github.com/Sieboldianus/TagMaps/commit/ae7c0775e02c9a7fab3713955cba937588a623d9))
+
+### Unknown
+
+* Manual version bump ([`9f42151`](https://github.com/Sieboldianus/TagMaps/commit/9f42151001c96cc55b58d784e3c5091303d4099c))
+
+
 ## v0.22.5 (2023-08-04)
 
 ### Build
