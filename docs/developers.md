@@ -33,18 +33,20 @@ Releases are made with [python-semantic-release](https://github.com/python-seman
 moment, releases are triggered manually after certain progress is available. Preview release flow with:
 
 ```bash
-semantic-release publish --verbosity=DEBUG --noop
+semantic-release -v --noop version
+twine upload dist/*
+semantic-release -v --noop publish
 ```
 
 Without `--noop`, semantic-release will do the [following](https://python-semantic-release.readthedocs.io/en/latest/#semantic-release-publish):
 
 1. Update changelog file.
-2. Run [semantic-release version](https://python-semantic-release.readthedocs.io/en/latest/#cmd-version).
+2. Version project based on previous commits
 3. Push changes to git.
 4. Run [build_command](https://python-semantic-release.readthedocs.io/en/latest/configuration.html#config-build-command) 
    (`python -m build`) and upload the distribution files to Pypi.
-5. Run [semantic-release changelog](https://python-semantic-release.readthedocs.io/en/latest/#cmd-changelog) and post to Gitlab/Github.
-6. Attach the files created by [build_command](https://python-semantic-release.readthedocs.io/en/latest/configuration.html#config-build-command) to the release.
+5. Run [semantic-release changelog](https://python-semantic-release.readthedocs.io/en/latest/commands.html#cmd-changelog) and post to Gitlab/Github.
+6. Attach the files created by [build_command](https://python-semantic-release.readthedocs.io/en/latest/commands.html#semantic-release-publish) to the release.
 
 To trigger a test build:
 ```bash
