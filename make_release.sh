@@ -12,6 +12,6 @@
 # Exit as soon as a command fails
 set -e
 
-semantic-release version -v
+semantic-release -v version
 twine upload dist/*
-semantic-release publish -v
+semantic-release -v publish
