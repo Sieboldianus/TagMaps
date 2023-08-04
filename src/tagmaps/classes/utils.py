@@ -31,15 +31,14 @@ import shapely.geometry as geometry
 from ..classes.shared_structure import AnalysisBounds, ConfigMap, ItemCounter
 
 
-class Utils():
+class Utils:
     """Collection of various tools and helper functions
 
     Primarily @classmethods and @staticmethods
     """
 
     @staticmethod
-    def check_folder_file(
-            folder_file: Path, create_folder: bool = None) -> Path:
+    def check_folder_file(folder_file: Path, create_folder: bool = None) -> Path:
         """Check if folder exists, optionally create it"""
         if not folder_file.exists():
             pname = "File"
@@ -54,8 +53,8 @@ class Utils():
 
     @staticmethod
     def check_fileheader(
-            fieldnames: Iterable[str],
-            source_map: ConfigMap, filename: Optional[str]):
+        fieldnames: Iterable[str], source_map: ConfigMap, filename: Optional[str]
+    ):
         """Checks against existing file columns
         warns if required keys are missing
 
@@ -69,12 +68,13 @@ class Utils():
             source_map.user_guid_col,
             source_map.latitude_col,
             source_map.longitude_col,
-            source_map.tags_col]
+            source_map.tags_col,
+        ]
         for header in header_req:
             if header not in fieldnames:
                 raise Warning(
-                    f'File header is missing "{header}"-column, '
-                    f'file: {filename}')
+                    f'File header is missing "{header}"-column, ' f"file: {filename}"
+                )
 
     @staticmethod
     def _count_none(str_list: Union[Dict[str, str], List[str]]) -> int:
@@ -88,22 +88,20 @@ class Utils():
         """Report only if list_ref contains at least 1 entry."""
         entry_count = Utils._count_none(list_ref)
         if entry_count > 0:
-            logging.getLogger("tagmaps").info(
-                f"Loaded {entry_count} {str_text}.")
+            logging.getLogger("tagmaps").info(f"Loaded {entry_count} {str_text}.")
 
     @staticmethod
     def concat_topic(term_list):
         """Concatenate list of terms (e.g. TOPIC) to string"""
-        if any('-' in s for s in term_list):
-            raise ValueError(
-                "No '-' characters supported in topic list terms")
-        topic_name = '-'.join(term_list)
+        if any("-" in s for s in term_list):
+            raise ValueError("No '-' characters supported in topic list terms")
+        topic_name = "-".join(term_list)
         return topic_name
 
     @staticmethod
     def split_topic(term_concat):
         """Split concat topic"""
-        topic_terms = term_concat.split('-')
+        topic_terms = term_concat.split("-")
         return topic_terms
 
     @staticmethod
@@ -113,41 +111,42 @@ class Utils():
         Leftover from pyproj < 2.0.0 compatibility,
         PROJ_LIB not needed anymore
         """
-        if not os.environ.get('PROJ_LIB'):
+        if not os.environ.get("PROJ_LIB"):
             local_proj_path = Path.cwd() / "proj"
             if not local_proj_path.exists():
-                raise ValueError("Pyproj 'proj' datadir not found. Either specify "
-                                 "PROJ_LIB environmental variable or copy 'proj' "
-                                 "folder to local path of executable")
-            os.environ['PROJ_LIB'] = str(local_proj_path)
+                raise ValueError(
+                    "Pyproj 'proj' datadir not found. Either specify "
+                    "PROJ_LIB environmental variable or copy 'proj' "
+                    "folder to local path of executable"
+                )
+            os.environ["PROJ_LIB"] = str(local_proj_path)
             pyproj.datadir.set_data_dir(str(local_proj_path))
 
     @staticmethod
-    def get_shapely_bounds(
-            bounds: AnalysisBounds) -> geometry.MultiPoint:
+    def get_shapely_bounds(bounds: AnalysisBounds) -> geometry.MultiPoint:
         """Returns boundary shape from 4 coordinates"""
-        bound_points_shapely = geometry.MultiPoint([
-            (bounds.lim_lng_min, bounds.lim_lat_min),
-            (bounds.lim_lng_max, bounds.lim_lat_max)
-        ])
+        bound_points_shapely = geometry.MultiPoint(
+            [
+                (bounds.lim_lng_min, bounds.lim_lat_min),
+                (bounds.lim_lng_max, bounds.lim_lat_max),
+            ]
+        )
         return bound_points_shapely
 
     @staticmethod
-    def get_best_utmzone(
-            bound_points_shapely: geometry.MultiPoint):
+    def get_best_utmzone(bound_points_shapely: geometry.MultiPoint):
         """Calculate best UTM Zone SRID/EPSG Code
         Args:
         True centroid (coords may be multipoint)"""
         input_lon_center = bound_points_shapely.centroid.coords[0][0]
         input_lat_center = bound_points_shapely.centroid.coords[0][1]
-        epsg_code = Utils._convert_wgs_to_utm(
-            input_lon_center, input_lat_center)
-        crs_proj = f'epsg:{epsg_code}'
+        epsg_code = Utils._convert_wgs_to_utm(input_lon_center, input_lat_center)
+        crs_proj = f"epsg:{epsg_code}"
         return crs_proj, epsg_code
 
     @staticmethod
     def _convert_wgs_to_utm(lon: float, lat: float):
-        """"Return best epsg code for pair
+        """ "Return best epsg code for pair
         of WGS coordinates (lat/lng)
 
         Args:
@@ -165,11 +164,11 @@ class Utils():
 
         utm_band = str((math.floor((lon + 180) / 6) % 60) + 1)
         if len(utm_band) == 1:
-            utm_band = '0'+utm_band
+            utm_band = "0" + utm_band
         if lat >= 0:
-            epsg_code = '326' + utm_band
+            epsg_code = "326" + utm_band
         else:
-            epsg_code = '327' + utm_band
+            epsg_code = "327" + utm_band
         return epsg_code
 
     @staticmethod
@@ -179,16 +178,14 @@ class Utils():
 
         - returns a string of double length,
         containing only hexadecimal digits"""
-        encoded_string = hashlib.sha3_256(
-            text_s.encode("utf8")).hexdigest()
+        encoded_string = hashlib.sha3_256(text_s.encode("utf8")).hexdigest()
         return encoded_string
 
     @staticmethod
     def remove_special_chars(text_s):
         """Removes a list of special chars from string"""
         special_chars = "?.!/;:,[]()'-&#|<>=\""
-        s_cleaned = text_s.translate(
-            {ord(c): " " for c in special_chars})
+        s_cleaned = text_s.translate({ord(c): " " for c in special_chars})
         return s_cleaned
 
     @staticmethod
@@ -202,22 +199,21 @@ class Utils():
         text_s = Utils.remove_hyperlinks(text_s)
         # split string by space character into list
         querywords = text_s.split()
-        resultwords = {word for word in querywords if word.lower()
-                       in selection_list}
-        s_cleaned = ' '.join(resultwords)
+        resultwords = {word for word in querywords if word.lower() in selection_list}
+        s_cleaned = " ".join(resultwords)
         return s_cleaned
 
     @staticmethod
     def select_emoji(
-            input_emoji_set: Set[str],
-            selection_emoji_set: Set[str] = None) -> Set[str]:
-        """Filters a set of emoji based on another set
-        """
+        input_emoji_set: Set[str], selection_emoji_set: Set[str] = None
+    ) -> Set[str]:
+        """Filters a set of emoji based on another set"""
         if selection_emoji_set is None:
             # no filter on empty selection list
             return input_emoji_set
         filtered_emoji_set = {
-            emoji for emoji in input_emoji_set if emoji in selection_emoji_set}
+            emoji for emoji in input_emoji_set if emoji in selection_emoji_set
+        }
         return filtered_emoji_set
 
     @staticmethod
@@ -231,9 +227,12 @@ class Utils():
         # split string by space character into list
         querywords = text_s.split()
         # clean list by matching against stopwords
-        resultwords = [word for word in querywords if word.lower()
-                       not in stopwords and not word.isdigit()]
-        s_cleaned = ' '.join(resultwords)
+        resultwords = [
+            word
+            for word in querywords
+            if word.lower() not in stopwords and not word.isdigit()
+        ]
+        s_cleaned = " ".join(resultwords)
         return s_cleaned
 
     @staticmethod
@@ -243,7 +242,7 @@ class Utils():
         Note:
         - anything between <a>xxx</a> will be kept
         """
-        pattern = r'<(a|/a).*?>'
+        pattern = r"<(a|/a).*?>"
         result = re.sub(pattern, "", text_s)
         return result
 
@@ -257,8 +256,7 @@ class Utils():
             return False
 
     @staticmethod
-    def check_intersect_polylist(
-            latlng_point, polylist, poly_exclude_list=None):
+    def check_intersect_polylist(latlng_point, polylist, poly_exclude_list=None):
         """Checks intersection of Point(lat, lng) against
         list of polygons.
 
@@ -297,13 +295,13 @@ class Utils():
         """
         # set console view parameters
         # stretch console
-        if platform.system() == 'Windows':
-            os.system('mode con: cols=197 lines=500')
+        if platform.system() == "Windows":
+            os.system("mode con: cols=197 lines=500")
         logging.getLogger("fiona.collection").disabled = True
 
     @staticmethod
     def set_logger(output_folder: Path = None, logging_level=None):
-        """ Set logging handler manually,
+        """Set logging handler manually,
         so we can also print to console while logging to file
         """
         # reset logging in case Jupyter Notebook has
@@ -324,27 +322,32 @@ class Utils():
             if not output_folder.exists():
                 Utils.init_dir(output_folder)
             # input(f'{type(output_folder)}')
-            __log_file = output_folder / 'log.txt'
-        log.format = '%(message)s'  # type: ignore
-        log.datefmt = ''  # type: ignore
+            __log_file = output_folder / "log.txt"
+        log.format = "%(message)s"  # type: ignore
+        log.datefmt = ""  # type: ignore
         log.setLevel(logging_level)
         # Set Output to Replace in case of
         # encoding issues (console/windows)
         if isinstance(sys.stdout, io.TextIOWrapper):
             # only for console output (not Juypter Notebook stream)
             sys.stdout = io.TextIOWrapper(
-                sys.stdout.detach(), sys.stdout.encoding, 'replace')  # type: ignore
+                sys.stdout.detach(), sys.stdout.encoding, "replace"
+            )  # type: ignore
             log.addHandler(logging.StreamHandler())
             if output_folder is not None:
                 # only log to file in console mode
                 log.addHandler(
-                    logging.FileHandler(__log_file, 'w', 'utf-8'))  # type: ignore
+                    logging.FileHandler(__log_file, "w", "utf-8")
+                )  # type: ignore
         else:
             # log to stdout, not stderr in Jupyter Mode to prevent
             # log.Info messages appear as red boxes
             logging.basicConfig(
-                stream=sys.stdout, format=log.format,  # type: ignore
-                level=logging_level, datefmt=None)
+                stream=sys.stdout,
+                format=log.format,  # type: ignore
+                level=logging_level,
+                datefmt=None,
+            )
             # log.stream = sys.stdout
         # flush once to clear console
         # sys.stdout.flush()
@@ -355,7 +358,7 @@ class Utils():
         """Creates local dir if not exists"""
         if not path_folder.exists():
             path_folder.mkdir()
-            print(f'Folder {path_folder.name}/ was created')
+            print(f"Folder {path_folder.name}/ was created")
 
     @staticmethod
     def query_yes_no(question, default="yes"):
@@ -368,8 +371,7 @@ class Utils():
 
         The "answer" return value is True for "yes" or False for "no".
         """
-        valid = {"yes": True, "y": True, "ye": True,
-                 "no": False, "n": False}
+        valid = {"yes": True, "y": True, "ye": True, "no": False, "n": False}
         if default is None:
             prompt = " [y/n] "
         elif default == "yes":
@@ -382,18 +384,16 @@ class Utils():
         while True:
             sys.stdout.write(question + prompt)
             choice = input().lower()
-            if default is not None and choice == '':
+            if default is not None and choice == "":
                 return valid[default]
             elif choice in valid:
                 return valid[choice]
-            sys.stdout.write(
-                "'yes' or 'no' (or 'y' or 'n').\n")
+            sys.stdout.write("'yes' or 'no' (or 'y' or 'n').\n")
 
     @staticmethod
     def daterange(start_date, end_date):
         """Return time difference between two dates"""
-        for n_val in range(
-                int((end_date - start_date).days)):
+        for n_val in range(int((end_date - start_date).days)):
             yield start_date + timedelta(n_val)
 
     @staticmethod
@@ -403,17 +403,15 @@ class Utils():
         on the earth (specified in decimal degrees)
         """
         # convert decimal degrees to radians
-        lon1, lat1, lon2, lat2 = map(
-            radians, [lon1, lat1, lon2, lat2])
+        lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
         # haversine formula
         dlon = lon2 - lon1
         dlat = lat2 - lat1
-        a_value = (sin(dlat/2)**2 + cos(lat1) *
-                   cos(lat2) * sin(dlon/2)**2)
+        a_value = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
         c_value = 2 * asin(sqrt(a_value))
         # Radius of earth in kilometers is 6371
         km_dist = 6371 * c_value
-        m_dist = km_dist*1000
+        m_dist = km_dist * 1000
         return m_dist
 
     @staticmethod
@@ -434,9 +432,9 @@ class Utils():
         - To convert this to meters, multiply by 1,000.
           So, 2 degrees is about 222,65 meters.
         """
-        dist = dist/1000
-        degrees_dist = dist/111.325
-        radians_dist = degrees_dist/57.2958
+        dist = dist / 1000
+        degrees_dist = dist / 111.325
+        radians_dist = degrees_dist / 57.2958
         return radians_dist
 
     @staticmethod
@@ -464,7 +462,7 @@ class Utils():
 
     @staticmethod
     def get_emojiname(emoji_string):
-        """"Tries to get a name representation for
+        """ "Tries to get a name representation for
         emoji. Emoji can either be a single character,
         or a number of characters that construct a grapheme cluster.
         Therefore, unicodedata.name cannot directly be applied.
@@ -477,21 +475,19 @@ class Utils():
             emoji_name = Utils._get_unicode_name(emoji_string)
         if not emoji_name:
             for char_s in emoji_string:
-                emoji_name = Utils._get_unicode_name(
-                    char_s)
+                emoji_name = Utils._get_unicode_name(char_s)
                 if emoji_name:
                     break
         if not emoji_name:
             emoji_name = demojize(emoji_string)
         if not emoji_name:
-            raise ValueError(f'No name found for {emoji_string}')
+            raise ValueError(f"No name found for {emoji_string}")
         return emoji_name
 
     @staticmethod
     def _get_unicode_name(emoji_string_or_char):
         try:
-            emojiname = unicodedata.name(
-                emoji_string_or_char)
+            emojiname = unicodedata.name(emoji_string_or_char)
             return emojiname
         except ValueError:
             return False
@@ -508,12 +504,8 @@ class Utils():
         """
         # name = name(str_emoji)
         try:
-            if unicodedata.name(
-                    char_unicode
-            ).startswith(
-                ("EMOJI MODIFIER",
-                 "VARIATION SELECTOR",
-                 "ZERO WIDTH")
+            if unicodedata.name(char_unicode).startswith(
+                ("EMOJI MODIFIER", "VARIATION SELECTOR", "ZERO WIDTH")
             ):
                 return False
             return True
@@ -523,8 +515,7 @@ class Utils():
 
     @staticmethod
     def extract_emoji(string_with_emoji: Optional[str]) -> Set[str]:
-        """Extract emoji and flags using emoji package
-        """
+        """Extract emoji and flags using emoji package"""
         if not string_with_emoji:
             # empty
             return set()
@@ -534,21 +525,18 @@ class Utils():
     def str2bool(str_text):
         """Convert any type of yes no string to
         bool representation"""
-        if str_text.lower() in (
-                'yes', 'true', 't', 'y', '1'):
+        if str_text.lower() in ("yes", "true", "t", "y", "1"):
             return True
-        elif str_text.lower() in (
-                'no', 'false', 'f', 'n', '0'):
+        elif str_text.lower() in ("no", "false", "f", "n", "0"):
             return False
-        raise argparse.ArgumentTypeError(
-            'Boolean value expected.')
+        raise argparse.ArgumentTypeError("Boolean value expected.")
 
     @staticmethod
     def get_rectangle_bounds(points):
         """Get rectangle bounds for numpy.ndarray of point coordinates"""
         RectangleBounds = namedtuple(
-            'RectangleBounds',
-            'lim_lat_min lim_lat_max lim_lng_min lim_lng_max')
+            "RectangleBounds", "lim_lat_min lim_lat_max lim_lng_min lim_lng_max"
+        )
         lim_y_min = np.min(points.T[1])
         lim_y_max = np.max(points.T[1])
         lim_x_min = np.min(points.T[0])
@@ -556,11 +544,12 @@ class Utils():
         return RectangleBounds(lim_y_min, lim_y_max, lim_x_min, lim_x_max)
 
     @staticmethod
-    def filter_tags(taglist: Set[str],
-                    sort_out_always_set: Set[str],
-                    sort_out_always_instr_set: Set[str],
-                    select_tags_set: Set[str] = None
-                    ) -> Tuple[Set[str], int, int]:
+    def filter_tags(
+        taglist: Set[str],
+        sort_out_always_set: Set[str],
+        sort_out_always_instr_set: Set[str],
+        select_tags_set: Set[str] = None,
+    ) -> Tuple[Set[str], int, int]:
         """Filter list of tags based on two stoplists
 
         - also removes numeric items and duplicates
@@ -596,9 +585,12 @@ class Utils():
                 # exclude numbers and those tags
                 # that are in sort_out_always_set
                 # or sort_out_always_instr_set
-                if (len(tag) == 1 or tag == '""'
-                        or tag.isdigit()
-                        or tag in sort_out_always_set):
+                if (
+                    len(tag) == 1
+                    or tag == '""'
+                    or tag.isdigit()
+                    or tag in sort_out_always_set
+                ):
                     count_skipped += 1
                     continue
                 for in_str_partial in sort_out_always_instr_set:
@@ -608,12 +600,10 @@ class Utils():
                 else:
                     # final else Clause on loop statement
                     tags_filtered.add(tag)
-        return (tags_filtered,
-                count_tags, count_skipped)
+        return (tags_filtered, count_tags, count_skipped)
 
     @staticmethod
-    def get_index_of_item(
-            l_tuple_str: List[ItemCounter], value: Optional[str]) -> int:
+    def get_index_of_item(l_tuple_str: List[ItemCounter], value: Optional[str]) -> int:
         """Get index pos from list of tuples.
 
         Stops iterating through the list as
