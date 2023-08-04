@@ -23,7 +23,7 @@ from math import asin, cos, radians, sin, sqrt
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple, Union
 
-from emoji import distinct_emoji_list
+from emoji.core import distinct_emoji_list, demojize
 import numpy as np
 import pyproj
 import shapely.geometry as geometry
@@ -482,7 +482,7 @@ class Utils():
                 if emoji_name:
                     break
         if not emoji_name:
-            emoji_name = emoji.demojize(emoji_string)
+            emoji_name = demojize(emoji_string)
         if not emoji_name:
             raise ValueError(f'No name found for {emoji_string}')
         return emoji_name
