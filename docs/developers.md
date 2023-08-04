@@ -27,6 +27,8 @@ The packaging is organized as described in the setuptools [declarative config (p
 
 The version is maintained both as git tags and inside `src/tagmaps/version.py`, with the latter as the single point of truth.
 
+Tagmaps commit follow the [Angular commit message conventions](https://github.com/angular/angular.js/blob/master/DEVELOPERS.md#commits). For a good introduction, see [Understanding Semantic Commit Messages Using Git and Angular](https://nitayneeman.com/posts/understanding-semantic-commit-messages-using-git-and-angular/).
+
 Releases are made with [python-semantic-release](https://github.com/python-semantic-release/python-semantic-release). At the
 moment, releases are triggered manually after certain progress is available. Preview release flow with:
 
