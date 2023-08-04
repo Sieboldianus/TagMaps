@@ -272,11 +272,8 @@ class LoadData():
             lbsn_post.hashtags = self._get_tags(
                 post.get(self.cfg.source_map.tags_col))
         if self.cfg.cluster_emoji:
-            lbsn_post.emoji = self._get_emoji(lbsn_post.post_body)
-            # no merge anymore:
-            # lbsn_post.hashtags = set.union(post_emoji)
-        lbsn_post.post_create_date = \
-            post.get(self.cfg.source_map.post_create_date_col)
+            lbsn_post.emoji = self._get_emoji(post)
+        lbsn_post.post_create_date = post.get(self.cfg.source_map.post_create_date_col)
         lbsn_post.post_views_count = self._get_count_frompost(
             post.get(self.cfg.source_map.post_views_count_col))
         # return parsed post object
@@ -318,10 +315,16 @@ class LoadData():
                     f'Returning 0.')
         return 0
 
-    def _get_emoji(self, post_body: Optional[str]) -> Set[str]:
-        """extract emoji, use selection list if available"""
-        emoji_filtered = Utils.select_emoji(
-            Utils.extract_emoji(post_body), self.cfg.select_emoji_set)
+    def _get_emoji(self, post: Dict[str, str]) -> Set[str]:
+        """Extract emoji from post_body and emoji col,
+        use selection list if available
+        """
+        emoji_body = Utils.select_emoji(
+            Utils.extract_emoji(post.get(self.cfg.source_map.post_body_col)),
+            self.cfg.select_emoji_set,
+        )
+        emoji_col = Utils.select_emoji(post.get(self.cfg.source_map.emoji_col))
+        emoji_filtered = set.union(emoji_body, emoji_col)
         if emoji_filtered:
             self.stats.count_emojis_global += len(emoji_filtered)
         return emoji_filtered
