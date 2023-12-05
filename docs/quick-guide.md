@@ -19,6 +19,14 @@ conda config --env --set channel_priority strict
 conda install tagmaps --channel conda-forge
 ```
 
+Or, use the provided `environment.yml` and install in editable mode.
+This would be more common for a development setup:
+```bash
+conda env create -n tagmaps -f environment.yml
+conda activate tagmaps
+pip install --no-deps --editable .
+```
+
 ## Windows
 
 There are many ways to install python tools:
