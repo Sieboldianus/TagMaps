@@ -2,6 +2,23 @@
 
 
 
+## v0.22.7 (2023-12-05)
+
+### Documentation
+
+* docs: add instructions to install from environment.yml ([`23a703a`](https://github.com/Sieboldianus/TagMaps/commit/23a703aa81549aae0e901a59654a6fed2d728459))
+
+* docs: add mapnik rendering link ([`b931cad`](https://github.com/Sieboldianus/TagMaps/commit/b931cad1285a4c6922ee0848ec3f49a89fa3d9cf))
+
+* docs: add note to environment.yml for Windows pinning ([`4403e0c`](https://github.com/Sieboldianus/TagMaps/commit/4403e0cf4a058d26ddf642c3dba0e248bf5fc667))
+
+### Fix
+
+* fix: do not abort in case of unknown emoji unicode character ([`a69fd5f`](https://github.com/Sieboldianus/TagMaps/commit/a69fd5f90a6074ab726d4d2946004f5165a489b0))
+
+* fix: emoji column not correctly parsed ([`362ad8f`](https://github.com/Sieboldianus/TagMaps/commit/362ad8fdee3e10c6a11b208dd99ef287bb0983ef))
+
+
 ## v0.22.6 (2023-08-04)
 
 ### Build
