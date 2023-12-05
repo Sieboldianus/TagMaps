@@ -16,6 +16,7 @@ import platform
 import re
 import sys
 import unicodedata
+import warnings
 from collections import namedtuple
 from datetime import timedelta
 from importlib import reload
@@ -481,7 +482,8 @@ class Utils:
         if not emoji_name:
             emoji_name = demojize(emoji_string)
         if not emoji_name:
-            raise ValueError(f"No name found for {emoji_string}")
+            warnings.warn(f"No name found for {emoji_string}")
+            return ""
         return emoji_name
 
     @staticmethod
