@@ -327,7 +327,10 @@ class LoadData:
             Utils.extract_emoji(post.get(self.cfg.source_map.post_body_col)),
             self.cfg.select_emoji_set,
         )
-        emoji_col = Utils.select_emoji(post.get(self.cfg.source_map.emoji_col))
+        emoji_col = Utils.select_emoji(
+            Utils.extract_emoji(post.get(self.cfg.source_map.emoji_col)),
+            self.cfg.select_emoji_set,
+        )
         emoji_filtered = set.union(emoji_body, emoji_col)
         if emoji_filtered:
             self.stats.count_emojis_global += len(emoji_filtered)
