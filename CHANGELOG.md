@@ -2,6 +2,26 @@
 
 
 
+## v0.22.8 (2024-01-16)
+
+### Chore
+
+* chore: update pylintrc ([`2c3805a`](https://github.com/Sieboldianus/TagMaps/commit/2c3805a5256d8e5b4b8414dd0e125cbd638d1d55))
+
+### Fix
+
+* fix: fiona/gdal issue [#213](https://github.com/conda-forge/fiona-feedstock/issues/213) on windows
+
+This issue seems to be related to pinnings under windows and fiona resulting in the following fiona error:
+Traceback (most recent call last):
+File , line 1, in
+File C:\tools\miniconda3\envs\fiona_test\Lib\site-packages\fiona_init_.py, line 86, in
+from fiona._env import (
+ImportError: DLL load failed while importing _env: The specified procedure could not be found.
+
+As a circumention, install fiona with pip, as suggested by https://stackoverflow.com/a/77289885/4556479 ([`a71c66a`](https://github.com/Sieboldianus/TagMaps/commit/a71c66a3ebc2ec9853263388b095d51093e5cc15))
+
+
 ## v0.22.7 (2023-12-05)
 
 ### Documentation
