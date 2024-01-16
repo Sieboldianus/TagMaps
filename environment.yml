@@ -9,7 +9,7 @@ channels:
 dependencies:
   - python>=3.7
   - pip
-  - fiona==1.8.22 # pin until fiona-feedstock/issues/213 is solved; only necessary for windows
+  # - fiona==1.8.22 # pin until fiona-feedstock/issues/213 is solved; only necessary for windows
   - shapely
   - pandas>=0.24.2
   - pyproj>=2.0.0
@@ -19,4 +19,7 @@ dependencies:
   - hdbscan>=0.8.31
   - seaborn
   - scipy
+  - gdal
+  pip:
+    - fiona
 
