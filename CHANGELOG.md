@@ -2,6 +2,13 @@
 
 
 
+## v0.22.9 (2024-02-05)
+
+### Documentation
+
+* docs: Remove Gholke wheels install instructions ([`7dd53ee`](https://github.com/Sieboldianus/TagMaps/commit/7dd53eedb3d983ffad511ce48feb9b28c4ea177f))
+
+
 ## v0.22.8 (2024-01-16)
 
 ### Chore
