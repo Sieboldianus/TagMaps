@@ -2,6 +2,13 @@
 
 
 
+## v0.22.34 (2024-02-09)
+
+### Unknown
+
+* Update gitignore ([`af5e90d`](https://github.com/Sieboldianus/TagMaps/commit/af5e90d40aecea7f8037a5eaec090b7bf09ebd85))
+
+
 ## v0.22.33 (2024-02-09)
 
 
