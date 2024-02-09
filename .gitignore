@@ -7,3 +7,4 @@ scripts/
 tagmaps.egg-info
 src/tagmaps/.pytest_cache
 tests/pytest-env/
+error.log
